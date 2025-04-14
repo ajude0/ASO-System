@@ -101,7 +101,6 @@
             Processing...
           </button>
         </div>
-       
       </form>
     </div>
   </div>
@@ -180,7 +179,8 @@ const resetCapsLock = () => {
 };
 
 definePageMeta({
-  layout: "empty",
+  middleware: "auth", // 👈 Tells Nuxt to run the "auth" middleware
+  layout: "empty", // 👈 Uses the "empty" layout (custom or default)
 });
 </script>
 

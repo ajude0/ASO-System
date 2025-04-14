@@ -52,7 +52,6 @@ export const getMyTransactions = async () => {
     myTransactions.value = response.transactions;
     totalEntries.value = response.totalCount;
     totalPages.value = Math.ceil(response.totalCount / query.value.PageSize);
-    
   } catch (error) {
     console.error("Error fetching myTransactions:", error);
   } finally {
@@ -93,4 +92,24 @@ export const generatePagination = () => {
     pages.push(totalPages.value);
   }
   return pages;
+};
+
+export const softDeleteTransaction = async (id) => {
+  console.log(id);
+  loading.value = true;
+  const token = getToken();
+
+  try {
+    await $fetch(`${API_BASE_URL}/api/Transaction/soft-delete/${id}`, {
+      method: "POST",
+      headers: {
+        token: token,
+      },
+    });
+    getMyTransactions();
+  } catch (error) {
+    console.error("Error deleting transaction:", error);
+  } finally{
+    loading.value = false;
+  }
 };

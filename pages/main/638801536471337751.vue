@@ -1,25 +1,15 @@
 <template>
   <nav class="flex mb-5 h-13 bg-gray-100 rounded-lg" aria-label="Breadcrumb">
     <ul class="p-4 flex flex-wrap space-x-3 text-sm font-medium">
-      <li class="flex items-center space-x-3">
-        <a
-          @click="dashboard()"
-          class="cursor-pointer flex items-center space-x-1 text-gray-800"
-        >
-          <svg
-            class="h-4 w-4 shrink-0 fill-gray-500"
-            aria-hidden="true"
-            viewBox="0 0 256 256"
-          >
-            <path
-              d="M184 32H72A16 16 0 0056 48V224a8.1 8.1.0 004.1 7 7.6 7.6.0 003.9 1 7.9 7.9.0 004.2-1.2L128 193.4l59.7 37.4a8.3 8.3.0 008.2.2 8.1 8.1.0 004.1-7V48A16 16 0 00184 32z"
-            ></path>
-          </svg>
-          <span>Dashboard</span>
-        </a>
-      </li>
-      <li class="flex items-center space-x-3" aria-current="page">
+      <li
+        v-for="(item, index) in nenunames"
+        :key="index"
+        class="flex items-center space-x-3"
+        :aria-current="index === nenunames.length - 1 ? 'page' : null"
+      >
+        <!-- Hide divider for the first item -->
         <div
+          v-if="index !== 0"
           aria-hidden="true"
           class="h-4 w-px rotate-12 rounded-full bg-gray-300"
         ></div>
@@ -34,14 +24,23 @@
               d="M136 88H120V35.3L91.7 63.6A8 8 0 0180.3 52.3l42-42a8.1 8.1.0 0111.4.0l42 42a8 8 0 010 11.3 8 8 0 01-11.4.0L136 35.3zm64 0H136v40a8 8 0 01-16 0V88H56a16 16 0 00-16 16V208a16 16 0 0016 16H2e2a16 16 0 0016-16V104A16 16 0 002e2 88z"
             ></path>
           </svg>
-          <span class="text-gray-400">Create Request</span>
+
+          <!-- Last item text is gray, others are black -->
+          <span
+            :class="
+              index === nenunames.length - 1 ? 'text-gray-400' : 'text-black'
+            "
+          >
+            {{ item }}
+          </span>
         </span>
       </li>
     </ul>
   </nav>
+
   <form
     @submit.prevent="submitAnswers"
-    class="max-w-6xl mx-auto p-6 bg-white shadow-lg rounded-lg"
+    class="max-w-full m-10 p-6 bg-white shadow-lg rounded-lg"
   >
     <div class="grid grid-cols-[auto,1fr] items-center gap-x-4 border-b pb-10">
       <label class="text-gray-700 font-bold text-2xl">Form Title</label>
@@ -49,7 +48,7 @@
         <select
           class="border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
           v-model="formId"
-          @change="getFormDetails"
+          @change="getDetails"
           :disabled="isLoading"
         >
           <option value="" hidden>Select Form Title</option>
@@ -171,12 +170,14 @@
             v-else-if="formObject.objecttype === 'TEXT'"
             type="text"
             v-model="formAnswers[formObject.id]"
+            maxlength="55"
             :class="[
               'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
               formErrors[formObject.id]
                 ? 'border-red-500 focus:ring-red-500'
                 : 'border-gray-300 focus:ring-blue-500',
             ]"
+            style="text-transform: uppercase"
           />
 
           <input
@@ -209,12 +210,14 @@
           <textarea
             v-else-if="formObject.objecttype === 'TEXTAREA'"
             v-model="formAnswers[formObject.id]"
+            maxlength="250"
             :class="[
               'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
               formErrors[formObject.id]
                 ? 'border-red-500 focus:ring-red-500'
                 : 'border-gray-300 focus:ring-blue-500',
             ]"
+            style="text-transform: uppercase"
           ></textarea>
 
           <select
@@ -345,63 +348,43 @@
 import { ref, onMounted } from "vue";
 import { API_BASE_URL } from "~/config";
 import { getToken } from "~/js/cryptoToken";
+import {
+  getFormTitle,
+  formTitles,
+  getFormDetails,
+  formDetails,
+} from "~/js/fetchForm";
 import LoadingModal from "~/components/modal/LoadingModal.vue";
-
+import { fetchCanAccess, nenunames } from "~/js/fetchMenu";
 const router = useRouter();
 const { $swal } = useNuxtApp();
-const formDetails = ref(null);
-const formId = ref(""); // Change this dynamically as needed
-const formTitles = ref([]);
+const formId = ref("");
 const formAnswers = ref({});
 const formErrors = ref({});
 const isLoading = ref(false);
-const isSubmitting = ref(false); // New state for loading
+const isSubmitting = ref(false);
+const paramid = ref("");
 
 function dashboard() {
   router.push("/main/dashboard");
 }
+
 function clearFormId() {
   formAnswers.value = {};
   formId.value = "";
   formDetails.value = null;
 }
 
-const getFormTitle = async () => {
-  const token = getToken();
+const getTitle = async () => {
   isLoading.value = true;
-
-  try {
-    const response = await $fetch(`${API_BASE_URL}/api/FormObject`, {
-      headers: {
-        token: token,
-      },
-    });
-    formTitles.value = response;
-  } catch (error) {
-    console.error("Error fetching menus:", error);
-  } finally {
-    isLoading.value = false;
-  }
+  await getFormTitle();
+  isLoading.value = false;
 };
 
-const getFormDetails = async () => {
+const getDetails = async () => {
   isLoading.value = true;
-  try {
-    const token = getToken();
-    const response = await $fetch(
-      `${API_BASE_URL}/api/FormObject/${formId.value}`,
-      {
-        headers: {
-          token: token,
-        },
-      }
-    );
-    formDetails.value = response.data;
-  } catch (error) {
-    console.error("Error fetching form details:", error);
-  } finally {
-    isLoading.value = false;
-  }
+  await getFormDetails(formId.value);
+  isLoading.value = false;
 };
 
 const toggleChecklist = (formObjectId, value) => {
@@ -472,17 +455,14 @@ const submitAnswers = async () => {
   };
 
   try {
-       await $fetch(
-      `${API_BASE_URL}/api/FormObject/submit-answers`,
-      {
-        method: "POST",
-        headers: {
-          token: token,
-          "Content-Type": "application/json",
-        },
-        body: payload,
-      }
-    );
+    await $fetch(`${API_BASE_URL}/api/FormObject/submit-answers`, {
+      method: "POST",
+      headers: {
+        token: token,
+        "Content-Type": "application/json",
+      },
+      body: payload,
+    });
     await $swal.fire({
       title: "Success",
       text: "Form submitted successfully!",
@@ -496,7 +476,7 @@ const submitAnswers = async () => {
 
     let errorMessage = "Please try again later.";
     if (error?.response?._data?.message) {
-      errorMessage = error.response._data.message; 
+      errorMessage = error.response._data.message;
     } else if (error?.message) {
       errorMessage = error.message;
     }
@@ -513,9 +493,16 @@ const submitAnswers = async () => {
 };
 
 onMounted(async () => {
-  getFormTitle();
+  getTitle();
+  getDetails();
+  const hash = window.location.hash; // "#/main/638799853882007798"
+  const parts = hash.split("/");
+  paramid.value = parts[parts.length - 1];
+  fetchCanAccess(paramid.value);
 });
 definePageMeta({
   middleware: "auth",
+  middleware: "check-menu-access",
+  name: "Create Request",
 });
 </script>

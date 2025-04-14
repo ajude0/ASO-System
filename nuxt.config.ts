@@ -13,5 +13,8 @@ export default defineNuxtConfig({
     options: {
       hashMode: true
     }
+  },
+  app: {
+    baseURL:'/aso', //add baseurl when generating the project
   }
 })
