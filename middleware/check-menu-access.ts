@@ -1,4 +1,4 @@
-import { allPageNames } from "~/js/fetchMenu";
+import { fetchUserMenu,allPageNames } from "~/js/fetchMenu";
 
 export default defineNuxtRouteMiddleware(async (to, from) => {
   const allPages: string[] = allPageNames.value || [];
@@ -13,4 +13,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
     const isConfirmed = confirm("Unauthorized!");
     return navigateTo("/main/dashboard"); 
   }
+
+  
+
 });

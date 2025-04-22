@@ -1,49 +1,35 @@
 <template>
- <nav class="flex mb-5 h-13 bg-gray-100 rounded-lg" aria-label="Breadcrumb">
-  <ul class="p-4 flex flex-wrap space-x-3 text-sm font-medium">
-    <li
-      v-for="(item, index) in nenunames"
-      :key="index"
-      class="flex items-center space-x-3"
-      :aria-current="index === nenunames.length - 1 ? 'page' : null"
-    >
-      <!-- Hide divider for the first item -->
-      <div
-        v-if="index !== 0"
-        aria-hidden="true"
-        class="h-4 w-px rotate-12 rounded-full bg-gray-300"
-      ></div>
-
-      <span class="flex items-center space-x-1">
-        <svg
-          class="h-4 w-4 shrink-0 fill-gray-400"
-          aria-hidden="true"
-          viewBox="0 0 256 256"
-        >
-          <path
-            d="M136 88H120V35.3L91.7 63.6A8 8 0 0180.3 52.3l42-42a8.1 8.1.0 0111.4.0l42 42a8 8 0 010 11.3 8 8 0 01-11.4.0L136 35.3zm64 0H136v40a8 8 0 01-16 0V88H56a16 16 0 00-16 16V208a16 16 0 0016 16H2e2a16 16 0 0016-16V104A16 16 0 002e2 88z"
-          ></path>
-        </svg>
-
-        <!-- Last item text is gray, others are black -->
-        <span :class="index === nenunames.length - 1 ? 'text-gray-400' : 'text-black'">
-          {{ item }}
-        </span>
-      </span>
-    </li>
-  </ul>
-</nav>
-
-  <div class="max-w-full m-10 mx-auto p-6 bg-white shadow-lg rounded-lg">
-    <h1 class="text-2xl font-bold mb-4">Create Form</h1>
-
-    <!-- Form Title & Description -->
+   <BreadCrumbs :nenunames="nenunames"/>
+   <div v-if="loading">
+      <!-- Skeleton Loader -->
+      <div class="animate-pulse pt-10 mb-6">
+        <div class="h-16 bg-gray-300 rounded w-full mb-1"></div>
+        <hr class="mb-3" />
+        <div class="mt-3">
+          <div class="h-10 bg-gray-300 rounded w-1/5 mb-2"></div>
+          <div class="h-14 bg-gray-300 rounded w-full"></div>
+        </div>
+        <div class="mt-4">
+          <div class="h-10 bg-gray-300 rounded w-1/5 mb-2"></div>
+          <div class="h-14 bg-gray-300 rounded w-full"></div>
+        </div>
+        <div class="mt-4">
+          <div class="h-10 bg-gray-300 rounded w-1/5 mb-2"></div>
+          <div class="h-14 bg-gray-300 rounded w-full"></div>
+        </div>
+      </div>
+      <LoadingModal />
+    </div>
+  <div v-else max-w-full m-10 mx-auto p-6 bg-white shadow-lg rounded-lg>
+    <div ref="errorAnchor" class="mb-7"></div>
+    <h1 class="text-2xl font-bold mb-4">Edit Form</h1>
+    
     <div class="mb-4">
       <label class="block font-medium" :class="{ 'text-red-500': errors.title }"
         >Title <span class="text-red-500 text-sm"> * </span></label
       >
       <input
-        v-model="form.title"
+        v-model="forms.title"
         type="text"
         class="border p-2 w-full rounded"
         :class="{ 'border-red-500': errors.title }"
@@ -60,7 +46,7 @@
         >Description <span class="text-red-500 text-sm"> * </span></label
       >
       <textarea
-        v-model="form.description"
+        v-model="forms.description"
         class="border p-2 w-full rounded"
         :class="{ 'border-red-500': errors.description }"
       ></textarea>
@@ -68,133 +54,147 @@
         {{ errors.description }}
       </p>
     </div>
+    <div ref="scrollContainer" class=" overflow-y-auto">
+      <draggable
+        v-model="forms.formObjects"
+        item-key="id"
+        handle=".drag-handle"
+        ghost-class="drag-ghost"
+        chosen-class="drag-chosen"
+        :options="draggableOptions"
+      >
+        <template #item="{ element, index }">
+          <div class="p-4 border rounded bg-gray-50">
+            <!-- Drag Handle -->
+            <div class="flex justify-between items-center mb-4">
+              <span
+                class="cursor-move drag-handle text-gray-500 hover:text-gray-700"
+                >⇅ Drag</span
+              >
+            </div>
 
-    <!-- Form Objects -->
-    <div
-      v-for="(formObject, index) in form.formObjects"
-      :key="index"
-      class="mb-6 p-4 border rounded bg-gray-50"
-    >
-      <h2 class="font-semibold mb-4">Section {{ index + 1 }}</h2>
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <!-- Label -->
+              <div class="col-span-1 mt-1">
+                <label
+                  class="block font-medium"
+                  :class="{ 'text-red-500': errors[index]?.label }"
+                >
+                  Label <span class="text-red-500 text-sm"> * </span>
+                </label>
+                <input
+                  v-model="element.label"
+                  type="text"
+                  class="border p-2 w-full rounded"
+                  :class="{ 'border-red-500': errors[index]?.label }"
+                />
+                <p
+                  v-if="errors[index]?.label"
+                  class="text-red-500 text-sm mt-1"
+                >
+                  {{ errors[index]?.label }}
+                </p>
+              </div>
 
-      <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <!-- Label -->
-        <div class="col-span-1 mt-1">
-          <label
-            class="block font-medium"
-            :class="{ 'text-red-500': errors[index]?.label }"
-          >
-            Label <span class="text-red-500 text-sm"> * </span>
-          </label>
-          <input
-            v-model="formObject.label"
-            type="text"
-            class="border p-2 w-full rounded"
-            :class="{ 'border-red-500': errors[index]?.label }"
-          />
-          <p v-if="errors[index]?.label" class="text-red-500 text-sm mt-1">
-            {{ errors[index]?.label }}
-          </p>
-        </div>
+              <!-- Select Field -->
+              <div class="col-span-1 mt-1">
+                <label
+                  class="block font-medium"
+                  :class="{ 'text-red-500': errors[index]?.objectType }"
+                >
+                  Select Field <span class="text-red-500 text-sm"> * </span>
+                </label>
+                <select
+                  v-model="element.objectType"
+                  class="border p-2 w-full rounded"
+                  :class="{ 'border-red-500': errors[index]?.objectType }"
+                >
+                  <option value="" disabled>Select Field</option>
+                  <option value="LABEL">Label</option>
+                  <option value="TEXT">Text</option>
+                  <option value="TEXTAREA">Textarea</option>
+                  <option value="DATETIME">Date</option>
+                  <option value="NUMBER">Number</option>
+                  <option value="DECIMAL">Decimal</option>
+                  <option value="LIST">List</option>
+                  <option value="CHECKBOX">Checkbox</option>
+                </select>
+                <p
+                  v-if="errors[index]?.objectType"
+                  class="text-red-500 text-sm mt-1"
+                >
+                  {{ errors[index]?.objectType }}
+                </p>
+              </div>
 
-        <!-- Select Field -->
-        <div class="col-span-1 mt-1">
-          <label
-            class="block font-medium"
-            :class="{ 'text-red-500': errors[index]?.objectType }"
-            >Select Field <span class="text-red-500 text-sm"> * </span></label
-          >
-          <select
-            v-model="formObject.objectType"
-            class="border p-2 w-full rounded"
-            :class="{ 'border-red-500': errors[index]?.objectType }"
-          >
-            <option value="">Select Field</option>
-            <option value="LABEL">Label</option>
-            <option value="TEXT">Text</option>
-            <option value="TEXTAREA">Textarea</option>
-            <option value="DATETIME">Date</option>
-            <option value="NUMBER">Number</option>
-            <option value="DECIMAL">Decimal</option>
-            <option value="LIST">List</option>
-            <option value="CHECKBOX">Checkbox</option>
-          </select>
-          <p v-if="errors[index]?.objectType" class="text-red-500 text-sm mt-1">
-            {{ errors[index]?.objectType }}
-          </p>
-        </div>
+              <!-- Options -->
+              <div
+                v-if="
+                  element.objectType === 'LIST' ||
+                  element.objectType === 'CHECKBOX'
+                "
+                class="col-span-1"
+              >
+                <h3 class="font-semibold mb-2">Options</h3>
+                <div
+                  v-for="(item, vIndex) in element.formObjectLists"
+                  :key="vIndex"
+                  class="flex items-center gap-2 mb-2"
+                >
+                  <input
+                    v-model="item.value"
+                    type="text"
+                    maxlength="80"
+                    class="border p-2 w-full rounded"
+                  />
+                  <button
+                    @click="element.formObjectLists.splice(vIndex, 1)"
+                    class="text-red-500 hover:text-red-800"
+                  >
+                    X
+                  </button>
+                </div>
+                <div class="flex justify-start">
+                  <button
+                    @click="element.formObjectLists.push({ value: '' })"
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-800 text-white rounded-lg"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
 
-        <!-- Options (LIST / CHECKBOX) -->
-        <div
-          v-if="
-            formObject.objectType === 'LIST' ||
-            formObject.objectType === 'CHECKBOX'
-          "
-          class="col-span-1"
-        >
-          <h3 class="font-semibold mb-2">Options</h3>
-          <div
-            v-for="(value, vIndex) in formObject.formObjectLists[0].values"
-            :key="vIndex"
-            class="flex items-center gap-2 mb-2"
-          >
-            <input
-              v-model="formObject.formObjectLists[0].values[vIndex]"
-              type="text"
-              class="border p-2 w-full rounded"
-            />
-            <button
-              @click="formObject.formObjectLists[0].values.splice(vIndex, 1)"
-              class="text-red-500 hover:text-red-800"
-            >
-              X
-            </button>
+              <!-- Sort Order -->
+              
+
+              <!-- Is Required -->
+              <div v-if="element.objectType !== 'LABEL'">
+                <label class="block font-medium">Is Required</label>
+                <select
+                  v-model="element.isRequired"
+                  class="border p-2 w-full rounded"
+                >
+                  <option :value="0">No</option>
+                  <option :value="1">Yes</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Remove Form Button -->
+            <div class="flex justify-end mt-1">
+              <button
+                @click="removeFormObject(index)"
+                class="px-4 py-2 bg-red-600 text-white rounded"
+              >
+                Remove Section
+              </button>
+            </div>
           </div>
-          <div class="flex justify-start">
-            <button
-              @click="addFormObjectListValue(index)"
-              class="px-4 py-2 bg-blue-600 hover:bg-blue-800 text-white rounded-lg"
-            >
-              +
-            </button>
-          </div>
-        </div>
-
-        <!-- Sort Order -->
-        <div>
-          <label class="block font-medium">Sort Order</label>
-          <input
-            v-model="formObject.sort"
-            type="number"
-            class="border p-2 w-full rounded"
-          />
-        </div>
-
-        <!-- Is Required -->
-        <div>
-          <label class="block font-medium">Is Required</label>
-          <select
-            v-model="formObject.isRequired"
-            class="border p-2 w-full rounded"
-          >
-            <option :value="0">No</option>
-            <option :value="1">Yes</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Remove Form Button -->
-      <div class="flex justify-end mt-4">
-        <button
-          @click="removeFormObject(index)"
-          class="px-4 py-2 bg-red-600 text-white rounded"
-        >
-          Remove Section
-        </button>
-      </div>
+        </template>
+      </draggable>
     </div>
-
-    <div class="mt-1 mb-10">
+    <!-- Add Section Button -->
+    <div class="mt-4 mb-10">
       <button @click="addFormObject" class="text-green-500">
         + Add Section
       </button>
@@ -250,7 +250,7 @@
           </thead>
           <tbody class="divide-y divide-gray-300">
             <tr
-              v-for="(approver, index) in form.approvers"
+              v-for="(approver, index) in forms.approvers"
               :key="index"
               class="bg-white transition-all duration-500 hover:bg-gray-50"
             >
@@ -275,22 +275,22 @@
                 {{ approver.approverNumber }}
               </td>
               <td class="flex p-5 items-center gap-0.5">
-                <button
-                  class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-gray-100 flex item-center"
-                  @click="openApproverModal(index)"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="1.2em"
-                    height="1.2em"
-                    viewBox="0 0 24 24"
+                <!-- <button
+                    class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-gray-100 flex item-center"
+                    @click="openApproverModal(index)"
                   >
-                    <path
-                      fill="#50b1fb"
-                      d="M12 22H5a2 2 0 0 1-2-2l.01-14c0-1.1.88-2 1.99-2h1V2h2v2h8V2h2v2h1c1.1 0 2 .9 2 2v6h-2v-2H5v10h7zm10.13-5.01l.71-.71a.996.996 0 0 0 0-1.41l-.71-.71a.996.996 0 0 0-1.41 0l-.71.71zm-.71.71l-5.3 5.3H14v-2.12l5.3-5.3z"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="1.2em"
+                      height="1.2em"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        fill="#50b1fb"
+                        d="M12 22H5a2 2 0 0 1-2-2l.01-14c0-1.1.88-2 1.99-2h1V2h2v2h8V2h2v2h1c1.1 0 2 .9 2 2v6h-2v-2H5v10h7zm10.13-5.01l.71-.71a.996.996 0 0 0 0-1.41l-.71-.71a.996.996 0 0 0-1.41 0l-.71.71zm-.71.71l-5.3 5.3H14v-2.12l5.3-5.3z"
+                      />
+                    </svg>
+                  </button> -->
                 <button
                   class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-red-100 flex item-center"
                   @click="removeApprover(index)"
@@ -323,10 +323,7 @@
       </div>
     </div>
 
-    <div
-      v-if="form.approvers.length > 0"
-      class="mb-6 p-4 border rounded bg-gray-50"
-    >
+    <div class="mb-6 p-4 border rounded bg-gray-50">
       <h2 class="font-semibold mb-4">Proxy</h2>
       <div class="flex justify-end mb-2 gap-4 mt-4">
         <button
@@ -368,15 +365,15 @@
           </thead>
           <tbody class="divide-y divide-gray-300">
             <tr
-              v-for="(proxy, index) in form.proxies"
+              v-for="(proxy, index) in forms.proxies"
               :key="index"
               class="bg-white transition-all duration-500 hover:bg-gray-50"
             >
               <td
                 class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
               >
-                Name:{{ proxy.existingapprovername }} <br />
-                Email: {{ proxy.existingapproveremail }}
+                Name:{{ proxy.existingApproverName }} <br />
+                Email: {{ proxy.existingApproverEmail }}
               </td>
               <td
                 class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
@@ -432,36 +429,36 @@
         </table>
       </div>
     </div>
-
-    <div class="flex justify-end">
-      <button
-        @click="submitForm"
-        :disabled="isSubmitting"
-        class="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
-      >
-        <svg
-          v-if="isSubmitting"
-          class="animate-spin h-5 w-5 mr-2 text-white"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
+    <div class="flex justify-end me-2">
+        <button
+         
+          @click="saveFormObjects"
+          :disabled="isSubmitting"
+          class="px-6 py-2 bg-blue-600 hover:bg-blue-900 text-white rounded-lg mt-4 flex items-center"
         >
-          <circle
-            class="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            stroke-width="4"
-          ></circle>
-          <path
-            class="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8v8H4z"
-          ></path>
-        </svg>
-        {{ isSubmitting ? "Submitting..." : "Save" }}
-      </button>
+          <svg
+            v-if="isSubmitting"
+            class="animate-spin h-5 w-5 mr-2 text-white"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              class="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              stroke-width="4"
+            ></circle>
+            <path
+              class="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8H4z"
+            ></path>
+          </svg>
+          {{ isSubmitting ? "Submitting..." : "Save" }}
+        </button>
     </div>
   </div>
   <div
@@ -486,12 +483,12 @@
         >
           {{ appr.employeename2 }}
         </div>
-        <div
-          v-if="availableApprovers.length === 0"
-          class="p-2 text-gray-400 text-center"
-        >
-          No users found.
-        </div>
+        <!-- <div
+            v-if="availableApprovers.length === 0"
+            class="p-2 text-gray-400 text-center"
+          >
+            No users found.
+          </div> -->
       </div>
 
       <div class="mt-4 flex justify-end gap-2">
@@ -527,12 +524,12 @@
         >
           {{ appr.employeename2 }}
         </div>
-        <div
-          v-if="availableApprovers.length === 0"
-          class="p-2 text-gray-400 text-center"
-        >
-          No users found.
-        </div>
+        <!-- <div
+            v-if="availableApprovers.length === 0"
+            class="p-2 text-gray-400 text-center"
+          >
+            No users found.
+          </div> -->
       </div>
 
       <h2 class="text-xl font-semibold mb-4">Select Proxy To</h2>
@@ -543,7 +540,7 @@
         @change="setSelectedProxyTo(selectedProxyTo)"
       >
         <option
-          v-for="proxyTo in form.approvers"
+          v-for="proxyTo in forms.approvers"
           :key="proxyTo.approverId"
           :value="proxyTo"
         >
@@ -568,17 +565,21 @@
     </div>
   </div>
 </template>
+
 <script setup>
-import { ref } from "vue";
-import { useRouter } from "vue-router";
-import { getToken } from "~/js/fetchToken";
-import { API_BASE_URL } from "~/config";
+import { reactive } from "vue";
+const { $swal } = useNuxtApp();
+import draggable from "vuedraggable";
+import { getFormObject, forms,loading } from "~/js/fetchFormObject";
 import { getEmployees, availableApprovers, query } from "~/js/fetchEmployees";
-import { fetchCanAccess,nenunames } from "~/js/fetchMenu";
+import { API_BASE_URL } from "~/config";
+import { getFormId,getToken } from "~/js/cryptoToken";
+import LoadingModal from "~/components/modal/LoadingModal.vue";
 
 const router = useRouter();
-const { $swal } = useNuxtApp();
+const isSubmitting = ref(false);
 const errors = ref([]);
+const errorAnchor = ref(null);
 const showApproverModal = ref(false);
 const showProxyModal = ref(false);
 const selectedApproverIndex = ref(null);
@@ -586,108 +587,49 @@ const selectedProxyIndex = ref(null);
 const selectedProxy = ref(null);
 const selectedProxyTo = ref(null);
 const immediateHeadAdded = ref(false);
-const isSubmitting = ref(false);
-const paramid =ref();
-
-const form = ref({
-  title: "",
-  description: "",
-  formObjects: [
-    {
-      label: "",
-      objectType: "",
-      sort: 1,
-      isRequired: 0,
-      formObjectLists: [{ values: [""] }],
-    },
-  ],
-  approvers: [],
-  proxies: [],
-});
-
-const validateForm = () => {
-  console.log("Before Validation:", form.value);
-  errors.value = {}; // Reset errors
-
-  if (!form.value.title.trim()) {
-    errors.value.title = "Title is required.";
-  }
-
-  if (!form.value.description.trim()) {
-    errors.value.description = "Description is required.";
-  }
-
-  if (!form.value.approvers || form.value.approvers.length === 0) {
-    errors.value.approver = "At least One Approver is required.";
-  }
-
-  form.value.formObjects.forEach((formObject, index) => {
-    let hasError = false;
-    errors.value[index] = {}; // Initialize error object
-
-    if (!formObject.label || !formObject.label.trim()) {
-      errors.value[index].label = "Label is required.";
-      hasError = true;
-    }
-
-    if (!formObject.objectType || !formObject.objectType.trim()) {
-      errors.value[index].objectType = "Object type is required.";
-      hasError = true;
-    }
-
-    if (
-      (formObject.objectType === "LIST" ||
-        formObject.objectType === "CHECKBOX") &&
-      (!formObject.formObjectLists ||
-        formObject.formObjectLists.length === 0 ||
-        !formObject.formObjectLists[0].values ||
-        formObject.formObjectLists[0].values.length < 2)
-    ) {
-      errors.value[index].objectType = "At least two options are required.";
-      hasError = true;
-    }
-
-    // Remove empty objects
-    if (!hasError) {
-      delete errors.value[index];
-    }
-  });
-
-  console.log("After Validation:", JSON.stringify(errors.value, null, 2));
-  console.log("Errors Length:", Object.keys(errors.value).length);
-
-  return Object.keys(errors.value).length === 0;
-};
-
+const scrollContainer = ref(null)
+const draggableOptions = ref({
+  scroll: true,
+  scrollSensitivity: 200,
+  scrollSpeed: 20,
+  scrollTarget: scrollContainer.value
+})
+const nenunames = ref(["ASO", "Maintence", "Edit Form"]);
+let idCounter = 1;
+const generateUniqueId = () => `form-${idCounter++}`;
 const addFormObject = () => {
-  form.value.formObjects.push({
+  forms.value.formObjects.push({
+    id: 0,
     label: "",
     objectType: "",
-    sort: form.value.formObjects.length + 1,
     isRequired: 0,
-    formObjectLists: [{ values: [""] }],
+    status: 0,
+    formObjectLists: [],
   });
 };
 
-const addFormObjectListValue = (index) => {
-  form.value.formObjects[index].formObjectLists[0].values.push("");
-};
 
 const removeFormObject = (index) => {
-  form.value.formObjects.splice(index, 1);
-  errors.value.splice(index, 1);
+  forms.value.formObjects.splice(index, 1);
+  errors.splice(index, 1);
+};
 
-  form.value.formObjects.forEach((obj, i) => {
-    obj.sort = i + 1;
-  });
+const checkImmediateHead = () => {
+  const exists = forms.value.approvers.some(
+    (a) => a.approverName === "Immediate Head"
+  );
+
+  if (exists) {
+    immediateHeadAdded.value = true;
+  }
 };
 
 const addImmediateHead = () => {
-  const existingImmediateHeadIndex = form.value.approvers.findIndex(
-    (a) => a.type === "Immediate Head"
+  const existingImmediateHeadIndex = forms.value.approvers.findIndex(
+    (a) => a.approverName === "Immediate Head"
   );
   if (existingImmediateHeadIndex === -1) {
-    form.value.approvers.unshift({
+    forms.value.approvers.unshift({
       type: "Immediate Head",
       approverName: "Immediate Head",
       approverEmail: "",
@@ -700,14 +642,9 @@ const addImmediateHead = () => {
   immediateHeadAdded.value = true;
 };
 
-const openApproverModal = (index) => {
-  selectedApproverIndex.value = index;
-  showApproverModal.value = true;
-};
-
 const selectApprover = (approver) => {
   if (selectedApproverIndex.value !== null) {
-    form.value.approvers[selectedApproverIndex.value] = {
+    forms.value.approvers[selectedApproverIndex.value] = {
       type: "Additional Approver",
       approverId: approver.emplId,
       approverName: approver.employeename2,
@@ -715,7 +652,8 @@ const selectApprover = (approver) => {
       approverContact: String(approver.mobileno.split("/")[0]),
     };
   } else {
-    form.value.approvers.push({
+    forms.value.approvers.push({
+      id : 0,
       type: "Additional Approver",
       approverId: approver.emplId,
       approverName: approver.employeename2,
@@ -736,17 +674,18 @@ const addApprover = () => {
 };
 
 const removeApprover = (index) => {
-  const removedApprover = form.value.approvers[index];
+  const removedApprover = forms.value.approvers[index];
 
+  console.log(forms.value.approvers[index]);
   if (!removedApprover) return;
 
   // Remove linked proxies
-  form.value.proxies = form.value.proxies.filter(
-    (proxy) => proxy.existingapproveremail !== removedApprover.approverEmail
+  forms.value.proxies = forms.value.proxies.filter(
+    (proxy) => proxy.approverNumber !== removedApprover.approverNumber
   );
 
   // Remove the approver
-  form.value.approvers.splice(index, 1);
+  forms.value.approvers.splice(index, 1);
 
   // If the removed approver is "Immediate Head," reset flag
   if (removedApprover.approverName === "Immediate Head") {
@@ -761,13 +700,13 @@ const updateSequences = () => {
   let approverNumber = 1;
 
   // Check if "Immediate Head" exists
-  const hasImmediateHead = form.value.approvers.some(
+  const hasImmediateHead = forms.value.approvers.some(
     (a) => a.type === "Immediate Head"
   );
 
   if (hasImmediateHead) {
     // If "Immediate Head" exists, shift all other numbers up by 1
-    form.value.approvers.forEach((approver) => {
+    forms.value.approvers.forEach((approver) => {
       if (approver.type === "Immediate Head") {
         approver.approverNumber = 1;
       } else {
@@ -776,15 +715,15 @@ const updateSequences = () => {
     });
   } else {
     // If no Immediate Head, assign numbers sequentially
-    form.value.approvers.forEach((approver) => {
+    forms.value.approvers.forEach((approver) => {
       approver.approverNumber = approverNumber++;
     });
   }
 
   // Update proxy approver numbers
-  form.value.proxies.forEach((proxy) => {
-    const linkedApprover = form.value.approvers.find(
-      (approver) => approver.approverEmail === proxy.existingapproveremail
+  forms.value.proxies.forEach((proxy) => {
+    const linkedApprover = forms.value.approvers.find(
+      (approver) => approver.approverEmail === proxy.existingApproverEmail
     );
 
     if (linkedApprover) {
@@ -795,7 +734,7 @@ const updateSequences = () => {
 
 const openProxyModal = (index) => {
   selectedProxyIndex.value = index;
-  selectedProxy.value = form.value.proxies[index]; // Set selected proxy for editing
+  selectedProxy.value = forms.value.proxies[index]; // Set selected proxy for editing
   showProxyModal.value = true;
 };
 
@@ -817,8 +756,8 @@ const submitProxySelection = () => {
   }
 
   const proxyData = {
-    existingapprovername: selectedProxyTo.value.approverName,
-    existingapproveremail: selectedProxyTo.value.approverEmail,
+    existingApproverName: selectedProxyTo.value.approverName,
+    existingApproverEmail: selectedProxyTo.value.approverEmail,
     approverName: selectedProxy.value.employeename2,
     approverEmail: selectedProxy.value.emailaddress,
     approverNumber: selectedProxyTo.value.approverNumber,
@@ -827,9 +766,9 @@ const submitProxySelection = () => {
   };
 
   if (selectedProxyIndex.value !== null) {
-    form.value.proxies[selectedProxyIndex.value] = proxyData;
+    forms.value.proxies[selectedProxyIndex.value] = proxyData;
   } else {
-    form.value.proxies.push(proxyData);
+    forms.value.proxies.push(proxyData);
   }
   selectedProxyIndex.value = null;
   selectedProxy.value = null;
@@ -844,63 +783,141 @@ const addProxy = () => {
 };
 
 const removeProxy = (index) => {
-  form.value.proxies.splice(index, 1);
+  forms.value.proxies.splice(index, 1);
 };
 
-const submitForm = async () => {
-  if (!validateForm()) {
-    await $swal.fire({
-      title: "Validation Error",
-      text: "Please fill in all required fields before submitting.",
-      icon: "warning",
-      confirmButtonText: "OK",
-    });
-    return;
+const validateForm = () => {
+  console.log("Before Validation:", forms.value);
+  errors.value = {}; // Reset errors
+
+  if (!forms.value.title.trim()) {
+    errors.value.title = "Title is required.";
+  }
+  console.log(errors.value.title);
+
+  if (!forms.value.description.trim()) {
+    errors.value.description = "Description is required.";
   }
 
+  if (!forms.value.approvers || forms.value.approvers.length === 0) {
+    errors.value.approver = "At least One Approver is required.";
+  }
+
+  forms.value.formObjects.forEach((formObject, index) => {
+    let hasError = false;
+    errors.value[index] = {}; // Initialize error object
+
+    if (!formObject.label || !formObject.label.trim()) {
+      errors.value[index].label = "Label is required.";
+      hasError = true;
+    }
+
+    if (!formObject.objectType || !formObject.objectType.trim()) {
+      errors.value[index].objectType = "Object type is required.";
+      hasError = true;
+    }
+
+    if (
+  (formObject.objectType === "LIST" || formObject.objectType === "CHECKBOX") &&
+  (!formObject.formObjectLists || formObject.formObjectLists.length < 2)
+) {
+  errors.value[index].objectType = "At least two options are required.";
+  hasError = true;
+}
+
+    // Remove empty objects
+    if (!hasError) {
+      delete errors.value[index];
+    }
+  });
+
+  console.log("After Validation:", JSON.stringify(errors.value, null, 2));
+  console.log("Errors Length:", Object.keys(errors.value).length);
+
+  return Object.keys(errors.value).length === 0;
+};
+
+const saveFormObjects = async () => {
+  if (!validateForm()) {
+    errorAnchor.value?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    })
+
+    // Remove focus from active element (like the button)
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur()
+    }
+
+    await $swal.fire({
+      title: 'Validation Error',
+      text: 'Please fill in all required fields before submitting.',
+      icon: 'warning',
+      timer: 1000,
+      showConfirmButton: false,
+      focusConfirm: false,
+    })
+
+    return
+  }
+
+  const formId = getFormId();
   const token = getToken();
-  isSubmitting.value = true; // Start loading
+  isSubmitting.value = true;
 
   try {
-    await $fetch(`${API_BASE_URL}/api/form`, {
-      method: "POST",
+    await $fetch(`${API_BASE_URL}/api/Form/update/${formId}`, {
+      method: 'POST',
       headers: {
-        token: token,
-      },
-      body: form.value,
+          token: token,
+        },
+      body: forms.value
     });
-
     await $swal.fire({
       title: "Success",
       text: "Form submitted successfully!",
       icon: "success",
-      confirmButtonText: "OK",
+      timer: 1000, // auto-close after 2 seconds
+      showConfirmButton: false,
     });
-    window.location.reload();
-  } catch (error) {
-    console.error("Error creating form:", error);
+    router.push('/main/638802127387670470')
 
+  } catch (error) {
+    console.error('Failed to save form:', error);
     await $swal.fire({
       title: "Error",
       text: "Failed to create form. Please try again.",
       icon: "error",
-      confirmButtonText: "OK",
+      timer: 1000, // auto-close after 2 seconds
+      showConfirmButton: false,
     });
-  } finally {
-    isSubmitting.value = false; // Stop loading
+  } finally{
+    isSubmitting.value = false; // Start loading
   }
 };
-onMounted(async () => {
-  await getEmployees(); // Ensure role is loaded when the component is mounted
-  const hash = window.location.hash; // "#/main/638799853882007798"
-  const parts = hash.split("/");
-  paramid.value = parts[parts.length - 1];
-  fetchCanAccess(paramid.value);
-});
+
 
 definePageMeta({
   middleware: "auth",
-  middleware: "check-menu-access",
-  name: "Create Form",
 });
+
+onMounted(async () => {
+  await getFormObject();
+  await checkImmediateHead();
+  draggableOptions.value.scrollTarget = scrollContainer.value
+  console.log(scrollContainer.value);
+});
+
 </script>
+
+<style scoped>
+.drag-ghost {
+  background-color: #dbeafe !important; /* Tailwind's blue-100 */
+  opacity: 0.8;
+}
+
+.drag-chosen {
+  border: 2px dashed #3b82f6; /* Tailwind's blue-500 */
+  background-color: #eff6ff; /* Optional: blue-50 */
+}
+</style>

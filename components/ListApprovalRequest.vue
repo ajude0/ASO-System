@@ -354,12 +354,10 @@
       </div>
 
       <div class="flex justify-left mt-10 space-x-2">
-        <span
-          >Showing {{ query.PageNumber }} out of {{ totalPages }} Pages ({{
-            totalEntries
-          }}
-          Entries)</span
-        >
+        <span>
+          Showing {{ totalEntries === 0 ? 0 : query.PageNumber }} out of
+          {{ totalPages }} Pages ({{ totalEntries }} Entries)
+        </span>
       </div>
 
       <div class="flex justify-center mt-10 space-x-2 mb-2">
@@ -629,7 +627,6 @@ import {
 } from "~/js/fetchListApprovalRequest";
 import LoadingModal from "./modal/LoadingModal.vue";
 
-
 const { $swal } = useNuxtApp();
 const showModal = ref(false);
 const isApprovedOpen = ref(false);
@@ -689,7 +686,13 @@ const postApprove = async () => {
 
   if (remarks) {
     await confirmApproval(selectedId.value, remarks);
-    $swal.fire("Approved!", "The request has been approved.", "success");
+    $swal.fire({
+      title: "Approved!",
+      text: "The request has been approved.",
+      icon: "success",
+      timer: 1000, // auto-close after 2 seconds
+      showConfirmButton: false,
+    });
     showModal.value = false;
   }
 };
@@ -713,14 +716,20 @@ const postReject = async () => {
 
   if (remarks) {
     await rejectApproval(selectedId.value, remarks);
-    $swal.fire("Rejected!", "The request has been rejected.", "error");
+    $swal.fire({
+      title: "Rejected!",
+      text: "The request has been rejected.",
+      icon: "success",
+      timer: 1000,
+      showConfirmButton: false,
+    });
     showModal.value = false;
   }
 };
 
 const props = defineProps({
-  canEdit: Boolean
-})
+  canEdit: Boolean,
+});
 onMounted(() => {
   getListOfTransactions();
 });

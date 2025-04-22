@@ -108,9 +108,10 @@
 <script setup>
 import { ref, onMounted } from "vue";
 import { API_BASE_URL } from "~/config";
+import { encryptData } from "~/js/cryptoToken";
+
 
 const { $swal } = useNuxtApp();
-import { encryptData } from "~/js/cryptoToken";
 const isChecked = ref(false);
 const formData = ref({ loginname: "", password: "" });
 const showPassword = ref(false);
@@ -145,21 +146,30 @@ const login = async () => {
       method: "POST",
       body: JSON.stringify(formData.value),
     });
+
     localStorage.setItem("aso_token", encryptData(response.stringParam1));
     router.push("/main/dashboard");
   } catch (error) {
     console.error("Login Error:", error);
+
+    let errorMessage = "Something went wrong. Please try again later.";
+
+    // Check if the error response has a readable message
+    if (error?.data?.message) {
+      errorMessage = error.data.message;
+    }
+
     await $swal.fire({
-      title: "Error",
-      text: "Something went wrong. Please try again later.",
+      title: "Login Failed",
+      text: errorMessage,
       icon: "error",
-      confirmButtonText: "OK",
+      timer: 1000, // auto-close after 2 seconds
+      showConfirmButton: false,
     });
   } finally {
     loginspinnerindicator.value = true;
   }
 };
-
 function Register() {
   router.push("/register");
 }

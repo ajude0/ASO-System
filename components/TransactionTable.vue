@@ -268,7 +268,9 @@
                         />
                       </svg>
                     </button>
-                    <button v-if="canDelete" @click="softDelete(transaction.id)"
+                    <button
+                      v-if="canDelete"
+                      @click="softDelete(transaction.id)"
                       class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-red-100 flex item-center"
                     >
                       <svg
@@ -315,12 +317,10 @@
         </div>
       </div>
       <div class="flex justify-left mt-10 space-x-2">
-        <span
-          >Showing {{ query.PageNumber }} out of {{ totalPages }} Pages ({{
-            totalEntries
-          }}
-          Entries)</span
-        >
+        <span>
+          Showing {{ totalEntries === 0 ? 0 : query.PageNumber }} out of
+          {{ totalPages }} Pages ({{ totalEntries }} Entries)
+        </span>
       </div>
       <div class="flex justify-center mt-10 space-x-2 mb-2">
         <a
@@ -599,10 +599,15 @@ const softDelete = async (id) => {
     confirmButtonText: "Yes, delete it!",
     cancelButtonText: "No, cancel",
   });
-
   if (confirm.isConfirmed) {
     await softDeleteTransaction(id);
-    await $swal.fire("Deleted!", "The request has been deleted.", "success");
+    $swal.fire({
+      title: "Deleted!",
+      text: "The request has been deleted.",
+      icon: "success",
+      timer: 1000, // auto-close after 2 seconds
+      showConfirmButton: false,
+    });
   }
 };
 
@@ -623,8 +628,8 @@ const wasPreviousGroupRejected = (allGroups, currentIndex) => {
   return false;
 };
 const props = defineProps({
-  canDelete: Boolean
-})
+  canDelete: Boolean,
+});
 onMounted(() => {
   getMyTransactions();
 });

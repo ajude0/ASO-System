@@ -1,6 +1,13 @@
 <template>
+  <BreadCrumbs :nenunames="nenunames"/>
   <div class="flex mb-5 me-4">
-    <button class="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 ">ADD</button>
+    <button
+    v-if="canAdd"
+      @click="goToCreateRequest"
+      class="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700"
+    >
+      ADD
+    </button>
   </div>
   <div class="flex flex-col md:flex-row justify-between">
     <div class="relative text-gray-500 focus-within:text-gray-900 mb-4">
@@ -67,9 +74,8 @@
           @click="open"
         >
           <option value="" selected hidden>Select Status</option>
-          <option value=1>Active</option>
-          <option value=2>Inactive</option>
-      
+          <option value="1">Active</option>
+          <option value="2">Inactive</option>
         </select>
         <div
           v-if="query.Status"
@@ -170,7 +176,7 @@
                   <td
                     class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
                   >
-                    asdasdad
+                   {{ form.description }}
                   </td>
                   <td
                     class="p-5 items-center whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
@@ -213,36 +219,30 @@
                   </td>
 
                   <td class="flex p-5 items-center gap-0.5">
-                    <button
-                      @click="
-                        viewTransaction(
-                          transaction.transactionid,
-                          transaction.id,
-                          transaction.status
-                        )
-                      "
-                      class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-green-600 flex item-center"
+                    <button v-if="canEdit" @click="editForm(form.id)"
+                      class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-yellow-600 flex item-center"
                     >
                       <svg
+                        class="w-6 h-6 text-yellow-400"
+                        aria-hidden="true"
                         xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
                         width="20"
                         height="20"
+                        fill="none"
+                        viewBox="0 0 24 24"
                       >
                         <path
-                          class="fill-green-600 group-hover:fill-white"
-                          d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
-                        />
-                        <path
-                          class="fill-green-600 group-hover:fill-white"
-                          fill-rule="evenodd"
-                          d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 0 1 0-1.113ZM17.25 12a5.25 5.25 0 1 1-10.5 0 5.25 5.25 0 0 1 10.5 0Z"
-                          clip-rule="evenodd"
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="m14.304 4.844 2.852 2.852M7 7H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-4.5m2.409-9.91a2.017 2.017 0 0 1 0 2.853l-6.844 6.844L8 14l.713-3.565 6.844-6.844a2.015 2.015 0 0 1 2.852 0Z"
                         />
                       </svg>
                     </button>
-                    <button @click="softDeleted(form.id)"
+                    <button
+                      v-if="canDelete"
+                      @click="softDeleted(form.id)"
                       class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-red-100 flex item-center"
                     >
                       <svg
@@ -367,10 +367,13 @@ import {
   query,
   loading,
   forms,
-  softDeleteForm
+  softDeleteForm,
 } from "~/js/fetchForm";
 import LoadingModal from "~/components/modal/LoadingModal.vue";
+import { fetchCanAccess, nenunames,canAdd,canDelete,canEdit } from "~/js/fetchMenu";
+import { encryptData } from "~/js/cryptoToken";
 
+const paramid = ref();
 const { $swal } = useNuxtApp();
 const router = useRouter();
 const isStatusOpen = ref(false);
@@ -384,6 +387,11 @@ function clearStatus() {
   query.value.Status = "";
   getListOfForms();
 }
+
+const editForm = async (id) => {
+  localStorage.setItem('formId',  encryptData(id)); 
+  router.push('/main/638802127387670470/editForm'); 
+};
 
 const softDeleted = async (id) => {
   console.log(id);
@@ -407,9 +415,23 @@ const softDeleted = async (id) => {
   }
 };
 
+const goToCreateRequest = async () => {
+  router.push("/main/638802127387670470/createForm");
+};
+
+definePageMeta({
+  middleware: ["auth", "check-menu-access"], // Use an array for multiple middlewares
+  name: "Form",
+});
+
 onMounted(() => {
   getListOfForms();
+  const hash = window.location.hash;
+  const parts = hash.split("/");
+  paramid.value = parts[parts.length - 1];
+  fetchCanAccess(paramid.value);
 });
+
 </script>
 
 <style></style>

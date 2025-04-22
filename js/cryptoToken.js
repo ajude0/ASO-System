@@ -15,4 +15,8 @@ export const getToken = () => {
   const encryptedToken = localStorage.getItem("aso_token");
   return encryptedToken ? decryptData(encryptedToken) : null;
 };
+export const getFormId = () => {
+  const encryptedToken = localStorage.getItem("formId");
+  return encryptedToken ? decryptData(encryptedToken) : null;
+};
 

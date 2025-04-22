@@ -95,7 +95,6 @@ export const generatePagination = () => {
 };
 
 export const softDeleteTransaction = async (id) => {
-  console.log(id);
   loading.value = true;
   const token = getToken();
 
