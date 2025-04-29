@@ -1,29 +1,55 @@
 <template>
-   <BreadCrumbs :nenunames="nenunames"/>
-   <div v-if="loading">
-      <!-- Skeleton Loader -->
-      <div class="animate-pulse pt-10 mb-6">
-        <div class="h-16 bg-gray-300 rounded w-full mb-1"></div>
-        <hr class="mb-3" />
-        <div class="mt-3">
-          <div class="h-10 bg-gray-300 rounded w-1/5 mb-2"></div>
-          <div class="h-14 bg-gray-300 rounded w-full"></div>
-        </div>
-        <div class="mt-4">
-          <div class="h-10 bg-gray-300 rounded w-1/5 mb-2"></div>
-          <div class="h-14 bg-gray-300 rounded w-full"></div>
-        </div>
-        <div class="mt-4">
-          <div class="h-10 bg-gray-300 rounded w-1/5 mb-2"></div>
-          <div class="h-14 bg-gray-300 rounded w-full"></div>
-        </div>
+  <BreadCrumbs :nenunames="nenunames" />
+
+  <button
+    @click="backButton"
+    type="button"
+    class="flex items-center mt-8 text-gray-700 hover:text-blue-600 transition-colors duration-200"
+  >
+    <svg
+      class="w-9 h-9"
+      aria-hidden="true"
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <path
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M5 12h14M5 12l4-4m-4 4 4 4"
+      />
+    </svg>
+    <span class="text-lg font-bold">Back</span>
+  </button>
+
+  <div v-if="loading">
+    <!-- Skeleton Loader -->
+    <div class="animate-pulse pt-10 mb-6">
+      <div class="h-16 bg-gray-300 rounded w-full mb-1"></div>
+      <hr class="mb-3" />
+      <div class="mt-3">
+        <div class="h-10 bg-gray-300 rounded w-1/5 mb-2"></div>
+        <div class="h-14 bg-gray-300 rounded w-full"></div>
       </div>
-      <LoadingModal />
+      <div class="mt-4">
+        <div class="h-10 bg-gray-300 rounded w-1/5 mb-2"></div>
+        <div class="h-14 bg-gray-300 rounded w-full"></div>
+      </div>
+      <div class="mt-4">
+        <div class="h-10 bg-gray-300 rounded w-1/5 mb-2"></div>
+        <div class="h-14 bg-gray-300 rounded w-full"></div>
+      </div>
     </div>
+    <LoadingModal />
+  </div>
   <div v-else max-w-full m-10 mx-auto p-6 bg-white shadow-lg rounded-lg>
     <div ref="errorAnchor" class="mb-7"></div>
     <h1 class="text-2xl font-bold mb-4">Edit Form</h1>
-    
+
     <div class="mb-4">
       <label class="block font-medium" :class="{ 'text-red-500': errors.title }"
         >Title <span class="text-red-500 text-sm"> * </span></label
@@ -31,6 +57,7 @@
       <input
         v-model="forms.title"
         type="text"
+        maxlength="40"
         class="border p-2 w-full rounded"
         :class="{ 'border-red-500': errors.title }"
       />
@@ -47,6 +74,7 @@
       >
       <textarea
         v-model="forms.description"
+        maxlength="90"
         class="border p-2 w-full rounded"
         :class="{ 'border-red-500': errors.description }"
       ></textarea>
@@ -54,7 +82,7 @@
         {{ errors.description }}
       </p>
     </div>
-    <div ref="scrollContainer" class=" overflow-y-auto">
+    <div ref="scrollContainer" class="overflow-y-auto">
       <draggable
         v-model="forms.formObjects"
         item-key="id"
@@ -65,7 +93,6 @@
       >
         <template #item="{ element, index }">
           <div class="p-4 border rounded bg-gray-50">
-            <!-- Drag Handle -->
             <div class="flex justify-between items-center mb-4">
               <span
                 class="cursor-move drag-handle text-gray-500 hover:text-gray-700"
@@ -85,6 +112,7 @@
                 <input
                   v-model="element.label"
                   type="text"
+                  maxlength="255"
                   class="border p-2 w-full rounded"
                   :class="{ 'border-red-500': errors[index]?.label }"
                 />
@@ -110,14 +138,13 @@
                   :class="{ 'border-red-500': errors[index]?.objectType }"
                 >
                   <option value="" disabled>Select Field</option>
-                  <option value="LABEL">Label</option>
-                  <option value="TEXT">Text</option>
-                  <option value="TEXTAREA">Textarea</option>
-                  <option value="DATETIME">Date</option>
-                  <option value="NUMBER">Number</option>
-                  <option value="DECIMAL">Decimal</option>
-                  <option value="LIST">List</option>
-                  <option value="CHECKBOX">Checkbox</option>
+                  <option
+                    v-for="(dropdown, index) in dropdowns"
+                    :key="index"
+                    :value="dropdown"
+                  >
+                    {{ dropdown }}
+                  </option>
                 </select>
                 <p
                   v-if="errors[index]?.objectType"
@@ -131,7 +158,8 @@
               <div
                 v-if="
                   element.objectType === 'LIST' ||
-                  element.objectType === 'CHECKBOX'
+                  element.objectType === 'CHECKBOX' ||
+                  element.objectType ==='CHOICES'
                 "
                 class="col-span-1"
               >
@@ -164,9 +192,6 @@
                 </div>
               </div>
 
-              <!-- Sort Order -->
-              
-
               <!-- Is Required -->
               <div v-if="element.objectType !== 'LABEL'">
                 <label class="block font-medium">Is Required</label>
@@ -194,6 +219,7 @@
       </draggable>
     </div>
     <!-- Add Section Button -->
+    <div ref="scrollAnchor"></div>
     <div class="mt-4 mb-10">
       <button @click="addFormObject" class="text-green-500">
         + Add Section
@@ -323,7 +349,10 @@
       </div>
     </div>
 
-    <div class="mb-6 p-4 border rounded bg-gray-50">
+    <div
+      v-if="forms.approvers && forms.approvers.length > 0"
+      class="mb-6 p-4 border rounded bg-gray-50"
+    >
       <h2 class="font-semibold mb-4">Proxy</h2>
       <div class="flex justify-end mb-2 gap-4 mt-4">
         <button
@@ -430,35 +459,34 @@
       </div>
     </div>
     <div class="flex justify-end me-2">
-        <button
-         
-          @click="saveFormObjects"
-          :disabled="isSubmitting"
-          class="px-6 py-2 bg-blue-600 hover:bg-blue-900 text-white rounded-lg mt-4 flex items-center"
+      <button
+        @click="saveFormObjects"
+        :disabled="isSubmitting"
+        class="px-6 py-2 bg-blue-600 hover:bg-blue-900 text-white rounded-lg mt-4 flex items-center"
+      >
+        <svg
+          v-if="isSubmitting"
+          class="animate-spin h-5 w-5 mr-2 text-white"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
         >
-          <svg
-            v-if="isSubmitting"
-            class="animate-spin h-5 w-5 mr-2 text-white"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            ></circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8H4z"
-            ></path>
-          </svg>
-          {{ isSubmitting ? "Submitting..." : "Save" }}
-        </button>
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v8H4z"
+          ></path>
+        </svg>
+        {{ isSubmitting ? "Submitting..." : "Save" }}
+      </button>
     </div>
   </div>
   <div
@@ -570,16 +598,19 @@
 import { reactive } from "vue";
 const { $swal } = useNuxtApp();
 import draggable from "vuedraggable";
-import { getFormObject, forms,loading } from "~/js/fetchFormObject";
+import { getFormObject, forms, loading } from "~/js/fetchFormObject";
 import { getEmployees, availableApprovers, query } from "~/js/fetchEmployees";
 import { API_BASE_URL } from "~/config";
-import { getFormId,getToken } from "~/js/cryptoToken";
+import { getFormId, getToken } from "~/js/cryptoToken";
 import LoadingModal from "~/components/modal/LoadingModal.vue";
+import { getDropdowns, dropdowns } from "~/js/fetchDrowdown";
 
 const router = useRouter();
+const paramid = ref();
 const isSubmitting = ref(false);
 const errors = ref([]);
 const errorAnchor = ref(null);
+const scrollAnchor = ref(null);
 const showApproverModal = ref(false);
 const showProxyModal = ref(false);
 const selectedApproverIndex = ref(null);
@@ -587,16 +618,18 @@ const selectedProxyIndex = ref(null);
 const selectedProxy = ref(null);
 const selectedProxyTo = ref(null);
 const immediateHeadAdded = ref(false);
-const scrollContainer = ref(null)
+const scrollContainer = ref(null);
 const draggableOptions = ref({
   scroll: true,
   scrollSensitivity: 200,
   scrollSpeed: 20,
-  scrollTarget: scrollContainer.value
-})
+  scrollTarget: scrollContainer.value,
+});
 const nenunames = ref(["ASO", "Maintence", "Edit Form"]);
-let idCounter = 1;
-const generateUniqueId = () => `form-${idCounter++}`;
+
+const backButton = () => {
+  router.push("/main/638802127387670470");
+};
 const addFormObject = () => {
   forms.value.formObjects.push({
     id: 0,
@@ -606,8 +639,11 @@ const addFormObject = () => {
     status: 0,
     formObjectLists: [],
   });
+  scrollAnchor.value?.scrollIntoView({
+    behavior: "smooth",
+    block: "center",
+  });
 };
-
 
 const removeFormObject = (index) => {
   forms.value.formObjects.splice(index, 1);
@@ -653,7 +689,7 @@ const selectApprover = (approver) => {
     };
   } else {
     forms.value.approvers.push({
-      id : 0,
+      id: 0,
       type: "Additional Approver",
       approverId: approver.emplId,
       approverName: approver.employeename2,
@@ -818,12 +854,13 @@ const validateForm = () => {
     }
 
     if (
-  (formObject.objectType === "LIST" || formObject.objectType === "CHECKBOX") &&
-  (!formObject.formObjectLists || formObject.formObjectLists.length < 2)
-) {
-  errors.value[index].objectType = "At least two options are required.";
-  hasError = true;
-}
+      (formObject.objectType === "LIST" ||
+        formObject.objectType === "CHECKBOX" || formObject.objectType === "CHOICES" ) &&
+      (!formObject.formObjectLists || formObject.formObjectLists.length < 2)
+    ) {
+      errors.value[index].objectType = "At least two options are required.";
+      hasError = true;
+    }
 
     // Remove empty objects
     if (!hasError) {
@@ -840,25 +877,25 @@ const validateForm = () => {
 const saveFormObjects = async () => {
   if (!validateForm()) {
     errorAnchor.value?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    })
+      behavior: "smooth",
+      block: "start",
+    });
 
     // Remove focus from active element (like the button)
     if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur()
+      document.activeElement.blur();
     }
 
     await $swal.fire({
-      title: 'Validation Error',
-      text: 'Please fill in all required fields before submitting.',
-      icon: 'warning',
+      title: "Validation Error",
+      text: "Please fill in all required fields before submitting.",
+      icon: "warning",
       timer: 1000,
       showConfirmButton: false,
       focusConfirm: false,
-    })
+    });
 
-    return
+    return;
   }
 
   const formId = getFormId();
@@ -867,11 +904,11 @@ const saveFormObjects = async () => {
 
   try {
     await $fetch(`${API_BASE_URL}/api/Form/update/${formId}`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-          token: token,
-        },
-      body: forms.value
+        token: token,
+      },
+      body: forms.value,
     });
     await $swal.fire({
       title: "Success",
@@ -880,10 +917,9 @@ const saveFormObjects = async () => {
       timer: 1000, // auto-close after 2 seconds
       showConfirmButton: false,
     });
-    router.push('/main/638802127387670470')
-
+    router.push("/main/638802127387670470");
   } catch (error) {
-    console.error('Failed to save form:', error);
+    console.error("Failed to save form:", error);
     await $swal.fire({
       title: "Error",
       text: "Failed to create form. Please try again.",
@@ -891,11 +927,10 @@ const saveFormObjects = async () => {
       timer: 1000, // auto-close after 2 seconds
       showConfirmButton: false,
     });
-  } finally{
+  } finally {
     isSubmitting.value = false; // Start loading
   }
 };
-
 
 definePageMeta({
   middleware: "auth",
@@ -904,20 +939,27 @@ definePageMeta({
 onMounted(async () => {
   await getFormObject();
   await checkImmediateHead();
-  draggableOptions.value.scrollTarget = scrollContainer.value
-  console.log(scrollContainer.value);
+  const hash = window.location.hash;
+  const parts = hash.split("/");
+  paramid.value = parts[parts.length - 2];
+  await fetchCanAccess(paramid.value);
+  nenunames.value.push("Edit");
+  await getDropdowns();
+  draggableOptions.value.scrollTarget = scrollContainer.value;
 });
-
 </script>
 
 <style scoped>
 .drag-ghost {
-  background-color: #dbeafe !important; /* Tailwind's blue-100 */
+  background-color: #dbeafe !important;
+  /* Tailwind's blue-100 */
   opacity: 0.8;
 }
 
 .drag-chosen {
-  border: 2px dashed #3b82f6; /* Tailwind's blue-500 */
-  background-color: #eff6ff; /* Optional: blue-50 */
+  border: 2px dashed #3b82f6;
+  /* Tailwind's blue-500 */
+  background-color: #eff6ff;
+  /* Optional: blue-50 */
 }
 </style>

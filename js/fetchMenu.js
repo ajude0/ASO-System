@@ -33,6 +33,7 @@ export const fetchUserMenu = async () => {
       menuList.value = data;
       allPageNames.value = getAllPageNames(data);
       sidemenuspinner.value = true;
+      console.log(data);
     }
   } catch (error) {
     alert("Failed to load menu list.");
@@ -71,7 +72,7 @@ export const getAllPageNames = (menuItems) => {
     items.forEach((item) => {
       if (item.pages && Array.isArray(item.pages)) {
         item.pages.forEach((subPage) => {
-          pageNames.push(subPage.name);
+          pageNames.push(subPage.stage);
           // If there are deeper levels of pages
           if (subPage.pages && Array.isArray(subPage.pages)) {
             extractNames([subPage]);

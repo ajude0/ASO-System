@@ -148,7 +148,7 @@
                     scope="col"
                     class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
                   >
-                    Created At
+                    Created Date
                   </th>
                   <th
                     scope="col"
@@ -252,7 +252,7 @@
                         <circle cx="2.5" cy="3" r="2.5" fill="#DC2626"></circle>
                       </svg>
                       <span class="font-medium text-xs text-red-600"
-                        >Rejected</span
+                        >Disapproved</span
                       >
                     </div>
                     <div
@@ -280,13 +280,17 @@
                       <div class="data">
                         <p class="font-normal text-sm text-gray-900">
                           {{
-                            new Date(
-                              transaction.createddate
-                            ).toLocaleDateString("en-US", {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                            })
+                            new Date(transaction.createddate).toLocaleString(
+                              "en-US",
+                              {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                                hour: "numeric",
+                                minute: "numeric",
+                                hour12: true, // optional, for 12-hour format with AM/PM
+                              }
+                            )
                           }}
                         </p>
                       </div>
@@ -487,7 +491,7 @@
             </div>
             <div v-else class="border p-3 rounded-md w-full text-gray-800">
               <span v-for="(value, index) in item.values" :key="index">
-                {{ value }}
+                {{ value }}<span v-if="index !== item.values.length - 1"> , </span>
               </span>
             </div>
           </div>
@@ -590,7 +594,7 @@
           @click="postReject()"
           class="py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-800"
         >
-          Reject
+          Disapprove
         </button>
       </div>
       <div v-else class="flex gap-1 items-center justify-end mb-0 mr-4 mt-3">
@@ -668,31 +672,29 @@ const wasPreviousGroupRejected = (allGroups, currentIndex) => {
 };
 
 const postApprove = async () => {
-  const { value: remarks } = await $swal.fire({
+  const confirm = await $swal.fire({
     title: "Are you sure?",
     text: "Do you really want to approve this request?",
     icon: "warning",
     input: "textarea",
-    inputPlaceholder: "Enter remarks here...",
+    inputPlaceholder: "Enter remarks here (optional)...",
     showCancelButton: true,
     confirmButtonText: "Yes, approve it!",
     cancelButtonText: "No, cancel",
-    inputValidator: (value) => {
-      if (!value) {
-        return "Remarks are required!";
-      }
-    },
   });
 
-  if (remarks) {
+  if (confirm.isConfirmed) {
+    const remarks = confirm.value; // Get the remarks entered by the user (if any)
     await confirmApproval(selectedId.value, remarks);
+
     $swal.fire({
       title: "Approved!",
       text: "The request has been approved.",
       icon: "success",
-      timer: 1000, // auto-close after 2 seconds
+      timer: 1000, // auto-close after 1 second
       showConfirmButton: false,
     });
+
     showModal.value = false;
   }
 };
@@ -700,12 +702,12 @@ const postApprove = async () => {
 const postReject = async () => {
   const { value: remarks } = await $swal.fire({
     title: "Are you sure?",
-    text: "Do you really want to reject this request?",
+    text: "Do you really want to disapprove this request?",
     icon: "warning",
     input: "textarea",
     inputPlaceholder: "Enter remarks here...",
     showCancelButton: true,
-    confirmButtonText: "Yes, reject it!",
+    confirmButtonText: "Yes, disapprove it!",
     cancelButtonText: "No, cancel",
     inputValidator: (value) => {
       if (!value) {
@@ -717,8 +719,8 @@ const postReject = async () => {
   if (remarks) {
     await rejectApproval(selectedId.value, remarks);
     $swal.fire({
-      title: "Rejected!",
-      text: "The request has been rejected.",
+      title: "Disapproved!",
+      text: "The request has been disapproved.",
       icon: "success",
       timer: 1000,
       showConfirmButton: false,

@@ -1,4 +1,12 @@
 <template>
+  <div class="flex mb-5 me-4">
+    <button
+      @click="goToCreateRequest"
+      class="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700"
+    >
+      ADD
+    </button>
+  </div>
   <div class="flex flex-col md:flex-row justify-between">
     <div class="relative text-gray-500 focus-within:text-gray-900 mb-4">
       <!-- Left Icon -->
@@ -66,7 +74,7 @@
           <option value="" selected hidden>Select Status</option>
           <option value="approved">Approved</option>
           <option value="pending">Pending</option>
-          <option value="rejected">Rejected</option>
+          <option value="rejected">Disapproved</option>
         </select>
         <div
           v-if="query.Status"
@@ -136,13 +144,26 @@
                     scope="col"
                     class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
                   >
-                    Created At
+                    Created Date
                   </th>
                   <th
                     scope="col"
                     class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
                   >
                     Is Approved
+                  </th>
+
+                  <th
+                    scope="col"
+                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                  >
+                    Current Approver
+                  </th>
+                  <th
+                    scope="col"
+                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                  >
+                    Approver Progress
                   </th>
                   <th
                     scope="col"
@@ -176,12 +197,15 @@
                       <div class="data">
                         <p class="font-normal text-sm text-gray-900">
                           {{
-                            new Date(transaction.createdAt).toLocaleDateString(
+                            new Date(transaction.createdAt).toLocaleString(
                               "en-US",
                               {
                                 year: "numeric",
                                 month: "long",
                                 day: "numeric",
+                                hour: "numeric",
+                                minute: "numeric",
+                                hour12: true, // optional, for 12-hour format with AM/PM
                               }
                             )
                           }}
@@ -240,9 +264,63 @@
                         <circle cx="2.5" cy="3" r="2.5" fill="#DC2626"></circle>
                       </svg>
                       <span class="font-medium text-xs text-red-600"
-                        >Rejected</span
+                        >Disapproved</span
                       >
                     </div>
+                  </td>
+
+                  <td
+                    class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
+                  >
+                    <div
+                      v-if="
+                        transaction.currentApprovers &&
+                        transaction.currentApprovers.length
+                      "
+                    >
+                      <div
+                        v-for="(
+                          approver, index
+                        ) in transaction.currentApprovers"
+                        :key="index"
+                        class="flex items-center gap-2 mb-2"
+                      >
+                        <span
+                          :class="
+                            approver.mainapprover === 1
+                              ? 'bg-green-50 text-green-600'
+                              : 'bg-amber-50 text-amber-600'
+                          "
+                          class="px-2 py-0.5 rounded-full text-xs font-semibold"
+                        >
+                          {{ approver.mainapprover === 1 ? "Main" : "Proxy" }}
+                        </span>
+                        <span> - </span>
+                        <span class="text-gray-700">
+                          {{ approver.approvername }}
+                        </span>
+                      </div>
+                    </div>
+
+                    <!-- Message when there are no approvers -->
+                    <div v-else class="text-sm">
+                      No current approvers available.
+                    </div>
+                  </td>
+                  <td
+                    class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
+                  >
+                    <span
+                      v-if="transaction.currentStatus == 'Disapproved'"
+                      class="text-red-600"
+                      >{{ transaction.approverProgress }}</span
+                    >
+                    <span
+                      v-else-if="transaction.currentStatus == 'Pending'"
+                      class="font-bold"
+                      >{{ transaction.approverProgress }}</span
+                    >
+                    <span v-else class="text-emerald-600">COMPLETE</span>
                   </td>
                   <td class="flex p-5 items-center gap-0.5">
                     <button
@@ -265,6 +343,29 @@
                           fill-rule="evenodd"
                           d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 0 1 0-1.113ZM17.25 12a5.25 5.25 0 1 1-10.5 0 5.25 5.25 0 0 1 10.5 0Z"
                           clip-rule="evenodd"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      v-if="!transaction.isSomeoneApprovedOrDisapproved && canEdit"
+                      @click="editTransaction(transaction.id)"
+                      class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-yellow-600 flex item-center"
+                    >
+                      <svg
+                        class="w-6 h-6 text-yellow-400"
+                        aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="20"
+                        height="20"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke="currentColor"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="m14.304 4.844 2.852 2.852M7 7H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-4.5m2.409-9.91a2.017 2.017 0 0 1 0 2.853l-6.844 6.844L8 14l.713-3.565 6.844-6.844a2.015 2.015 0 0 1 2.852 0Z"
                         />
                       </svg>
                     </button>
@@ -450,7 +551,8 @@
             </div>
             <div v-else class="border p-3 rounded-md w-full text-gray-800">
               <span v-for="(value, index) in item.values" :key="index">
-                {{ value }}
+                {{ value
+                }}<span v-if="index !== item.values.length - 1"> , </span>
               </span>
             </div>
           </div>
@@ -566,10 +668,22 @@ import {
   softDeleteTransaction,
 } from "~/js/fetchTransactions";
 import LoadingModal from "./modal/LoadingModal.vue";
+import { encryptData } from "~/js/cryptoToken";
+import { canEdit } from "~/js/fetchMenu";
 
 const showModal = ref(false);
 const isApprovedOpen = ref(false);
 const { $swal } = useNuxtApp();
+const router = useRouter();
+
+function goToCreateRequest() {
+  router.push("/main/638799853882007798/addRequest");
+}
+
+const editTransaction = async (id) => {
+  localStorage.setItem("transactionId", encryptData(id));
+  router.push("/main/638799853882007798/editRequest");
+};
 
 function closeModal() {
   showModal.value = false;
@@ -627,8 +741,10 @@ const wasPreviousGroupRejected = (allGroups, currentIndex) => {
   }
   return false;
 };
+
 const props = defineProps({
   canDelete: Boolean,
+  canEdit:Boolean
 });
 onMounted(() => {
   getMyTransactions();

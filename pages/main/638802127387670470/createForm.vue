@@ -1,7 +1,32 @@
 <template>
-  <BreadCrumbs :nenunames="nenunames"/>
+  <BreadCrumbs :nenunames="nenunames" />
 
-  <div class="max-w-full m-10 mx-auto p-6 bg-white shadow-lg rounded-lg">
+  <button
+    @click="backButton"
+    type="button"
+    class="flex items-center ms-6 mt-8 text-gray-700 hover:text-blue-600 transition-colors duration-200"
+  >
+    <svg
+      class="w-9 h-9"
+      aria-hidden="true"
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <path
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M5 12h14M5 12l4-4m-4 4 4 4"
+      />
+    </svg>
+    <span class="text-lg font-bold">Back</span>
+  </button>
+
+  <div class="max-w-full m-2 mx-auto p-6 bg-white shadow-lg rounded-lg">
     <h1 class="text-2xl font-bold mb-4">Create Form</h1>
     <div ref="errorAnchor" class="mb-7"></div>
 
@@ -13,6 +38,7 @@
       <input
         v-model="form.title"
         type="text"
+        maxlength="40"
         class="border p-2 w-full rounded"
         :class="{ 'border-red-500': errors.title }"
       />
@@ -30,6 +56,7 @@
       <textarea
         v-model="form.description"
         class="border p-2 w-full rounded"
+        maxlength="90"
         :class="{ 'border-red-500': errors.description }"
       ></textarea>
       <p v-if="errors.description" class="text-red-500 text-sm mt-1">
@@ -38,140 +65,214 @@
     </div>
 
     <!-- Form Objects -->
-    <draggable
-      v-model="form.formObjects"
-      item-key="id"
-      handle=".drag-handle"
-      ghost-class="drag-ghost"
-      chosen-class="drag-chosen"
-      class="space-y-6"
-    >
-      <template #item="{ element: formObject, index }">
-        <div class="mb-6 p-4 border rounded bg-gray-50">
-          <div class="flex justify-between items-center mb-4">
-            <span
-              class="cursor-move drag-handle text-gray-500 hover:text-gray-700"
-            >
-              ⇅ Drag
-            </span>
-          </div>
-
-          <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
-            <!-- Label -->
-            <div class="col-span-1 mt-1">
-              <label
-                class="block font-medium"
-                :class="{ 'text-red-500': errors[index]?.label }"
+    <div>
+      <draggable
+        v-model="form.formObjects"
+        item-key="id"
+        handle=".drag-handle"
+        ghost-class="drag-ghost"
+        chosen-class="drag-chosen"
+        class="space-y-6"
+      >
+        <template #item="{ element: formObject, index }">
+          <div class="mb-6 p-4 border rounded bg-gray-50">
+            <div class="flex justify-between items-center mb-4">
+              <span
+                class="cursor-move drag-handle text-gray-500 hover:text-gray-700"
               >
-                Label <span class="text-red-500 text-sm"> * </span>
-              </label>
-              <input
-                v-model="formObject.label"
-                type="text"
-                class="border p-2 w-full rounded"
-                :class="{ 'border-red-500': errors[index]?.label }"
-              />
-              <p v-if="errors[index]?.label" class="text-red-500 text-sm mt-1">
-                {{ errors[index]?.label }}
-              </p>
+                ⇅ Drag
+              </span>
             </div>
 
-            <!-- Select Field -->
-            <div class="col-span-1 mt-1">
-              <label
-                class="block font-medium"
-                :class="{ 'text-red-500': errors[index]?.objectType }"
-              >
-                Select Field <span class="text-red-500 text-sm"> * </span>
-              </label>
-              <select
-                v-model="formObject.objectType"
-                class="border p-2 w-full rounded"
-                :class="{ 'border-red-500': errors[index]?.objectType }"
-              >
-                <option value="" disabled>Select Field</option>
-                <option value="LABEL">Label</option>
-                <option value="TEXT">Text</option>
-                <option value="TEXTAREA">Textarea</option>
-                <option value="DATETIME">Date</option>
-                <option value="NUMBER">Number</option>
-                <option value="DECIMAL">Decimal</option>
-                <option value="LIST">List</option>
-                <option value="CHECKBOX">Checkbox</option>
-              </select>
-              <p
-                v-if="errors[index]?.objectType"
-                class="text-red-500 text-sm mt-1"
-              >
-                {{ errors[index]?.objectType }}
-              </p>
-            </div>
+            <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <!-- Label -->
+              <div class="col-span-1 mt-1">
+                <label
+                  class="block font-medium"
+                  :class="{ 'text-red-500': errors[index]?.label }"
+                >
+                  Label <span class="text-red-500 text-sm"> * </span>
+                </label>
 
-            <!-- Options -->
-            <div
-              v-if="
-                formObject.objectType === 'LIST' ||
-                formObject.objectType === 'CHECKBOX'
-              "
-              class="col-span-1"
-            >
-              <h3 class="font-semibold mb-2">Options</h3>
-              <div
-                v-for="(value, vIndex) in formObject.formObjectLists[0].values"
-                :key="vIndex"
-                class="flex items-center gap-2 mb-2"
-              >
-                <input
-                  v-model="formObject.formObjectLists[0].values[vIndex]"
-                  type="text"
-                  maxlength="80"
-                  class="border p-2 w-full rounded"
-                />
-                <button
-                  @click="
-                    formObject.formObjectLists[0].values.splice(vIndex, 1)
+                <textarea
+                  v-if="
+                    formObject.objectType && formObject.objectType === 'LABEL'
                   "
-                  class="text-red-500 hover:text-red-800"
+                  v-model="formObject.label"
+                  type="text"
+                  maxlength="255"
+                  class="border p-2 w-full rounded"
+                  :class="{ 'border-red-500': errors[index]?.label }"
                 >
-                  X
-                </button>
-              </div>
-              <div class="flex justify-start">
-                <button
-                  @click="addFormObjectListValue(index)"
-                  class="px-4 py-2 bg-blue-600 hover:bg-blue-800 text-white rounded-lg"
+                </textarea>
+                <input
+                  v-else
+                  v-model="formObject.label"
+                  type="text"
+                  maxlength="255"
+                  class="border p-2 w-full rounded"
+                  :class="{ 'border-red-500': errors[index]?.label }"
+                />
+                <p
+                  v-if="errors[index]?.label"
+                  class="text-red-500 text-sm mt-1"
                 >
-                  +
-                </button>
+                  {{ errors[index]?.label }}
+                </p>
               </div>
-            </div>
 
-            <!-- Is Required -->
-            <div v-if="formObject.objectType !== 'LABEL'">
-              <label class="block font-medium">Is Required</label>
-              <select
-                v-model="formObject.isRequired"
-                class="border p-2 w-full rounded"
+              <!-- Select Field -->
+              <div class="col-span-1 mt-1">
+                <label
+                  class="block font-medium"
+                  :class="{ 'text-red-500': errors[index]?.objectType }"
+                >
+                  Select Field <span class="text-red-500 text-sm"> * </span>
+                </label>
+                <select
+                  v-model="formObject.objectType"
+                  class="border p-2 w-full rounded"
+                  :class="{ 'border-red-500': errors[index]?.objectType }"
+                >
+                  <option value="" disabled>Select Field</option>
+                  <option
+                    v-for="(dropdown, index) in dropdowns"
+                    :key="index"
+                    :value="dropdown"
+                  >
+                    {{ dropdown }}
+                  </option>
+                </select>
+                <p
+                  v-if="errors[index]?.objectType"
+                  class="text-red-500 text-sm mt-1"
+                >
+                  {{ errors[index]?.objectType }}
+                </p>
+              </div>
+
+              <!-- Options -->
+              <div
+                v-if="
+                  formObject.objectType === 'LIST' ||
+                  formObject.objectType === 'CHECKBOX' ||
+                  formObject.objectType == 'CHOICES'
+                "
+                class="col-span-1"
               >
-                <option :value="0">No</option>
-                <option :value="1">Yes</option>
-              </select>
+                <h3 class="font-semibold mb-2">Options</h3>
+                <div
+                  v-for="(value, vIndex) in formObject.formObjectLists[0]
+                    .values"
+                  :key="vIndex"
+                  class="flex items-center gap-2 mb-2"
+                >
+                  <input
+                    v-model="formObject.formObjectLists[0].values[vIndex]"
+                    type="text"
+                    maxlength="80"
+                    class="border p-2 w-full rounded"
+                    style="text-transform: uppercase"
+                  />
+                  <button
+                    @click="
+                      formObject.formObjectLists[0].values.splice(vIndex, 1)
+                    "
+                    class="text-red-500 hover:text-red-800"
+                  >
+                    X
+                  </button>
+                </div>
+                <div class="flex justify-start">
+                  <button
+                    @click="addFormObjectListValue(index)"
+                    class="px-4 py-2 bg-blue-600 hover:bg-blue-800 text-white rounded-lg"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+
+              <!-- Data -->
+              <div v-if="formObject.objectType === 'TEXTFROMSOURCE'" class="col-span-1 mt-1">
+                <label
+                  class="block font-medium"
+                  :class="{ 'text-red-500': errors[index]?.label }"
+                >
+                  Data <span class="text-red-500 text-sm"> * </span>
+                </label>
+                <input
+                  
+                  v-model="sample"
+                  type="text"
+                  maxlength="255"
+                  class="border p-2 w-full rounded"
+                  :class="{ 'border-red-500': errors[index]?.label }"
+                />
+              </div>
+
+              <!-- Display -->
+              <div v-if="formObject.objectType === 'TEXTFROMSOURCE'" class="col-span-1 mt-1">
+                <label
+                  class="block font-medium"
+                  :class="{ 'text-red-500': errors[index]?.label }"
+                >
+                  Display <span class="text-red-500 text-sm"> * </span>
+                </label>
+                <input
+                  v-model="sample"
+                  type="text"
+                  maxlength="255"
+                  class="border p-2 w-full rounded"
+                  :class="{ 'border-red-500': errors[index]?.label }"
+                />
+              </div>
+
+              <!-- Is Required -->
+              <div v-if="formObject.objectType !== 'LABEL'">
+                <label class="block font-medium">Is Required</label>
+                <select
+                  v-model="formObject.isRequired"
+                  class="border p-2 w-full rounded"
+                >
+                  <option :value="0">No</option>
+                  <option :value="1">Yes</option>
+                </select>
+              </div>
+
+              <!-- Datasourcescript -->
+              <div v-if="formObject.objectType === 'TEXTFROMSOURCE'" class="col-span-1 mt-1">
+                <label
+                  class="block font-medium"
+                  :class="{ 'text-red-500': errors[index]?.label }"
+                >
+                  Datasourcescript <span class="text-red-500 text-sm"> * </span>
+                </label>
+                <textarea
+                  v-model="sample"
+                  type="text"
+                  maxlength="255"
+                  class="border p-2 w-full rounded"
+                  :class="{ 'border-red-500': errors[index]?.label }"
+                >
+                </textarea>
+              </div>
+            </div>
+
+            <!-- Remove Form Button -->
+            <div class="flex justify-end mt-4">
+              <button
+                @click="removeFormObject(index)"
+                class="px-4 py-2 bg-red-600 text-white rounded"
+              >
+                Remove Section
+              </button>
             </div>
           </div>
-
-          <!-- Remove Form Button -->
-          <div class="flex justify-end mt-4">
-            <button
-              @click="removeFormObject(index)"
-              class="px-4 py-2 bg-red-600 text-white rounded"
-            >
-              Remove Section
-            </button>
-          </div>
-        </div>
-      </template>
-    </draggable>
-
+        </template>
+      </draggable>
+    </div>
+    <div ref="scrollAnchor"></div>
     <div class="mt-1 mb-10">
       <button @click="addFormObject" class="text-green-500">
         + Add Section
@@ -415,7 +516,7 @@
       <button
         @click="submitForm"
         :disabled="isSubmitting"
-        class="mt-4 bg-blue-500 text-white px-4 py-2 rounded"
+        class="px-6 py-2 bg-blue-600 hover:bg-blue-900 text-white rounded-lg mt-4 flex items-center"
       >
         <svg
           v-if="isSubmitting"
@@ -552,7 +653,8 @@ import { useRouter } from "vue-router";
 import { getToken } from "~/js/cryptoToken";
 import { API_BASE_URL } from "~/config";
 import { getEmployees, availableApprovers, query } from "~/js/fetchEmployees";
-import { fetchCanAccess } from "~/js/fetchMenu";
+import { fetchCanAccess, nenunames } from "~/js/fetchMenu";
+import { getDropdowns, dropdowns } from "~/js/fetchDrowdown";
 import draggable from "vuedraggable";
 
 const router = useRouter();
@@ -560,6 +662,7 @@ const { $swal } = useNuxtApp();
 const errors = ref([]);
 const showApproverModal = ref(false);
 const errorAnchor = ref(null);
+const scrollAnchor = ref(null);
 const showProxyModal = ref(false);
 const selectedApproverIndex = ref(null);
 const selectedProxyIndex = ref(null);
@@ -582,7 +685,10 @@ const form = ref({
   approvers: [],
   proxies: [],
 });
-const nenunames = ref(["ASO", "Maintence", "Create Form"]);
+
+const backButton = () => {
+  router.push("/main/638802127387670470");
+};
 
 const validateForm = () => {
   console.log("Before Validation:", form.value);
@@ -616,7 +722,8 @@ const validateForm = () => {
 
     if (
       (formObject.objectType === "LIST" ||
-        formObject.objectType === "CHECKBOX") &&
+        formObject.objectType === "CHECKBOX" ||
+        formObject.objectType === "CHOICES") &&
       (!formObject.formObjectLists ||
         formObject.formObjectLists.length === 0 ||
         !formObject.formObjectLists[0].values ||
@@ -644,6 +751,11 @@ const addFormObject = () => {
     objectType: "",
     isRequired: 0,
     formObjectLists: [{ values: [""] }],
+  });
+
+  scrollAnchor.value?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
   });
 };
 
@@ -819,25 +931,25 @@ const removeProxy = (index) => {
 const submitForm = async () => {
   if (!validateForm()) {
     errorAnchor.value?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    })
+      behavior: "smooth",
+      block: "start",
+    });
 
     // Remove focus from active element (like the button)
     if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur()
+      document.activeElement.blur();
     }
 
     await $swal.fire({
-      title: 'Validation Error',
-      text: 'Please fill in all required fields before submitting.',
-      icon: 'warning',
+      title: "Validation Error",
+      text: "Please fill in all required fields before submitting.",
+      icon: "warning",
       timer: 1000,
       showConfirmButton: false,
       focusConfirm: false,
-    })
+    });
 
-    return
+    return;
   }
 
   const token = getToken();
@@ -876,18 +988,18 @@ const submitForm = async () => {
 };
 
 onMounted(async () => {
-  await getEmployees(); 
-  const hash = window.location.hash; 
+  await getEmployees();
+  const hash = window.location.hash;
   const parts = hash.split("/");
-  paramid.value = parts[2];
-  fetchCanAccess(paramid.value);
+  paramid.value = parts[parts.length - 2];
+  await fetchCanAccess(paramid.value);
+  nenunames.value.push("Create");
+  await getDropdowns();
 });
-
 
 definePageMeta({
   middleware: "auth",
 });
-
 </script>
 
 <style scoped>

@@ -12,7 +12,7 @@
             </button>
             <div class="flex ml-5 md:mr-24 md:flex hidden">
               <a class="flex">
-                <span @click="Dashboard()" class="cursor-pointer self-center text-xl font-semibold sm:text-2xl whitespace-nowrap ">APPROVAL ONLINE SYSTEM</span>
+                <span @click="Dashboard()" class="cursor-pointer self-center text-xl font-semibold sm:text-2xl whitespace-nowrap ">APPROVAL SYSTEM ONLINE</span>
               </a>
             </div>
           </div>
@@ -68,7 +68,7 @@ import { toggleSidebar } from "./store";
 import { getProfile, user} from "~/js/fetchUserProfile";
 const router = useRouter();
 useHead({
-  title: 'ASO',
+  title: 'Approval Online System',
   meta: [
     { name: 'ASO', content: 'Approval Online System.' }
   ],

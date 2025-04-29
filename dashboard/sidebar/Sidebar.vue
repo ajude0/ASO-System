@@ -37,7 +37,7 @@ const handleClickOutside = (event) => {
 };
 
 const toggleOpen = (index) => {
-  open.value[index] = !open.value[index];
+  open.value = open.value === index ? null : index;
 };
 
 function dashboard() {
@@ -68,7 +68,7 @@ function handleChildMenuClick(menuCode) {
         <img
           v-if="sidebarOpen"
           src="/static/images/logo.png"
-          class="h-10 mr-3 h-14 w-auto"
+          class="mr-3 h-20 w-auto"
           alt="DatabridgeLogo"
         />
       </div>
@@ -239,10 +239,10 @@ function handleChildMenuClick(menuCode) {
                   href="#"
                   @click.prevent="toggleOpen(index)"
                   class="cursor-pointer flex items-center px-3 py-2 text-gray-600 transition-colors duration-300 transform rounded-lg dark:black-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-200 hover:text-gray-700"
-                  :class="{ '': isActive || open[index] }"
+                  :class="{ '': isActive || open === index }"
                   role="button"
                   aria-haspopup="true"
-                  :aria-expanded="open[index] || isActive ? 'true' : 'false'"
+                  :aria-expanded="open === index || isActive ? 'true' : 'false'"
                 >
                   <span aria-hidden="false">
                     <svg
@@ -276,13 +276,14 @@ function handleChildMenuClick(menuCode) {
                     </svg>
                   </span>
 
-                  <span v-if="sidebarOpen" class="mx-2 text-sm font-medium">{{
-                    parent.name
-                  }}</span>
+                  <span v-if="sidebarOpen" class="mx-2 text-sm font-medium">
+                    {{ parent.name }}
+                  </span>
+
                   <span aria-hidden="true" class="ml-auto">
                     <svg
                       class="w-4 h-4 transition-transform transform"
-                      :class="{ 'rotate-180': open[index] }"
+                      :class="{ 'rotate-180': open === index }"
                       xmlns="http://www.w3.org/2000/svg"
                       fill="none"
                       viewBox="0 0 24 24"
@@ -297,9 +298,10 @@ function handleChildMenuClick(menuCode) {
                     </svg>
                   </span>
                 </a>
+
                 <div
-                  v-if="open[index]"
-                  v-show="sidebarOpen || open[index]"
+                  v-if="open === index"
+                  v-show="sidebarOpen || open === index"
                   :class="[
                     'mt-2 space-y-2 px-7',
                     { 'child-dropdown mt-2 space-y-2': !sidebarOpen },
@@ -314,7 +316,7 @@ function handleChildMenuClick(menuCode) {
                     :class="[
                       'cursor-pointer flex items-center px-3 py-2 text-gray-600 transition-colors duration-300 transform rounded-lg dark:black-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-200 hover:text-gray-700',
                       {
-                        'bg-gray-800 text-white':
+                        'bg-gray-200 text-black':
                           $route.path === `/main/${child.stage}`,
                       },
                     ]"
@@ -334,10 +336,11 @@ function handleChildMenuClick(menuCode) {
                       />
                     </svg>
                     <span
-                      v-if="sidebarOpen || open[index]"
+                      v-if="sidebarOpen || open === index"
                       class="mx-2 text-sm font-medium"
-                      >{{ child.name }}</span
                     >
+                      {{ child.name }}
+                    </span>
                   </a>
                 </div>
               </div>

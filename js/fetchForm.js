@@ -25,7 +25,7 @@ export const getFormTitle = async () => {
         },
       });
       formTitles.value = response;
-      console.log('hey');
+    
     } catch (error) {
       console.error("Error fetching menus:", error);
     } 
@@ -70,6 +70,7 @@ export const getFormDetails = async (formId) => {
       }
   
       forms.value = response.forms;
+      console.log(forms.value);
       totalEntries.value = response.totalCount;
       totalPages.value = Math.ceil(response.totalCount / query.value.PageSize);
   

@@ -1,8 +1,8 @@
 <template>
-  <BreadCrumbs :nenunames="nenunames"/>
+  <BreadCrumbs :nenunames="nenunames" />
   <div class="flex mb-5 me-4">
     <button
-    v-if="canAdd"
+      v-if="canAdd"
       @click="goToCreateRequest"
       class="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700"
     >
@@ -120,7 +120,7 @@
       </div>
     </div>
   </div>
-  <div class="bg-white h-full flex flex-col rounded">
+  <div class="bg-white flex flex-col rounded">
     <div class="flex flex-col">
       <div class="overflow-x-auto pb-4">
         <div class="min-w-full inline-block align-middle">
@@ -128,7 +128,12 @@
             <table v-if="!loading" class="table-auto min-w-full rounded-xl">
               <thead>
                 <tr class="bg-gray-50">
-                  <th class=""></th>
+                  <th
+                    scope="col"
+                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                  >
+                    Created By
+                  </th>
                   <th
                     scope="col"
                     class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
@@ -146,6 +151,12 @@
                     class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
                   >
                     Status
+                  </th>
+                  <th
+                    scope="col"
+                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                  >
+                    Created Date
                   </th>
 
                   <th
@@ -167,7 +178,11 @@
                   :key="index"
                   class="bg-white transition-all duration-500 hover:bg-gray-50"
                 >
-                  <td class=""></td>
+                  <td
+                    class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
+                  >
+                    {{ form.user }}
+                  </td>
                   <td
                     class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
                   >
@@ -176,7 +191,7 @@
                   <td
                     class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
                   >
-                   {{ form.description }}
+                    {{ form.description }}
                   </td>
                   <td
                     class="p-5 items-center whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
@@ -217,9 +232,24 @@
                       >
                     </div>
                   </td>
-
+                  <td
+                    class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
+                  >
+                    {{
+                      new Date(form.createddate).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "numeric",
+                        hour12: true, // optional, for 12-hour format with AM/PM
+                      })
+                    }}
+                  </td>
                   <td class="flex p-5 items-center gap-0.5">
-                    <button v-if="canEdit" @click="editForm(form.id)"
+                    <button
+                      v-if="canEdit"
+                      @click="editForm(form.id)"
                       class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-yellow-600 flex item-center"
                     >
                       <svg
@@ -292,12 +322,10 @@
       </div>
 
       <div class="flex justify-left mt-10 space-x-2">
-        <span
-          >Showing {{ query.PageNumber }} out of {{ totalPages }} Pages ({{
-            totalEntries
-          }}
-          Entries)</span
-        >
+        <span>
+          Showing {{ totalEntries === 0 ? 0 : query.PageNumber }} out of
+          {{ totalPages }} Pages ({{ totalEntries }} Entries)
+        </span>
       </div>
 
       <div class="flex justify-center mt-10 space-x-2 mb-2">
@@ -370,7 +398,13 @@ import {
   softDeleteForm,
 } from "~/js/fetchForm";
 import LoadingModal from "~/components/modal/LoadingModal.vue";
-import { fetchCanAccess, nenunames,canAdd,canDelete,canEdit } from "~/js/fetchMenu";
+import {
+  fetchCanAccess,
+  nenunames,
+  canAdd,
+  canDelete,
+  canEdit,
+} from "~/js/fetchMenu";
 import { encryptData } from "~/js/cryptoToken";
 
 const paramid = ref();
@@ -389,8 +423,8 @@ function clearStatus() {
 }
 
 const editForm = async (id) => {
-  localStorage.setItem('formId',  encryptData(id)); 
-  router.push('/main/638802127387670470/editForm'); 
+  localStorage.setItem("formId", encryptData(id));
+  router.push("/main/638802127387670470/editForm");
 };
 
 const softDeleted = async (id) => {
@@ -421,7 +455,7 @@ const goToCreateRequest = async () => {
 
 definePageMeta({
   middleware: ["auth", "check-menu-access"], // Use an array for multiple middlewares
-  name: "Form",
+  name: "638802127387670470",
 });
 
 onMounted(() => {
@@ -431,7 +465,6 @@ onMounted(() => {
   paramid.value = parts[parts.length - 1];
   fetchCanAccess(paramid.value);
 });
-
 </script>
 
 <style></style>

@@ -1,6 +1,5 @@
 <template>
-  <BreadCrumbs :nenunames="nenunames"/>
-
+  <BreadCrumbs :nenunames="nenunames" />
   <div class="bg-white p-4 w-full shadow-md">
     <div class="grid grid-cols-2 p-4 text-center">
       <button
@@ -23,13 +22,13 @@
         "
         @click="activeTab = 'approver'"
       >
-        Approval Requests
+       Pending for Approval
       </button>
     </div>
 
     <div class="p-4">
       <div v-if="activeTab === 'transactions'">
-        <TransactionTable :can-delete="canDelete" />
+        <TransactionTable :can-delete="canDelete" :can-edit="canEdit" />
       </div>
       <div v-if="activeTab === 'approver'">
         <ListApprovalRequest :can-edit="canEdit" />
@@ -51,7 +50,7 @@ const activeTab = ref("transactions");
 
 definePageMeta({
   middleware: ["auth", "check-menu-access"], // Use an array for multiple middlewares
-  name: "My Request",
+  name:"638799853882007798",
 });
 
 onMounted(async () => {
@@ -60,5 +59,4 @@ onMounted(async () => {
   paramid.value = parts[parts.length - 1];
   await fetchCanAccess(paramid.value);
 });
-
 </script>

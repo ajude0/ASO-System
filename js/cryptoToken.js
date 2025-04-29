@@ -19,4 +19,8 @@ export const getFormId = () => {
   const encryptedToken = localStorage.getItem("formId");
   return encryptedToken ? decryptData(encryptedToken) : null;
 };
+export const getTransactionId = () => {
+  const encryptedToken = localStorage.getItem("transactionId");
+  return encryptedToken ? decryptData(encryptedToken) : null;
+};
 

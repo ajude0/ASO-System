@@ -1,10 +1,7 @@
 <template>
-   <BreadCrumbs :nenunames="nenunames"/>
+  <BreadCrumbs :nenunames="nenunames" />
 
-  <form
-    @submit.prevent="submitAnswers"
-    class="max-w-full m-10 p-6 bg-white shadow-lg rounded-lg"
-  >
+  <form class="max-w-full m-10 p-6 bg-white shadow-lg rounded-lg">
     <div class="grid grid-cols-[auto,1fr] items-center gap-x-4 border-b pb-10">
       <label class="text-gray-700 font-bold text-2xl">Form Title</label>
       <div class="relative w-full">
@@ -108,7 +105,7 @@
         :key="formObject.id"
         class="mb-6"
       >
-        <form @submit.prevent="submitAnswers">
+        <div>
           <div
             v-if="formObject.objecttype !== 'LABEL'"
             class="flex justify-between"
@@ -218,7 +215,7 @@
             ]"
           />
 
-          <div v-else-if="formObject.objecttype === 'CHECKBOX'">
+          <div v-else-if="formObject.objecttype === 'CHOICES'">
             <div
               v-for="option in formObject.options"
               :key="option.id"
@@ -241,13 +238,60 @@
             </div>
           </div>
 
+          <div v-else-if="formObject.objecttype === 'CHECKBOX'">
+            <div
+              v-for="option in formObject.options"
+              :key="option.id"
+              class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition"
+            >
+              <input
+                type="radio"
+                :id="'radio-' + option.id"
+                :value="option.value"
+                v-model="formAnswers[formObject.id]"
+                class="w-6 h-6 text-blue-600 border-gray-300 focus:ring focus:ring-blue-400"
+              />
+              <label
+                :for="'radio-' + option.id"
+                class="text-gray-700 font-medium cursor-pointer hover:text-blue-600 transition"
+              >
+                {{ option.value }}
+              </label>
+            </div>
+          </div>
+
+          <div v-else-if="formObject.objecttype === 'TEXTFROMSOURCE'">
+            <div class="flex justify-between items-center">
+              <!-- Flex container -->
+              <input
+                disabled
+                type="text"
+                v-model="formAnswers[formObject.id]"
+                maxlength="55"
+                :class="[
+                  'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+                  formErrors[formObject.id]
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-gray-300 focus:ring-blue-500',
+                ]"
+                style="text-transform: uppercase"
+              />
+              <button
+                @click="openModal(formObject.id)"
+                class="ml-2 px-10 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg"
+              >
+                Search
+              </button>
+            </div>
+          </div>
+
           <p v-else class="text-red-500 font-medium">
             Unknown type: {{ formObject.objecttype }}
           </p>
           <p v-if="formErrors[formObject.id]" class="text-red-500 text-sm">
             {{ formObject.label }} is {{ formErrors[formObject.id] }}
           </p>
-        </form>
+        </div>
       </div>
 
       <!-- Approver Section -->
@@ -278,7 +322,7 @@
 
       <div class="flex justify-end">
         <button
-          type="submit"
+          @click="submitAnswers"
           :disabled="isSubmitting"
           class="px-6 py-2 bg-blue-600 hover:bg-blue-900 text-white rounded-lg mt-4 flex items-center"
         >
@@ -308,6 +352,55 @@
       </div>
     </div>
   </form>
+
+  <div
+    v-if="showModal"
+    class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]"
+  >
+    <div class="w-full max-w-4xl bg-white shadow-lg rounded-lg p-6 relative">
+      <input
+        type="text"
+        v-model="searchQuery"
+        @input="debouncedSearch(storeId)"
+        placeholder="Search"
+        class="w-full p-4 rounded border border-gray-600 focus:outline-none"
+      />
+
+      <div class="max-h-60 overflow-y-auto border border-gray-300 rounded mt-2">
+        <div v-if="loading" class="loading">Loading...</div>
+        <div
+          v-if="justifications.length > 0"
+          v-for="(justification, index) in justifications"
+          :key="index"
+          @click="selectEmployee(storeId, justification.display)"
+          class="p-2 hover:bg-gray-200 cursor-pointer"
+        >
+          {{ justification.display }}
+        </div>
+        <div
+          v-else-if="searchQuery && !loading"
+          class="p-2 text-gray-400 text-center"
+        >
+          No results found.
+        </div>
+        <div
+          v-else
+          class="p-2 text-gray-400 text-center"
+        >
+        No results found.
+        </div>
+      </div>
+
+      <div class="mt-4 flex justify-end gap-2">
+        <button
+          @click="showModal = false"
+          class="px-4 py-2 bg-red-500 text-white rounded-lg"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -321,26 +414,38 @@ import {
   formDetails,
 } from "~/js/fetchForm";
 import LoadingModal from "~/components/modal/LoadingModal.vue";
+import {
+  searchQuery,
+  debouncedSearch,
+  justifications,
+  loading,
+} from "~/js/textfromsource";
 import { fetchCanAccess, nenunames } from "~/js/fetchMenu";
+
 const router = useRouter();
+const paramid = ref();
 const { $swal } = useNuxtApp();
 const formId = ref("");
 const formAnswers = ref({});
 const formErrors = ref({});
 const isLoading = ref(false);
 const isSubmitting = ref(false);
-const paramid = ref("");
-const errorAnchor = ref(null);  
-
-function dashboard() {
-  router.push("/main/dashboard");
-}
-
+const errorAnchor = ref(null);
+const showModal = ref(false);
+const storeId = ref();
 function clearFormId() {
   formAnswers.value = {};
   formId.value = "";
   formDetails.value = null;
 }
+
+const selectEmployee = (id, selectedJustification) => {
+  console.log(id);
+  // Update formAnswers with the selected justification
+  formAnswers.value[id] = selectedJustification;
+
+  showModal.value = false; // Close the modal after selection
+};
 
 const getTitle = async () => {
   isLoading.value = true;
@@ -374,6 +479,11 @@ const handleNumberInput = (event, id) => {
   formAnswers.value[id] = value; // Keep as string to allow leading zeros
 };
 
+const openModal = (id) => {
+  storeId.value = id;
+  showModal.value = true;
+};
+
 const submitAnswers = async () => {
   isSubmitting.value = true;
   formErrors.value = {};
@@ -388,24 +498,24 @@ const submitAnswers = async () => {
   if (Object.keys(formErrors.value).length > 0) {
     isSubmitting.value = false;
     errorAnchor.value?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'start',
-    })
+      behavior: "smooth",
+      block: "start",
+    });
 
     // Remove focus from active element (like the button)
     if (document.activeElement instanceof HTMLElement) {
-      document.activeElement.blur()
+      document.activeElement.blur();
     }
 
     await $swal.fire({
-      title: 'Validation Error',
-      text: 'Please fill in all required fields before submitting.',
-      icon: 'warning',
+      title: "Validation Error",
+      text: "Please fill in all required fields before submitting.",
+      icon: "warning",
       timer: 1000,
       showConfirmButton: false,
       focusConfirm: false,
-    })
-    
+    });
+
     return;
   }
 
@@ -473,17 +583,15 @@ const submitAnswers = async () => {
     isSubmitting.value = false; // Stop loading indicator
   }
 };
-definePageMeta({
-  middleware: ["auth","check-menu-access"],
-  name: "638801536471337751",
-});
+nenunames.value = [...nenunames.value, "Add Request"];
 onMounted(async () => {
   getTitle();
   getDetails();
-  const hash = window.location.hash; // "#/main/638799853882007798"
+  const hash = window.location.hash;
   const parts = hash.split("/");
-  paramid.value = parts[parts.length - 1];
-  fetchCanAccess(paramid.value);
-});
+  paramid.value = parts[parts.length - 2];
+  await fetchCanAccess(paramid.value);
+  nenunames.value.push("Create");
 
+});
 </script>

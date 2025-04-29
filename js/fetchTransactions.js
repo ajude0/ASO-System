@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "~/config";
-import { getToken } from "./cryptoToken";
+import { getToken,getTransactionId } from "./cryptoToken";
 
 export const query = ref({
   Search: "",
@@ -14,6 +14,7 @@ export const totalPages = ref(0);
 export const loading = ref(false);
 export const myTransactions = ref([]);
 export const isTxLoading = ref([]);
+export const isLoading = ref(false);
 export const transactions = ref({ formObjects: [] });
 
 export const getTransaction = async (transactionId) => {
@@ -29,11 +30,36 @@ export const getTransaction = async (transactionId) => {
       }
     );
     transactions.value = response;
+    console.log(response);
   } catch (error) {
     console.error("Error fetching transactions:", error);
   } finally {
     setTimeout(() => {
       isTxLoading.value = false;
+    }, 200);
+  }
+};
+
+export const getMyTransaction = async () => {
+  isLoading.value = true;
+  const token = getToken();
+  const transactionId = getTransactionId();
+  try {
+    const response = await $fetch(
+      `${API_BASE_URL}/api/Transaction/get-forms/${transactionId}`,
+      {
+        headers: {
+          token: token,
+        },
+      }
+    );
+    transactions.value = response;
+    console.log(transactions.value);
+  } catch (error) {
+    console.error("Error fetching transactions:", error);
+  } finally {
+    setTimeout(() => {
+      isLoading.value = false;
     }, 200);
   }
 };
@@ -52,6 +78,7 @@ export const getMyTransactions = async () => {
     myTransactions.value = response.transactions;
     totalEntries.value = response.totalCount;
     totalPages.value = Math.ceil(response.totalCount / query.value.PageSize);
+    console.log(myTransactions.value);
   } catch (error) {
     console.error("Error fetching myTransactions:", error);
   } finally {
