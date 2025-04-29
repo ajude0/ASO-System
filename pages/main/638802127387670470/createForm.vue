@@ -197,35 +197,47 @@
               <div v-if="formObject.objectType === 'TEXTFROMSOURCE'" class="col-span-1 mt-1">
                 <label
                   class="block font-medium"
-                  :class="{ 'text-red-500': errors[index]?.label }"
+                  :class="{ 'text-red-500': errors[index]?.data }"
                 >
                   Data <span class="text-red-500 text-sm"> * </span>
                 </label>
                 <input
                   
-                  v-model="sample"
+                  v-model="formObject.data"
                   type="text"
                   maxlength="255"
                   class="border p-2 w-full rounded"
-                  :class="{ 'border-red-500': errors[index]?.label }"
+                  :class="{ 'border-red-500': errors[index]?.data }"
                 />
+                <p
+                  v-if="errors[index]?.data"
+                  class="text-red-500 text-sm mt-1"
+                >
+                  {{ errors[index]?.data }}
+                </p>
               </div>
 
               <!-- Display -->
               <div v-if="formObject.objectType === 'TEXTFROMSOURCE'" class="col-span-1 mt-1">
                 <label
                   class="block font-medium"
-                  :class="{ 'text-red-500': errors[index]?.label }"
+                  :class="{ 'text-red-500': errors[index]?.display }"
                 >
                   Display <span class="text-red-500 text-sm"> * </span>
                 </label>
                 <input
-                  v-model="sample"
+                  v-model="formObject.display"
                   type="text"
                   maxlength="255"
                   class="border p-2 w-full rounded"
-                  :class="{ 'border-red-500': errors[index]?.label }"
+                  :class="{ 'border-red-500': errors[index]?.display }"
                 />
+                <p
+                  v-if="errors[index]?.display"
+                  class="text-red-500 text-sm mt-1"
+                >
+                  {{ errors[index]?.display }}
+                </p>
               </div>
 
               <!-- Is Required -->
@@ -244,18 +256,24 @@
               <div v-if="formObject.objectType === 'TEXTFROMSOURCE'" class="col-span-1 mt-1">
                 <label
                   class="block font-medium"
-                  :class="{ 'text-red-500': errors[index]?.label }"
+                  :class="{ 'text-red-500': errors[index]?.datasourcescript }"
                 >
                   Datasourcescript <span class="text-red-500 text-sm"> * </span>
                 </label>
                 <textarea
-                  v-model="sample"
+                  v-model="formObject.datasourcescript"
                   type="text"
                   maxlength="255"
                   class="border p-2 w-full rounded"
-                  :class="{ 'border-red-500': errors[index]?.label }"
+                  :class="{ 'border-red-500': errors[index]?.datasourcescript }"
                 >
                 </textarea>
+                <p
+                  v-if="errors[index]?.datasourcescript"
+                  class="text-red-500 text-sm mt-1"
+                >
+                  {{ errors[index]?.datasourcescript }}
+                </p>
               </div>
             </div>
 
@@ -679,6 +697,9 @@ const form = ref({
       label: "",
       objectType: "",
       isRequired: 0,
+      datasourcescript:"",
+      data:"",
+      display:"",
       formObjectLists: [{ values: [""] }],
     },
   ],
@@ -717,6 +738,27 @@ const validateForm = () => {
 
     if (!formObject.objectType || !formObject.objectType.trim()) {
       errors.value[index].objectType = "Object type is required.";
+      hasError = true;
+    }
+    if (
+      (formObject.objectType === "TEXTFROMSOURCE") &&
+      (!formObject.datasourcescript || !formObject.datasourcescript.trim())
+    ) {
+      errors.value[index].datasourcescript = "Datasourcescript is required.";
+      hasError = true;
+    }
+    if (
+      (formObject.objectType === "TEXTFROMSOURCE") &&
+      (!formObject.data || !formObject.data.trim())
+    ) {
+      errors.value[index].data = "Data is required.";
+      hasError = true;
+    }
+    if (
+      (formObject.objectType === "TEXTFROMSOURCE") &&
+      (!formObject.display || !formObject.display.trim())
+    ) {
+      errors.value[index].display = "Display is required.";
       hasError = true;
     }
 

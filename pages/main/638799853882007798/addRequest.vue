@@ -266,7 +266,7 @@
               <input
                 disabled
                 type="text"
-                v-model="formAnswers[formObject.id]"
+                v-model="formDisplays[formObject.id]"
                 maxlength="55"
                 :class="[
                   'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
@@ -372,7 +372,7 @@
           v-if="justifications.length > 0"
           v-for="(justification, index) in justifications"
           :key="index"
-          @click="selectEmployee(storeId, justification.display)"
+          @click="selectEmployee(storeId, justification)"
           class="p-2 hover:bg-gray-200 cursor-pointer"
         >
           {{ justification.display }}
@@ -383,11 +383,8 @@
         >
           No results found.
         </div>
-        <div
-          v-else
-          class="p-2 text-gray-400 text-center"
-        >
-        No results found.
+        <div v-else class="p-2 text-gray-400 text-center">
+          No results found.
         </div>
       </div>
 
@@ -433,18 +430,17 @@ const isSubmitting = ref(false);
 const errorAnchor = ref(null);
 const showModal = ref(false);
 const storeId = ref();
+const formDisplays = ref({});
 function clearFormId() {
   formAnswers.value = {};
   formId.value = "";
   formDetails.value = null;
 }
 
-const selectEmployee = (id, selectedJustification) => {
-  console.log(id);
-  // Update formAnswers with the selected justification
-  formAnswers.value[id] = selectedJustification;
-
-  showModal.value = false; // Close the modal after selection
+const selectEmployee = (id, justification) => {
+  formAnswers.value[id] = justification.data; // Save hidden data
+  formDisplays.value[id] = justification.display; // Save visible text
+  showModal.value = false;
 };
 
 const getTitle = async () => {
@@ -592,6 +588,5 @@ onMounted(async () => {
   paramid.value = parts[parts.length - 2];
   await fetchCanAccess(paramid.value);
   nenunames.value.push("Create");
-
 });
 </script>

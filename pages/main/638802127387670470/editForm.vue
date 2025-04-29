@@ -159,7 +159,7 @@
                 v-if="
                   element.objectType === 'LIST' ||
                   element.objectType === 'CHECKBOX' ||
-                  element.objectType ==='CHOICES'
+                  element.objectType === 'CHOICES'
                 "
                 class="col-span-1"
               >
@@ -191,7 +191,54 @@
                   </button>
                 </div>
               </div>
+              <!-- Data -->
+              <div
+                v-if="element.objectType === 'TEXTFROMSOURCE'"
+                class="col-span-1 mt-1"
+              >
+                <label
+                  class="block font-medium"
+                  :class="{ 'text-red-500': errors[index]?.data }"
+                >
+                  Data <span class="text-red-500 text-sm"> * </span>
+                </label>
+                <input
+                  v-model="element.data"
+                  type="text"
+                  maxlength="255"
+                  class="border p-2 w-full rounded"
+                  :class="{ 'border-red-500': errors[index]?.data }"
+                />
+                <p v-if="errors[index]?.data" class="text-red-500 text-sm mt-1">
+                  {{ errors[index]?.data }}
+                </p>
+              </div>
 
+              <!-- Display -->
+              <div
+                v-if="element.objectType === 'TEXTFROMSOURCE'"
+                class="col-span-1 mt-1"
+              >
+                <label
+                  class="block font-medium"
+                  :class="{ 'text-red-500': errors[index]?.display }"
+                >
+                  Display <span class="text-red-500 text-sm"> * </span>
+                </label>
+                <input
+                  v-model="element.display"
+                  type="text"
+                  maxlength="255"
+                  class="border p-2 w-full rounded"
+                  :class="{ 'border-red-500': errors[index]?.display }"
+                />
+                <p
+                  v-if="errors[index]?.display"
+                  class="text-red-500 text-sm mt-1"
+                >
+                  {{ errors[index]?.display }}
+                </p>
+              </div>
               <!-- Is Required -->
               <div v-if="element.objectType !== 'LABEL'">
                 <label class="block font-medium">Is Required</label>
@@ -205,6 +252,32 @@
               </div>
             </div>
 
+            <!-- Datasourcescript -->
+            <div
+              v-if="element.objectType === 'TEXTFROMSOURCE'"
+              class="col-span-1 mt-1"
+            >
+              <label
+                class="block font-medium"
+                :class="{ 'text-red-500': errors[index]?.datasourcescript }"
+              >
+                Datasourcescript <span class="text-red-500 text-sm"> * </span>
+              </label>
+              <textarea
+                v-model="element.datasourcescript"
+                type="text"
+                maxlength="255"
+                class="border p-2 w-full rounded"
+                :class="{ 'border-red-500': errors[index]?.datasourcescript }"
+              >
+              </textarea>
+              <p
+                v-if="errors[index]?.datasourcescript"
+                class="text-red-500 text-sm mt-1"
+              >
+                {{ errors[index]?.datasourcescript }}
+              </p>
+            </div>
             <!-- Remove Form Button -->
             <div class="flex justify-end mt-1">
               <button
@@ -637,6 +710,9 @@ const addFormObject = () => {
     objectType: "",
     isRequired: 0,
     status: 0,
+    datasourcescript: "",
+    data: "",
+    display: "",
     formObjectLists: [],
   });
   scrollAnchor.value?.scrollIntoView({
@@ -852,10 +928,33 @@ const validateForm = () => {
       errors.value[index].objectType = "Object type is required.";
       hasError = true;
     }
+    if (
+      (formObject.objectType === "TEXTFROMSOURCE") &&
+      (!formObject.datasourcescript || !formObject.datasourcescript.trim())
+    ) {
+      errors.value[index].datasourcescript = "Datasourcescript is required.";
+      hasError = true;
+    }
+
+    if (
+      (formObject.objectType === "TEXTFROMSOURCE") &&
+      (!formObject.data || !formObject.data.trim())
+    ) {
+      errors.value[index].data = "Data is required.";
+      hasError = true;
+    }
+    if (
+      (formObject.objectType === "TEXTFROMSOURCE") &&
+      (!formObject.display || !formObject.display.trim())
+    ) {
+      errors.value[index].display = "Display is required.";
+      hasError = true;
+    }
 
     if (
       (formObject.objectType === "LIST" ||
-        formObject.objectType === "CHECKBOX" || formObject.objectType === "CHOICES" ) &&
+        formObject.objectType === "CHECKBOX" ||
+        formObject.objectType === "CHOICES") &&
       (!formObject.formObjectLists || formObject.formObjectLists.length < 2)
     ) {
       errors.value[index].objectType = "At least two options are required.";
@@ -901,7 +1000,7 @@ const saveFormObjects = async () => {
   const formId = getFormId();
   const token = getToken();
   isSubmitting.value = true;
-
+  console.log(forms.value);
   try {
     await $fetch(`${API_BASE_URL}/api/Form/update/${formId}`, {
       method: "POST",
@@ -939,12 +1038,13 @@ definePageMeta({
 onMounted(async () => {
   await getFormObject();
   await checkImmediateHead();
+  await getDropdowns();
   const hash = window.location.hash;
   const parts = hash.split("/");
   paramid.value = parts[parts.length - 2];
   await fetchCanAccess(paramid.value);
   nenunames.value.push("Edit");
-  await getDropdowns();
+
   draggableOptions.value.scrollTarget = scrollContainer.value;
 });
 </script>

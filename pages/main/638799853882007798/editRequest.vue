@@ -92,7 +92,7 @@
           <div v-else-if="item.objecttype === 'TEXTFROMSOURCE'">
             <div class="flex justify-between items-center">
               <!-- Flex container -->
-              <input disabled type="text" v-model="item.value" maxlength="55" :class="[
+              <input disabled type="text" v-model="item.textFromSourceValue.display" maxlength="55" :class="[
                 'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
                 formErrors[index]
                   ? 'border-red-500 focus:ring-red-500'
@@ -177,7 +177,7 @@
       <div class="max-h-60 overflow-y-auto border border-gray-300 rounded mt-2">
         <div v-if="loading" class="loading">Loading...</div>
         <div v-if="justifications.length > 0" v-for="(justification, index) in justifications" :key="index"
-          @click="selectEmployee(storeIndex, justification.display)" class="p-2 hover:bg-gray-200 cursor-pointer">
+          @click="selectEmployee(storeIndex, justification)" class="p-2 hover:bg-gray-200 cursor-pointer">
           {{ justification.display }}
         </div>
         <div v-else-if="searchQuery && !loading" class="p-2 text-gray-400 text-center">
@@ -251,8 +251,9 @@ const openModal = (index, id) => {
   showModal.value = true;
 };
 
-const selectEmployee = (id, selectedJustification) => {
-  transactions.value.formObjects[id].value = selectedJustification;
+const selectEmployee = (id, justification) => {
+  transactions.value.formObjects[id].value = justification.data;
+  transactions.value.formObjects[id].textFromSourceValue.display =  justification.display;
   showModal.value = false; // Close the modal after selection
 };
 
@@ -313,7 +314,7 @@ const saveForm = async () => {
       }))
       : [],
   }));
-
+  console.log(payload);
   try {
     await $fetch(`${API_BASE_URL}/api/Transaction/update-transaction`, {
       method: "POST",
