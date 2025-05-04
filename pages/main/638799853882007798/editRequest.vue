@@ -22,16 +22,27 @@
     <LoadingModal />
   </div>
   <div v-else class="max-w-full m-10 p-6 bg-white shadow-lg rounded-lg">
-    <h1 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2 pt-2">
-      {{ transactions.title }}
-    </h1>
-
-    <div div v-for="(item, index) in transactions.formObjects" :key="index" class="mb-6">
+    <div class="bg-gray-400 rounded-t-lg text-center">
+      <h1 class="text-2xl font-bold text-white border-b p-8">
+        {{ transactions.title }}
+      </h1>
+    </div>
+    <div class="rounded-t-lg">
+        <h1 class="text-lg font-semibold text-gray-700 mb-6 border-b p-5">
+          {{ transactions.description }}
+        </h1>
+      </div>
+    <div
+      v-for="(item, index) in transactions.formObjects"
+      :key="index"
+      class="mb-6"
+    >
       <div v-if="item.objecttype !== 'LABEL'" class="flex justify-between">
         <label class="text-gray-700 font-semibold mb-2">
           {{ item.label }}
           <span v-if="item.isRequired === 1" class="text-red-500 text-sm">
-            *</span>
+            *</span
+          >
         </label>
       </div>
 
@@ -45,84 +56,153 @@
       <div v-else class="rounded-md w-full text-gray-800">
         <div class="mb-2">
           <!-- LIST -->
-          <select v-if="item.objecttype === 'LIST'" :class="[
-            'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-            formErrors[index]
-              ? 'border-red-500 focus:ring-red-500'
-              : 'border-gray-300 focus:ring-blue-500',
-          ]" v-model="item.value">
+          <select
+            v-if="item.objecttype === 'LIST'"
+            :class="[
+              'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+              formErrors[index]
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-blue-500',
+            ]"
+            v-model="item.value"
+          >
             <option hidden>Select {{ item.label }}</option>
-            <option v-for="(option, optIndex) in item.options" :key="optIndex" :value="option">
+            <option
+              v-for="(option, optIndex) in item.options"
+              :key="optIndex"
+              :value="option"
+            >
               {{ option }}
             </option>
           </select>
 
           <div v-else-if="item.objecttype === 'CHECKBOX'">
-            <div v-for="(option, optIndex) in item.options" :key="optIndex"
-              class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition">
-              <input type="radio" :id="'radio-' + optIndex" :value="option" v-model="item.value"
-                class="w-6 h-6 text-blue-600 border-gray-300 focus:ring focus:ring-blue-400" />
-              <label :for="'radio-' + optIndex"
-                class="text-gray-700 font-medium cursor-pointer hover:text-blue-600 transition">
+            <div
+              v-for="(option, optIndex) in item.options"
+              :key="optIndex"
+              class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition"
+            >
+              <input
+                type="radio"
+                :id="'radio-' + optIndex"
+                :value="option"
+                v-model="item.value"
+                class="w-6 h-6 text-blue-600 border-gray-300 focus:ring focus:ring-blue-400"
+              />
+              <label
+                :for="'radio-' + optIndex"
+                class="text-gray-700 font-medium cursor-pointer hover:text-blue-600 transition"
+              >
                 {{ option }}
               </label>
             </div>
           </div>
+          <input
+            v-else-if="item.objecttype === 'DATE'"
+            type="date"
+            :value="item.value || ''"
+            @input="item.value = $event.target.value.toString()"
+            :class="[
+              'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+              formErrors[index]
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-blue-500',
+            ]"
+          />
+
 
           <div v-else-if="item.objecttype === 'CHOICES'">
-            <div v-for="(option, optIndex) in item.options" :key="optIndex"
-              class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition">
-              <input type="checkbox" :id="'chk-' + item.id + '-' + optIndex" :value="option"
-                :checked="item.values.map((v) => v.value).includes(option)" @change="toggleChecklist(item, option)"
-                class="w-6 h-6 text-blue-600 border-gray-300 rounded focus:ring focus:ring-blue-400" />
-              <label :for="'chk-' + item.id + '-' + optIndex"
-                class="text-gray-700 font-medium cursor-pointer hover:text-blue-600 transition">
+            <div
+              v-for="(option, optIndex) in item.options"
+              :key="optIndex"
+              class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition"
+            >
+              <input
+                type="checkbox"
+                :id="'chk-' + item.id + '-' + optIndex"
+                :value="option"
+                :checked="item.values.map((v) => v.value).includes(option)"
+                @change="toggleChecklist(item, option)"
+                class="w-6 h-6 text-blue-600 border-gray-300 rounded focus:ring focus:ring-blue-400"
+              />
+              <label
+                :for="'chk-' + item.id + '-' + optIndex"
+                class="text-gray-700 font-medium cursor-pointer hover:text-blue-600 transition"
+              >
                 {{ option }}
               </label>
             </div>
           </div>
           <!-- TEXTAREA -->
-          <textarea v-else-if="item.objecttype === 'TEXTAREA'" v-model="item.value" maxlength="250" :class="[
-            'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-            formErrors[index]
-              ? 'border-red-500 focus:ring-red-500'
-              : 'border-gray-300 focus:ring-blue-500',
-          ]" style="text-transform: uppercase"></textarea>
+          <textarea
+            v-else-if="item.objecttype === 'TEXTAREA'"
+            v-model="item.value"
+            maxlength="250"
+            :class="[
+              'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+              formErrors[index]
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-blue-500',
+            ]"
+            style="text-transform: uppercase"
+          ></textarea>
 
           <div v-else-if="item.objecttype === 'TEXTFROMSOURCE'">
             <div class="flex justify-between items-center">
               <!-- Flex container -->
-              <input disabled type="text" v-model="item.textFromSourceValue.display" maxlength="55" :class="[
-                'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-                formErrors[index]
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-gray-300 focus:ring-blue-500',
-              ]" style="text-transform: uppercase" />
-              <button @click="openModal(index, item.formObjectId)"
-                class="ml-2 px-10 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg">
+              <input
+                disabled
+                type="text"
+                v-model="item.textFromSourceValue.display"
+                maxlength="55"
+                :class="[
+                  'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+                  formErrors[index]
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-gray-300 focus:ring-blue-500',
+                ]"
+                style="text-transform: uppercase"
+              />
+              <button
+                @click="openModal(index, item.formObjectId)"
+                class="ml-2 px-10 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg"
+              >
                 Search
               </button>
             </div>
           </div>
 
           <!-- NUMBER -->
-          <input v-else-if="item.objecttype === 'NUMBER'" type="number" v-model="item.value" @keypress="
-            (e) =>
-              (e.charCode >= 48 && e.charCode <= 57) || e.preventDefault()
-          " :class="[
-            'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-            formErrors[index]
-              ? 'border-red-500 focus:ring-red-500'
-              : 'border-gray-300 focus:ring-blue-500',
-          ]" />
+          <input
+            v-else-if="item.objecttype === 'NUMBER'"
+            type="number"
+            v-model="item.value"
+            @keypress="
+              (e) =>
+                (e.charCode >= 48 && e.charCode <= 57) || e.preventDefault()
+            "
+            :class="[
+              'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+              formErrors[index]
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-blue-500',
+            ]"
+          />
 
           <!-- TEXT -->
-          <input v-else v-model="item.value" type="text" maxlength="55" :class="[
-            'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-            formErrors[index]
-              ? 'border-red-500 focus:ring-red-500'
-              : 'border-gray-300 focus:ring-blue-500',
-          ]" style="text-transform: uppercase" />
+          <input
+            v-else
+            v-model="item.value"
+            type="text"
+            maxlength="55"
+            :class="[
+              'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+              formErrors[index]
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-blue-500',
+            ]"
+            style="text-transform: uppercase"
+          />
 
           <p v-if="formErrors[index]" class="text-red-500 text-sm">
             {{ item.label }} is {{ formErrors[index] }}
@@ -131,14 +211,21 @@
       </div>
     </div>
 
-    <div v-for="(approverGroup, approverNumber) in transactions.approvers" :key="approverNumber"
-      class="mt-2 p-4 bg-gray-50 rounded-lg">
+    <div
+      v-for="(approverGroup, approverNumber) in transactions.approvers"
+      :key="approverNumber"
+      class="mt-2 p-4 bg-gray-50 rounded-lg"
+    >
       <div>
         <h2 class="text-md font-semibold text-gray-800 mb-2">
           Approver {{ approverNumber }}
         </h2>
 
-        <div v-for="approver in approverGroup" :key="approver.id" class="p-2 bg-white rounded-md shadow-sm mb-2">
+        <div
+          v-for="approver in approverGroup"
+          :key="approver.id"
+          class="p-2 bg-white rounded-md shadow-sm mb-2"
+        >
           <h2 class="text-sm font-bold text-gray-800 mb-2">
             {{ approver.mainapprover ? "Main" : "Proxy" }}
           </h2>
@@ -157,39 +244,117 @@
     </div>
 
     <div class="flex justify-end">
-      <button @click="saveForm" :disabled="isSubmitting"
-        class="px-6 py-2 bg-blue-600 hover:bg-blue-900 text-white rounded-lg mt-4 flex items-center">
-        <svg v-if="isSubmitting" class="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg"
-          fill="none" viewBox="0 0 24 24">
-          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+      <button
+        @click="saveForm"
+        :disabled="isSubmitting"
+        class="px-6 py-2 bg-blue-600 hover:bg-blue-900 text-white rounded-lg mt-4 flex items-center"
+      >
+        <svg
+          v-if="isSubmitting"
+          class="animate-spin h-5 w-5 mr-2 text-white"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            class="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            stroke-width="4"
+          ></circle>
+          <path
+            class="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8v8H4z"
+          ></path>
         </svg>
         {{ isSubmitting ? "Submitting..." : "Save" }}
       </button>
     </div>
   </div>
-  <div v-if="showModal"
-    class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]">
-    <div class="w-full max-w-4xl bg-white shadow-lg rounded-lg p-6 relative">
-      <input type="text" v-model="searchQuery" @input="debouncedSearch(storeId)" placeholder="Search"
-        class="w-full p-4 rounded border border-gray-600 focus:outline-none" />
+  <div
+    v-if="showModal"
+    class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]"
+  >
+    <div class="w-full max-w-6xl bg-white shadow-lg rounded-lg p-6 relative">
+      <input
+        type="text"
+        v-model="searchQuery"
+         @keydown.enter="debouncedSearch(storeId)"
+        placeholder="Search"
+        class="w-full p-4 rounded border border-gray-600 focus:outline-none"
+      />
 
-      <div class="max-h-60 overflow-y-auto border border-gray-300 rounded mt-2">
-        <div v-if="loading" class="loading">Loading...</div>
-        <div v-if="justifications.length > 0" v-for="(justification, index) in justifications" :key="index"
-          @click="selectEmployee(storeIndex, justification)" class="p-2 hover:bg-gray-200 cursor-pointer">
-          {{ justification.display }}
-        </div>
-        <div v-else-if="searchQuery && !loading" class="p-2 text-gray-400 text-center">
-          No results found.
-        </div>
-        <div v-else class="p-2 text-gray-400 text-center">
-          No results found.
+      <div class="bg-white max-h-96 overflow-x-auto flex flex-col rounded">
+        <div class="flex flex-col">
+          <div class="pb-4">
+            <div class="min-w-full inline-block align-middle">
+              <div class="border rounded-md border-gray-300">
+                <div v-if="loading" class="p-2 text-center text-gray-500">
+                  Loading...
+                </div>
+                <!-- Table for Dynamic Columns -->
+                <table
+                  v-if="!loading && justifications.length"
+                  class="table-auto min-w-full rounded-xl"
+                >
+                  <thead>
+                    <tr class="bg-gray-50">
+                      <!-- Dynamically generate headers based on data -->
+                      <th
+                        v-for="header in Object.keys(
+                          justifications[0]?.all || {}
+                        )"
+                        :key="header"
+                        scope="col"
+                        class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                      >
+                        {{ header }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="(justification, index) in justifications"
+                      :key="index"
+                      @click="selectEmployee(storeIndex, justification)"
+                      class="hover:bg-gray-200 cursor-pointer"
+                    >
+                      <!-- Dynamically populate rows -->
+                      <td
+                        v-for="header in Object.keys(justification.all)"
+                        :key="header"
+                        class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
+                      >
+                        {{ justification.all[header] }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <!-- No Results Found -->
+                <div
+                  v-else-if="searchQuery && !loading"
+                  class="p-2 text-gray-400 text-center"
+                >
+                  No results found.
+                </div>
+                <div v-else class="p-2 text-gray-400 text-center">
+                  No results found.
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="mt-4 flex justify-end gap-2">
-        <button @click="showModal = false" class="px-4 py-2 bg-red-500 text-white rounded-lg">
+        <button
+          @click="showModal = false"
+          class="px-4 py-2 bg-red-500 text-white rounded-lg"
+        >
           Cancel
         </button>
       </div>
@@ -245,15 +410,17 @@ const toggleChecklist = (item, option) => {
 };
 
 const openModal = (index, id) => {
-  console.log(id);
   storeIndex.value = index;
   storeId.value = id;
   showModal.value = true;
+  searchQuery.value = "";
+  justifications.value = "";
 };
 
 const selectEmployee = (id, justification) => {
   transactions.value.formObjects[id].value = justification.data;
-  transactions.value.formObjects[id].textFromSourceValue.display =  justification.display;
+  transactions.value.formObjects[id].textFromSourceValue.display =
+    justification.display;
   showModal.value = false; // Close the modal after selection
 };
 
@@ -309,12 +476,12 @@ const saveForm = async () => {
     value: item.value ?? "",
     values: Array.isArray(item.values)
       ? item.values.map((val) => ({
-        id: val.id ?? 0, // Default to 0 if val.id is undefined
-        value: val.value ?? "", // Default to empty string if val.value is undefined
-      }))
+          id: val.id ?? 0, // Default to 0 if val.id is undefined
+          value: val.value ?? "", // Default to empty string if val.value is undefined
+        }))
       : [],
   }));
-  console.log(payload);
+
   try {
     await $fetch(`${API_BASE_URL}/api/Transaction/update-transaction`, {
       method: "POST",
@@ -350,9 +517,11 @@ const saveForm = async () => {
 
 onMounted(async () => {
   await getMyTransaction();
+
   const hash = window.location.hash;
   const parts = hash.split("/");
   paramid.value = parts[parts.length - 2];
+
   await fetchCanAccess(paramid.value);
   nenunames.value.push("Edit");
 });

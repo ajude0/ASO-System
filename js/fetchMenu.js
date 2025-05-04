@@ -33,7 +33,6 @@ export const fetchUserMenu = async () => {
       menuList.value = data;
       allPageNames.value = getAllPageNames(data);
       sidemenuspinner.value = true;
-      console.log(data);
     }
   } catch (error) {
     alert("Failed to load menu list.");

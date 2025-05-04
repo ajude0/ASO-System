@@ -1000,7 +1000,7 @@ const saveFormObjects = async () => {
   const formId = getFormId();
   const token = getToken();
   isSubmitting.value = true;
-  console.log(forms.value);
+
   try {
     await $fetch(`${API_BASE_URL}/api/Form/update/${formId}`, {
       method: "POST",

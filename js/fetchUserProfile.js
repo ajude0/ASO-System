@@ -5,7 +5,6 @@ export const user = ref();
 export const getProfile = async () => {
   
   const token = getToken();
-  console.log(token);
   try {
     const response = await $fetch(`${API_BASE_URL}/api/account/get-profile`, {
       headers: {

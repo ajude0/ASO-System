@@ -57,7 +57,7 @@
         type="text"
         id="default-search"
         v-model="query.Search"
-        @input="getListOfForms"
+         @keydown.enter="getListOfForms"
         class="block w-80 h-11 pr-10 pl-10 py-2.5 text-base font-normal shadow-xs text-gray-900 bg-transparent border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none"
         placeholder="Search"
       />
@@ -128,11 +128,12 @@
             <table v-if="!loading" class="table-auto min-w-full rounded-xl">
               <thead>
                 <tr class="bg-gray-50">
+
                   <th
                     scope="col"
                     class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
                   >
-                    Created By
+                    Id
                   </th>
                   <th
                     scope="col"
@@ -142,15 +143,21 @@
                   </th>
                   <th
                     scope="col"
-                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize min-w-[150px]"
+                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
                   >
                     Description
                   </th>
                   <th
                     scope="col"
-                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize min-w-[150px]"
                   >
                     Status
+                  </th>
+                  <th
+                    scope="col"
+                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                  >
+                    Created By
                   </th>
                   <th
                     scope="col"
@@ -181,7 +188,7 @@
                   <td
                     class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
                   >
-                    {{ form.user }}
+                    {{ form.id }}
                   </td>
                   <td
                     class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
@@ -232,6 +239,12 @@
                       >
                     </div>
                   </td>
+                  <td
+                    class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
+                  >
+                    {{ form.user }}
+                  </td>
+                 
                   <td
                     class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
                   >
@@ -428,7 +441,6 @@ const editForm = async (id) => {
 };
 
 const softDeleted = async (id) => {
-  console.log(id);
   const confirm = await $swal.fire({
     title: "Are you sure?",
     text: "Do you really want to delete this form?",

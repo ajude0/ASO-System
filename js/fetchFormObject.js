@@ -16,7 +16,6 @@ export const getFormObject = async () => {
       });
  
       forms.value = data;
-      console.log(forms.value);
     } catch (error) {
       console.error("Error fetching menus:", error);
     } finally{

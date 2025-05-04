@@ -168,7 +168,6 @@ const saveForm = async () => {
       formErrors.value[index] = "Required field.";
     }
   });
-  console.log("Updated form values:", transactions.value.formObjects);
 
   const token = getToken();
   const payload = transactions.value.formObjects.map((item) => ({

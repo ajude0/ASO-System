@@ -36,7 +36,6 @@ export const getListOfTransactions = async () => {
     listOfTransactions.value = response.transactions;
     totalEntries.value = response.totalCount;
     totalPages.value = Math.ceil(response.totalCount / query.value.PageSize);
-
   } catch (error) {
     console.error("Error fetching transactions:", error.message || error);
   } finally {

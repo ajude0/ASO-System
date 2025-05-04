@@ -55,7 +55,7 @@
         type="text"
         id="default-search"
         v-model="query.Search"
-        @input="getMyTransactions"
+         @keydown.enter="getMyTransactions"
         class="block w-80 h-11 pr-10 pl-10 py-2.5 text-base font-normal shadow-xs text-gray-900 bg-transparent border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none"
         placeholder="Search"
       />
@@ -72,8 +72,8 @@
           @click="open"
         >
           <option value="" selected hidden>Select Status</option>
-          <option value="approved">Approved</option>
           <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
           <option value="rejected">Disapproved</option>
         </select>
         <div
@@ -127,43 +127,43 @@
             <table v-if="!loading" class="table-auto min-w-full rounded-xl">
               <thead>
                 <tr class="bg-gray-50">
-                  <th class=""></th>
+                  <th
+                    scope="col"
+                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                  >
+                   ID
+                  </th>
                   <th
                     scope="col"
                     class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
                   >
                     Title
                   </th>
-                  <th
-                    scope="col"
-                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize min-w-[150px]"
-                  >
-                    Description
-                  </th>
+                 
                   <th
                     scope="col"
                     class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
                   >
-                    Created Date
+                    Status
                   </th>
-                  <th
-                    scope="col"
-                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
-                  >
-                    Is Approved
-                  </th>
-
                   <th
                     scope="col"
                     class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
                   >
                     Current Approver
                   </th>
+                
                   <th
                     scope="col"
                     class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
                   >
                     Approver Progress
+                  </th>
+                  <th
+                    scope="col"
+                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                  >
+                    Created Date
                   </th>
                   <th
                     scope="col"
@@ -179,40 +179,17 @@
                   :key="index"
                   class="bg-white transition-all duration-500 hover:bg-gray-50"
                 >
-                  <td class=""></td>
+                <td
+                    class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
+                  >
+                    {{ transaction.id }}
+                  </td>
                   <td
                     class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
                   >
                     {{ transaction.title }}
                   </td>
-                  <td
-                    class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
-                  >
-                    {{ transaction.description }}
-                  </td>
-                  <td
-                    class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
-                  >
-                    <div class="flex items-center gap-3">
-                      <div class="data">
-                        <p class="font-normal text-sm text-gray-900">
-                          {{
-                            new Date(transaction.createdAt).toLocaleString(
-                              "en-US",
-                              {
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                                hour: "numeric",
-                                minute: "numeric",
-                                hour12: true, // optional, for 12-hour format with AM/PM
-                              }
-                            )
-                          }}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
+                 
                   <td
                     class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
                   >
@@ -268,7 +245,6 @@
                       >
                     </div>
                   </td>
-
                   <td
                     class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
                   >
@@ -307,6 +283,7 @@
                       No current approvers available.
                     </div>
                   </td>
+                  
                   <td
                     class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
                   >
@@ -320,9 +297,32 @@
                       class="font-bold"
                       >{{ transaction.approverProgress }}</span
                     >
-                    <span v-else class="text-emerald-600">COMPLETE</span>
+                    <span v-else class="text-emerald-600">COMPLETED</span>
                   </td>
-                  <td class="flex p-5 items-center gap-0.5">
+                  <td
+                    class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
+                  >
+                    <div class="flex items-center gap-3">
+                      <div class="data">
+                        <p class="font-normal text-sm text-gray-900">
+                          {{
+                            new Date(transaction.createdAt).toLocaleString(
+                              "en-US",
+                              {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                                hour: "numeric",
+                                minute: "numeric",
+                                hour12: true, // optional, for 12-hour format with AM/PM
+                              }
+                            )
+                          }}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="flex items-center gap-0.5">
                     <button
                       @click="viewTransaction(transaction.id)"
                       class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-green-600 flex item-center"
@@ -563,28 +563,34 @@
           >
             <div
               v-if="
-                !wasPreviousGroupRejected(
+                getGroupVisibilityStatus(
                   transactions.approvers,
                   approverNumber
-                ) && getApprovalStatus(approverGroup) != null
+                ) !== 'hidden'
               "
             >
               <h2 class="text-md font-semibold text-gray-800 mb-2">
                 Approver {{ approverNumber }} -
                 <span
-                  v-if="
-                    !wasPreviousGroupRejected(
-                      transactions.approvers,
-                      approverNumber
-                    )
-                  "
                   :class="{
                     'text-green-600':
                       getApprovalStatus(approverGroup) === 'approved',
                     'text-red-600':
                       getApprovalStatus(approverGroup) === 'rejected',
                     'text-yellow-600':
-                      getApprovalStatus(approverGroup) === 'pending',
+                      getApprovalStatus(approverGroup) !== 'approved' &&
+                      getApprovalStatus(approverGroup) !== 'rejected' &&
+                      getGroupVisibilityStatus(
+                        transactions.approvers,
+                        approverNumber
+                      ) === 'pending',
+                    'text-gray-500':
+                      getApprovalStatus(approverGroup) !== 'approved' &&
+                      getApprovalStatus(approverGroup) !== 'rejected' &&
+                      getGroupVisibilityStatus(
+                        transactions.approvers,
+                        approverNumber
+                      ) === 'waiting',
                   }"
                 >
                   {{
@@ -592,7 +598,12 @@
                       ? "Approved"
                       : getApprovalStatus(approverGroup) === "rejected"
                       ? "Rejected"
-                      : "Pending"
+                      : getGroupVisibilityStatus(
+                          transactions.approvers,
+                          approverNumber
+                        ) === "pending"
+                      ? "Pending"
+                      : "Waiting"
                   }}
                 </span>
               </h2>
@@ -620,15 +631,8 @@
                   >
                     <div class="text-md font-bold">Remarks:</div>
                     <div
-                      class="text-md font-bold ml-1 underline"
-                      :class="{
-                        'text-green-600':
-                          getApprovalStatus(approverGroup) === 'approved',
-                        'text-red-600':
-                          getApprovalStatus(approverGroup) === 'rejected',
-                        'text-gray-600':
-                          getApprovalStatus(approverGroup).status === 'pending',
-                      }"
+                      class="text-md font-bold ml-1"
+                      
                     >
                       {{ approver.remarks }}
                     </div>
@@ -726,20 +730,59 @@ const softDelete = async (id) => {
 };
 
 const getApprovalStatus = (approverGroup) => {
-  if (!Array.isArray(approverGroup)) return "pending"; // safe guard
+  if (!Array.isArray(approverGroup)) return "pending"; // fallback
 
-  const hasRejected = approverGroup.some((approver) => approver.response === 2);
-  const hasApproved = approverGroup.some((approver) => approver.response === 1);
-  return hasRejected ? "rejected" : hasApproved ? "approved" : "pending";
+  const hasRejected = approverGroup.some((a) => a.response === 2);
+  const hasApproved = approverGroup.some((a) => a.response === 1);
+  const allPending = approverGroup.every(
+    (a) => a.response === 0 || a.response == null
+  );
+
+  if (hasRejected) return "rejected";
+  if (hasApproved) return "approved";
+  if (allPending) return "pending";
+
+  return "pending"; // fallback
 };
-
 const wasPreviousGroupRejected = (allGroups, currentIndex) => {
-  for (let i = 0; i < currentIndex; i++) {
-    if (getApprovalStatus(allGroups[i]) === "rejected") {
+  const keys = Object.keys(allGroups)
+    .map(Number)
+    .sort((a, b) => a - b);
+  for (let i = 0; i < keys.length; i++) {
+    if (keys[i] >= currentIndex) break;
+    if (getApprovalStatus(allGroups[keys[i]]) === "rejected") {
       return true;
     }
   }
   return false;
+};
+
+const areAllPreviousGroupsApproved = (allGroups, currentIndex) => {
+  const keys = Object.keys(allGroups)
+    .map(Number)
+    .sort((a, b) => a - b);
+  for (let i = 0; i < keys.length; i++) {
+    if (keys[i] >= currentIndex) break;
+    if (getApprovalStatus(allGroups[keys[i]]) !== "approved") {
+      return false;
+    }
+  }
+  return true;
+};
+
+const getGroupVisibilityStatus = (allGroups, currentIndex) => {
+  if (wasPreviousGroupRejected(allGroups, currentIndex)) {
+    return "hidden";
+  }
+  if (
+    Number(currentIndex) === Math.min(...Object.keys(allGroups).map(Number))
+  ) {
+    return "pending";
+  }
+  if (areAllPreviousGroupsApproved(allGroups, currentIndex)) {
+    return "pending";
+  }
+  return "waiting";
 };
 
 const props = defineProps({

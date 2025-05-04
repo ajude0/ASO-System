@@ -14,7 +14,6 @@ export const getEmployees = async () => {
       params: { ...query.value },
     });
     availableApprovers.value = response;
-    console.log(availableApprovers.value);
   } catch (error) {
     console.error("Error fetching menus:", error);
   }

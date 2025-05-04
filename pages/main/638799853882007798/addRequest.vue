@@ -3,7 +3,7 @@
 
   <form class="max-w-full m-10 p-6 bg-white shadow-lg rounded-lg">
     <div class="grid grid-cols-[auto,1fr] items-center gap-x-4 border-b pb-10">
-      <label class="text-gray-700 font-bold text-2xl">Form Title</label>
+      <label class="text-gray-700 font-bold text-2xl">Form  </label>
       <div class="relative w-full">
         <select
           class="border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
@@ -96,9 +96,12 @@
     </div>
 
     <div v-if="!isLoading && formDetails">
-      <h1 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2 pt-10">
-        {{ formDetails.formTitle }}
-      </h1>
+    
+      <div class="rounded-t-lg">
+        <h1 class="text-lg font-semibold text-gray-700 mb-10 border-b">
+          {{ formDetails.formDescription }}
+        </h1>
+      </div>
 
       <div
         v-for="(formObject, index) in formDetails.formObjects"
@@ -203,7 +206,7 @@
           </select>
 
           <input
-            v-else-if="formObject.objecttype === 'DATETIME'"
+            v-else-if="formObject.objecttype === 'DATE'"
             type="date"
             :value="formAnswers[formObject.id] || ''"
             @input="formAnswers[formObject.id] = $event.target.value.toString()"
@@ -357,37 +360,80 @@
     v-if="showModal"
     class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]"
   >
-    <div class="w-full max-w-4xl bg-white shadow-lg rounded-lg p-6 relative">
+    <div class="w-full max-w-6xl bg-white shadow-lg rounded-lg p-6 relative">
+      <!-- Search Input -->
       <input
         type="text"
         v-model="searchQuery"
-        @input="debouncedSearch(storeId)"
+        @keydown.enter="debouncedSearch(storeId)"
         placeholder="Search"
         class="w-full p-4 rounded border border-gray-600 focus:outline-none"
       />
 
-      <div class="max-h-60 overflow-y-auto border border-gray-300 rounded mt-2">
-        <div v-if="loading" class="loading">Loading...</div>
-        <div
-          v-if="justifications.length > 0"
-          v-for="(justification, index) in justifications"
-          :key="index"
-          @click="selectEmployee(storeId, justification)"
-          class="p-2 hover:bg-gray-200 cursor-pointer"
-        >
-          {{ justification.display }}
-        </div>
-        <div
-          v-else-if="searchQuery && !loading"
-          class="p-2 text-gray-400 text-center"
-        >
-          No results found.
-        </div>
-        <div v-else class="p-2 text-gray-400 text-center">
-          No results found.
+      <!-- Dynamic Table -->
+      <div class="bg-white max-h-96 overflow-auto flex flex-col rounded">
+        <div class="flex flex-col">
+          <div class=" pb-4">
+            <div class="min-w-full inline-block align-middle">
+              <div class="border rounded-md border-gray-300">
+                <div v-if="loading" class="p-2 text-center text-gray-500">
+                  Loading...
+                </div>
+                <!-- Table for Dynamic Columns -->
+                <table
+                  v-if="!loading && justifications.length"
+                  class="table-auto min-w-full rounded-xl"
+                >
+                  <thead>
+                    <tr class="bg-gray-50">
+                      <!-- Dynamically generate headers based on data -->
+                      <th
+                        v-for="header in Object.keys(
+                          justifications[0]?.all || {}
+                        )"
+                        :key="header"
+                        scope="col"
+                        class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                      >
+                        {{ header }}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="(justification, index) in justifications"
+                      :key="index"
+                      @click="selectEmployee(storeId, justification)"
+                      class="hover:bg-gray-200 cursor-pointer"
+                    >
+                      <!-- Dynamically populate rows -->
+                      <td
+                        v-for="header in Object.keys(justification.all)"
+                        :key="header"
+                        class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
+                      >
+                        {{ justification.all[header] }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <!-- No Results Found -->
+                <div
+                  v-else-if="searchQuery && !loading"
+                  class="p-2 text-gray-400 text-center"
+                >
+                  No results found.
+                </div>
+                <div v-else class="p-2 text-gray-400 text-center">
+                  No results found.
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-
+      <!-- Buttons -->
       <div class="mt-4 flex justify-end gap-2">
         <button
           @click="showModal = false"
@@ -476,6 +522,8 @@ const handleNumberInput = (event, id) => {
 };
 
 const openModal = (id) => {
+  searchQuery.value = "";
+  justifications.value= "";
   storeId.value = id;
   showModal.value = true;
 };

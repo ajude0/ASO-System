@@ -30,7 +30,6 @@ export const getTransaction = async (transactionId) => {
       }
     );
     transactions.value = response;
-    console.log("here",response);
   } catch (error) {
     console.error("Error fetching transactions:", error);
   } finally {
@@ -54,7 +53,6 @@ export const getMyTransaction = async () => {
       }
     );
     transactions.value = response;
-    console.log(transactions.value);
   } catch (error) {
     console.error("Error fetching transactions:", error);
   } finally {
@@ -78,7 +76,7 @@ export const getMyTransactions = async () => {
     myTransactions.value = response.transactions;
     totalEntries.value = response.totalCount;
     totalPages.value = Math.ceil(response.totalCount / query.value.PageSize);
-    console.log(myTransactions.value);
+
   } catch (error) {
     console.error("Error fetching myTransactions:", error);
   } finally {

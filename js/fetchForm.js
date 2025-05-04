@@ -32,7 +32,6 @@ export const getFormTitle = async () => {
 }
 
 export const getFormDetails = async (formId) => {
-  console.log(formId);
     try {
       const token = getToken();
       const response = await $fetch(
@@ -44,7 +43,6 @@ export const getFormDetails = async (formId) => {
         }
       );
       formDetails.value = response.data;
-      console.log(response.data)
     } catch (error) {
       console.error("Error fetching form details:", error);
     } 
@@ -70,7 +68,6 @@ export const getFormDetails = async (formId) => {
       }
   
       forms.value = response.forms;
-      console.log(forms.value);
       totalEntries.value = response.totalCount;
       totalPages.value = Math.ceil(response.totalCount / query.value.PageSize);
   

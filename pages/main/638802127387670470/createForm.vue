@@ -569,7 +569,7 @@
       <input
         type="text"
         v-model="query.search"
-        @input="getEmployees"
+        @keydown.enter="getEmployees"
         placeholder="Search Approver..."
         class="w-full p-4 rounded border border-gray-600 focus:outline-none"
       />
@@ -610,7 +610,7 @@
       <input
         type="text"
         v-model="query.search"
-        @input="getEmployees"
+        @keydown.enter="getEmployees"
         placeholder="Search Approver..."
         class="w-full p-4 rounded border border-gray-600 focus:outline-none"
       />
@@ -996,7 +996,7 @@ const submitForm = async () => {
 
   const token = getToken();
   isSubmitting.value = true; // Start loading
-  console.log(form.value);
+
   try {
     await $fetch(`${API_BASE_URL}/api/form`, {
       method: "POST",

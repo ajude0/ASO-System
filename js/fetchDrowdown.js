@@ -15,6 +15,7 @@ export const getDropdowns = async () => {
           }
         );
         dropdowns.value = data;
+        
       } catch (error) {
         console.error("Error fetching form dropdown:", error);
       } 
