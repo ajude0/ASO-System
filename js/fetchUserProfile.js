@@ -12,7 +12,6 @@ export const getProfile = async () => {
       },
     });
     user.value = response;
-
   } catch (error) {
     console.error("Error fetching menus:", error);
   }

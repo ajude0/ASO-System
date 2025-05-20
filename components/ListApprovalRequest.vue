@@ -1,5 +1,6 @@
 <template>
   <div class="flex flex-col md:flex-row justify-between">
+    <div class="flex gap-2">
     <div class="relative text-gray-500 focus-within:text-gray-900 mb-4">
       <!-- Left Icon -->
       <div
@@ -23,7 +24,7 @@
       <!-- Right Icon -->
       <div
         v-if="query.Search"
-        class="absolute inset-y-0 left-72 flex items-center"
+        class="absolute inset-y-0 md:left-72 left-44 flex items-center"
       >
         <svg
           @click="clearSearch"
@@ -48,9 +49,31 @@
         id="default-search"
         v-model="query.Search"
         @keydown.enter="getListOfTransactions"
-        class="block w-80 h-11 pr-10 pl-10 py-2.5 text-base font-normal shadow-xs text-gray-900 bg-transparent border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none"
+        class="block w-52 md:w-80 h-11 pr-10 pl-10 py-2.5 text-base font-normal shadow-xs text-gray-900 bg-transparent border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none"
         placeholder="Search"
       />
+    </div>
+    <button
+      @click="getListOfTransactions"
+      class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700"
+    >
+      <svg
+        class="w-6 h-6 text-gray-800 dark:text-white"
+        aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-width="2"
+          d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+        />
+      </svg>
+    </button>
     </div>
     <div>
       <div class="relative inline-block mr-4 mb-2">
@@ -148,6 +171,13 @@
                     scope="col"
                     class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
                   >
+                    Approved By
+                  </th>
+
+                  <th
+                    scope="col"
+                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                  >
                     Created By
                   </th>
                   <th
@@ -178,7 +208,7 @@
                   <td
                     class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
                   >
-                    {{ transaction.id }}
+                    {{ transaction.transactionid }}
                   </td>
                   <td
                     class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
@@ -223,6 +253,7 @@
                       >
                     </div>
                   </td>
+
                   <td
                     class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
                   >
@@ -245,7 +276,7 @@
                     </div>
                     <div
                       v-else-if="transaction.status == 'rejected'"
-                      class="py-1.5 px-2.5 bg-red-50 rounded-full flex items-center justify-center w-20 gap-1"
+                      class="py-1.5 px-2.5 bg-red-50 rounded-full flex items-center justify-center w-28 gap-1"
                     >
                       <svg
                         width="5"
@@ -257,7 +288,7 @@
                         <circle cx="2.5" cy="3" r="2.5" fill="#DC2626"></circle>
                       </svg>
                       <span class="font-medium text-xs text-red-600"
-                        >Disapproved</span
+                        >Disaaproved</span
                       >
                     </div>
                     <div
@@ -276,6 +307,91 @@
                       <span class="font-medium text-xs text-amber-600"
                         >Pending</span
                       >
+                    </div>
+                  </td>
+                  <td
+                    class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
+                  >
+                    <!-- 1) The approver list, if any -->
+                    <div
+                      v-if="
+                        transaction.listofapproved?.length &&
+                        transaction.status != 'rejected'
+                      "
+                      class="space-y-2"
+                    >
+                      <ul class="space-y-2">
+                        <li
+                          v-for="approver in transaction.listofapproved"
+                          :key="approver.approvername"
+                          class="flex items-start space-x-2"
+                        >
+                          <div class="flex-shrink-0">
+                            <svg
+                              class="w-5 h-5 text-green-500 mt-1"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-width="2"
+                              viewBox="0 0 24 24"
+                            >
+                              <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M5 13l4 4L19 7"
+                              />
+                            </svg>
+                          </div>
+                          <div>
+                            <p
+                              class="font-semibold text-gray-800 flex items-center space-x-1"
+                            >
+                              <span
+                                class="text-gray-600 text-md font-bold flex items-center justify-center"
+                              >
+                                {{ approver.approverNumber }} -
+                              </span>
+                              <span>{{ approver.approvername }}</span>
+                            </p>
+                            <p class="text-xs text-gray-600">
+                              {{
+                                new Date(approver.responsedate).toLocaleString(
+                                  "en-US",
+                                  {
+                                    year: "numeric",
+                                    month: "long",
+                                    day: "numeric",
+                                    hour: "numeric",
+                                    minute: "numeric",
+                                    hour12: true,
+                                  }
+                                )
+                              }}
+                            </p>
+                          </div>
+                        </li>
+                      </ul>
+                    </div>
+
+                    <!-- 2) Always show “rejected” if status is rejected -->
+                    <div
+                      v-if="transaction.status === 'rejected'"
+                      class="mt-3 p-3 b text-red-700 rounded-lg text-sm flex items-center space-x-2"
+                    >
+                      <span
+                        >This transaction has been
+                        <strong>disapproved</strong>.</span
+                      >
+                    </div>
+
+                    <!-- 3) If there are no approvers AND it isn’t rejected -->
+                    <div
+                      v-if="
+                        !transaction.listofapproved?.length &&
+                        transaction.status !== 'rejected'
+                      "
+                      class="text-sm text-gray-400 italic mt-2"
+                    >
+                      No one has approved yet
                     </div>
                   </td>
                   <td
@@ -620,7 +736,7 @@
           Approve
         </button>
         <button
-          @click="postReject()"
+          @click="postDisapprove()"
           class="py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-800"
         >
           Disapprove
@@ -650,7 +766,7 @@ import {
   getListOfTransactions,
   listOfTransactions,
   confirmApproval,
-  rejectApproval,
+  disapproveApproval,
   generatePagination,
   changePage,
   totalPages,
@@ -766,7 +882,7 @@ const postApprove = async () => {
   }
 };
 
-const postReject = async () => {
+const postDisapprove = async () => {
   const { value: remarks } = await $swal.fire({
     title: "Are you sure?",
     text: "Do you really want to disapprove this request?",
@@ -784,7 +900,7 @@ const postReject = async () => {
   });
 
   if (remarks) {
-    await rejectApproval(selectedId.value, remarks);
+    await disapproveApproval(selectedId.value, remarks);
     $swal.fire({
       title: "Disapproved!",
       text: "The request has been disapproved.",

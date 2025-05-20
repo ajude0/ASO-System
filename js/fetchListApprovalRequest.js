@@ -59,10 +59,10 @@ export const confirmApproval = async (id,remarks) => {
   }
 };
 
-export const rejectApproval = async (id,remarks) => {
+export const disapproveApproval = async (id,remarks) => {
   const token = getToken();
   try {
-    await $fetch(`${API_BASE_URL}/api/Approver/rejected/${id}`, {
+    await $fetch(`${API_BASE_URL}/api/Approver/disapproved/${id}`, {
       method: "POST",
       headers: {
         token: token,

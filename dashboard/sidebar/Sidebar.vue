@@ -1,6 +1,7 @@
 <script setup>
 import { sidebarOpen } from "../store";
-import { fetchUserMenu, menuList } from "~/js/fetchMenu";
+import { fetchUserMenu, menuList,loading } from "~/js/fetchMenu";
+import LoadingModal from "~/components/modal/LoadingModal.vue";
 const router = useRouter();
 
 defineProps({
@@ -46,7 +47,12 @@ function dashboard() {
 
 function handleChildMenuClick(menuCode) {
   router.push(`/main/${menuCode}`);
+  if (!sidebarOpen.value){
+  open.value = false;
+  }
 }
+
+
 </script>
 
 <template>
@@ -72,8 +78,17 @@ function handleChildMenuClick(menuCode) {
           alt="DatabridgeLogo"
         />
       </div>
-
-      <div class="flex flex-col justify-between flex-1 mt-6">
+      <div v-if="loading">
+        <LoadingModal/>
+        <div class="mt-5 mr-0 w-64 space-y-2">
+          <div class="h-5 bg-gray-300 rounded animate-pulse w-10"></div>
+        <div class="h-8 bg-gray-300 rounded animate-pulse w-52"></div>
+        <div class="h-8 bg-gray-300 rounded animate-pulse w-52"></div>
+        <div class="h-8 bg-gray-300 rounded animate-pulse w-52"></div>
+        
+      </div>
+      </div>
+      <div v-else class="flex flex-col justify-between flex-1 mt-6">
         <nav class="-mx-3 space-y-6">
           <div class="space-y-3">
             <label

@@ -4,63 +4,103 @@
     <button
       v-if="canAdd"
       @click="goToCreateRequest"
-      class="px-8 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700"
+      class="flex px-3 py-3 bg-green-500 text-white rounded-lg hover:bg-green-700 place-items-center gap-1"
     >
-      ADD
+      <svg
+        class="w-4 h-4 text-gray-800 dark:text-white"
+        aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg"
+        width="24"
+        height="24"
+        fill="none"
+        viewBox="0 0 24 24"
+      >
+        <path
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M5 12h14m-7 7V5"
+        />
+      </svg>
+      Add Form
     </button>
   </div>
   <div class="flex flex-col md:flex-row justify-between">
-    <div class="relative text-gray-500 focus-within:text-gray-900 mb-4">
-      <!-- Left Icon -->
-      <div
-        class="absolute inset-y-0 left-3 flex items-center pointer-events-none"
-      >
-        <svg
-          class="w-5 h-5"
-          viewBox="0 0 20 20"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
+    <div class="flex gap-2">
+      <div class="relative text-gray-500 focus-within:text-gray-900 mb-4">
+        <!-- Left Icon -->
+        <div
+          class="absolute inset-y-0 left-3 flex items-center pointer-events-none"
         >
-          <path
-            d="M17.5 17.5L15.4167 15.4167M15.8333 9.16667C15.8333 5.48477 12.8486 2.5 9.16667 2.5C5.48477 2.5 2.5 5.48477 2.5 9.16667C2.5 12.8486 5.48477 15.8333 9.16667 15.8333C11.0005 15.8333 12.6614 15.0929 13.8667 13.8947C15.0814 12.6872 15.8333 11.0147 15.8333 9.16667Z"
-            stroke="#9CA3AF"
-            stroke-width="1.6"
-            stroke-linecap="round"
-          />
-        </svg>
-      </div>
+          <svg
+            class="w-5 h-5"
+            viewBox="0 0 20 20"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M17.5 17.5L15.4167 15.4167M15.8333 9.16667C15.8333 5.48477 12.8486 2.5 9.16667 2.5C5.48477 2.5 2.5 5.48477 2.5 9.16667C2.5 12.8486 5.48477 15.8333 9.16667 15.8333C11.0005 15.8333 12.6614 15.0929 13.8667 13.8947C15.0814 12.6872 15.8333 11.0147 15.8333 9.16667Z"
+              stroke="#9CA3AF"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+          </svg>
+        </div>
 
-      <!-- Right Icon -->
-      <div
-        v-if="query.Search"
-        class="absolute inset-y-0 left-72 flex items-center"
+        <!-- Right Icon -->
+        <div
+          v-if="query.Search"
+          class="absolute inset-y-0 md:left-72 left-44 flex items-center"
+        >
+          <svg
+            @click="clearSearch"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="size-6 cursor-pointer text-red-700"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+            />
+          </svg>
+        </div>
+
+        <!-- Input Field -->
+        <input
+          type="text"
+          id="default-search"
+          v-model="query.Search"
+          @keydown.enter="getListOfForms"
+          class="block w-52 md:w-80 h-11 pr-10 pl-10 py-2.5 text-base font-normal shadow-xs text-gray-900 bg-transparent border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none"
+          placeholder="Search"
+        />
+      </div>
+      <button
+        @click="getListOfForms"
+        class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700"
       >
         <svg
-          @click="clearSearch"
+          class="w-6 h-6 text-gray-800 dark:text-white"
+          aria-hidden="true"
           xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
           fill="none"
           viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="size-6 cursor-pointer text-red-700"
         >
           <path
+            stroke="currentColor"
             stroke-linecap="round"
-            stroke-linejoin="round"
-            d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+            stroke-width="2"
+            d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
           />
         </svg>
-      </div>
-
-      <!-- Input Field -->
-      <input
-        type="text"
-        id="default-search"
-        v-model="query.Search"
-         @keydown.enter="getListOfForms"
-        class="block w-80 h-11 pr-10 pl-10 py-2.5 text-base font-normal shadow-xs text-gray-900 bg-transparent border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none"
-        placeholder="Search"
-      />
+      </button>
     </div>
     <div>
       <div class="relative inline-block mr-4 mb-2">
@@ -75,7 +115,7 @@
         >
           <option value="" selected hidden>Select Status</option>
           <option value="1">Active</option>
-          <option value="2">Inactive</option>
+          <option value="0">Inactive</option>
         </select>
         <div
           v-if="query.Status"
@@ -128,7 +168,6 @@
             <table v-if="!loading" class="table-auto min-w-full rounded-xl">
               <thead>
                 <tr class="bg-gray-50">
-
                   <th
                     scope="col"
                     class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
@@ -196,9 +235,33 @@
                     {{ form.title }}
                   </td>
                   <td
-                    class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
+                    class="p-5 text-sm leading-6 font-medium text-gray-900 br"
+                    :title="form.description"
                   >
-                    {{ form.description }}
+                    <div>
+                      <div>
+                        {{
+                          expandedIndex === index
+                            ? form.description
+                            : form.description.length > 15
+                            ? form.description.slice(0, 15) + "..."
+                            : form.description
+                        }}
+                      </div>
+                      <div v-if="form.description.length > 15">
+                        <button
+                          @click="
+                            expandedIndex =
+                              expandedIndex === index ? null : index
+                          "
+                          class="mt-1 text-blue-500 hover:underline text-xs"
+                        >
+                          {{
+                            expandedIndex === index ? "See less" : "See more"
+                          }}
+                        </button>
+                      </div>
+                    </div>
                   </td>
                   <td
                     class="p-5 items-center whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
@@ -222,7 +285,7 @@
                     </div>
 
                     <div
-                      v-if="form.status == '2'"
+                      v-if="form.status == '0'"
                       class="py-1.5 px-2.5 bg-red-50 rounded-full flex items-center justify-center w-20 gap-1"
                     >
                       <svg
@@ -244,7 +307,7 @@
                   >
                     {{ form.user }}
                   </td>
-                 
+
                   <td
                     class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
                   >
@@ -419,6 +482,7 @@ import {
   canEdit,
 } from "~/js/fetchMenu";
 import { encryptData } from "~/js/cryptoToken";
+const expandedIndex = ref(null);
 
 const paramid = ref();
 const { $swal } = useNuxtApp();

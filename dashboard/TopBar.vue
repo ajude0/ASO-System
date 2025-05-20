@@ -12,13 +12,13 @@
             </button>
             <div class="flex ml-5 md:mr-24 md:flex hidden">
               <a class="flex">
-                <span @click="Dashboard()" class="cursor-pointer self-center text-xl font-semibold sm:text-2xl whitespace-nowrap ">APPROVAL SYSTEM ONLINE</span>
+                <span @click="Dashboard()" class="cursor-pointer self-center text-xl font-semibold sm:text-2xl whitespace-nowrap ">{{ sysdescription }}</span>
               </a>
             </div>
           </div>
     
         </div>
-        <div class="relative font-[sans-serif] w-max mx-auto m:right-auto sm:mr-0">
+        <div class="relative font-[sans-serif] w-max mx-auto m:right-auto sm:mr-0" ref="dropdownRef">
           <button type="button" @click="toggleDropdown" class="px-4 py-2 flex items-center text-sm ">
             <img src="../static/images/UserIcon.png" class="w-8 h-8 mr-3 rounded-full shrink-0"></img>
             {{user? `${user.lastname}, ${user.firstname}` : 'Test User'}}
@@ -47,6 +47,13 @@
               </svg>
               Dashboard
             </li>
+            <li @click = "storeEncryptedDataInCookie()"
+              class='py-2.5 px-5 flex items-center hover:bg-gray-100 text-[#333] text-sm cursor-pointer'>
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-4 h-4 mr-3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
+              </svg>
+              Change Password
+            </li>
             <li @click="Logout()"
               class='py-2.5 px-5 flex items-center hover:bg-gray-100 text-[#333] text-sm cursor-pointer'>
               <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="w-4 h-4 mr-3" viewBox="0 0 6.35 6.35">
@@ -66,18 +73,33 @@
 import { ref } from 'vue';
 import { toggleSidebar } from "./store";
 import { getProfile, user} from "~/js/fetchUserProfile";
+import { getKey,encryptData } from '~/encrpyt';
+import { getToken } from '~/js/cryptoToken';
+import { fetchSysDescription,sysdescription } from '~/js/fetchMenu';
 const router = useRouter();
-useHead({
-  title: 'Approval Online System',
-  meta: [
-    { name: 'ASO', content: 'Approval Online System.' }
-  ],
-  link: [
-    { rel: 'icon', type: 'image/pnh', href: window.location.origin +'/_nuxt/static/images/logo_head.png' } 
-  ]
+
+watch(sysdescription, (newTitle) => {
+  if (newTitle) {
+    useHead({
+      title: newTitle,
+      meta: [{ name: 'ASO', content: newTitle }],
+      link: [
+        {
+          rel: 'icon',
+          type: 'image/png',
+          href: window.location.origin + '/_nuxt/static/images/logo.GLrYiIGw.png',
+        },
+      ],
+    });
+  }
 });
 const isDropdownOpen = ref(false);
-
+const dropdownRef = ref(null);
+const handleClickOutside = (event) => {
+  if (isDropdownOpen.value && dropdownRef.value && !dropdownRef.value.contains(event.target)) {
+    isDropdownOpen.value = false;
+  }
+};
 function toggleDropdown() {
   isDropdownOpen.value = !isDropdownOpen.value;
 }
@@ -89,10 +111,46 @@ function Logout() {
 }
 
 function Dashboard() {
+  isDropdownOpen.value = false;
   router.push('/main/dashboard')
 }
+
+async function storeEncryptedDataInCookie() {
+const token = getToken();
+  const payload = {
+    systemid: 84,
+    userhashcode: user.value.hashcode,
+    token: token,
+  };
+
+  const key = await getKey(); // You can share the password securely across systems
+  const encrypted = await encryptData(payload, key);
+
+  // Calculate expiration time (30 minutes from now)
+  const expirationDate = new Date();
+  expirationDate.setMinutes(expirationDate.getMinutes() + 30);
+
+  // Set cookie (secure, strict, and expires in 30 minutes)
+  document.cookie = `utility=${encrypted}; path=/; secure; samesite=strict; expires=${expirationDate.toUTCString()}`;
+
+  localStorage.setItem(
+    "sourceapplication",
+    "https://apps.fastlogistics.com.ph/aso/#/"
+  );
+  window.location.href =
+    "https://apps.fastlogistics.com.ph/utility/#/ChangePassword/Change";
+}
+
 onMounted(async () => {
   getProfile();
+  fetchSysDescription();
+  document.addEventListener('click', handleClickOutside);
 });
+onUnmounted(async () => {
+  document.removeEventListener('click', handleClickOutside);
+});
+
+
+
 
 </script>

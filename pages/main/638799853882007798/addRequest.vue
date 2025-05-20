@@ -1,51 +1,120 @@
 <template>
   <BreadCrumbs :nenunames="nenunames" />
 
-  <form class="max-w-full m-10 p-6 bg-white shadow-lg rounded-lg">
+  <div class="max-w-full m-10 p-6 bg-white shadow-lg rounded-lg">
     <div class="grid grid-cols-[auto,1fr] items-center gap-x-4 border-b pb-10">
-      <label class="text-gray-700 font-bold text-2xl">Form  </label>
-      <div class="relative w-full">
-        <select
-          class="border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
-          v-model="formId"
-          @change="getDetails"
-          :disabled="isLoading"
+      <label class="text-gray-700 font-bold text-2xl">Form </label>
+      <div ref="dropdownRef" class="relative">
+        <button
+          @click="toggleDropdown"
+          class="border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-left"
         >
-          <option value="" hidden>Select Form Title</option>
-          <option
-            v-for="formTitle in formTitles"
-            :key="formTitle.id"
-            :value="formTitle.id"
-          >
-            {{ formTitle.title }}
-          </option>
-        </select>
-
-        <!-- Loading Spinner -->
+          {{ selectedTitle || "Select Form Title" }}
+        </button>
         <div
-          v-if="isLoading"
-          class="absolute inset-y-0 right-3 flex items-center"
+          v-if="isOpen"
+          @keydown="handleKeyDown"
+          tabindex="0"
+          class="absolute z-10 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-gray-300 rounded-md shadow-md"
         >
-          <svg
-            class="animate-spin h-6 w-6 text-blue-500"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            ></circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8H4z"
-            ></path>
-          </svg>
+          <!-- 🔍 Search Input Inside Dropdown -->
+          <div class="flex gap-2 sticky top-0 bg-white z-10">
+            <div
+              class="relative text-gray-500 focus-within:text-gray-900 mb-4 w-full"
+            >
+              <!-- Left Icon -->
+              <div
+                class="absolute inset-y-0 left-3 flex items-center pointer-events-none"
+              >
+                <svg
+                  class="w-5 h-5"
+                  viewBox="0 0 20 20"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M17.5 17.5L15.4167 15.4167M15.8333 9.16667C15.8333 5.48477 12.8486 2.5 9.16667 2.5C5.48477 2.5 2.5 5.48477 2.5 9.16667C2.5 12.8486 5.48477 15.8333 9.16667 15.8333C11.0005 15.8333 12.6614 15.0929 13.8667 13.8947C15.0814 12.6872 15.8333 11.0147 15.8333 9.16667Z"
+                    stroke="#9CA3AF"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                  />
+                </svg>
+              </div>
+
+              <!-- Right Icon -->
+              <div
+                v-if="searchTitle"
+                class="absolute inset-y-0 right-1 flex items-center"
+              >
+                <svg
+                  @click="clearSearch"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke-width="1.5"
+                  stroke="currentColor"
+                  class="size-6 cursor-pointer text-red-700"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+                  />
+                </svg>
+              </div>
+
+              <!-- Input Field -->
+              <input
+                ref="searchInputRef"
+                type="text"
+                v-model="searchTitle"
+                autocomplete="off"
+                @keydown.enter.prevent="handleEnterKey"
+                @keydown.down.prevent="moveDown"
+                @keydown.up.prevent="moveUp"
+                class="block w-full h-11 pr-10 pl-10 py-2.5 text-base font-normal shadow-xs text-gray-900 bg-transparent border border-gray-950 rounded-md placeholder-gray-400 focus:outline-none mx-1"
+                placeholder="Search"
+              />
+            </div>
+            <button
+              @click="getFormTitle"
+              class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700"
+            >
+              <svg
+                class="w-6 h-6 text-gray-800 dark:text-white"
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-width="2"
+                  d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+                />
+              </svg>
+            </button>
+          </div>
+          <div ref="scrollContainer">
+            <div v-if="formTitles && formTitles.length > 0">
+              <div
+                v-for="(formTitle, index) in formTitles"
+                :key="formTitle.id"
+                :style="{ scrollMarginTop: '5.5rem' }"
+                @click="selectForm(formTitle)"
+                class="px-4 py-2 hover:bg-gray-200 cursor-pointer"
+                :class="{ 'bg-gray-200 font-bold': index === highlightedIndex }"
+              >
+                {{ formTitle.title }}
+              </div>
+            </div>
+            <div v-else class="px-4 py-2 text-gray-500 mb-3 text-center">
+              No form title found
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -96,9 +165,10 @@
     </div>
 
     <div v-if="!isLoading && formDetails">
-    
       <div class="rounded-t-lg">
-        <h1 class="text-lg font-semibold text-gray-700 mb-10 border-b">
+        <h1
+          class="text-lg font-semibold text-gray-700 mb-10 border-b break-all line-clamp-2"
+        >
           {{ formDetails.formDescription }}
         </h1>
       </div>
@@ -113,7 +183,7 @@
             v-if="formObject.objecttype !== 'LABEL'"
             class="flex justify-between"
           >
-            <label class="text-gray-700 font-semibold mb-2">
+            <label class="text-gray-700 font-semibold mb-2 break-all block">
               {{ formObject.label }}
               <span
                 v-if="formObject.isrequired === 1"
@@ -163,7 +233,6 @@
             step="0.01"
             :value="String(formAnswers[formObject.id] || '')"
             @input="formAnswers[formObject.id] = $event.target.value"
-            onkeypress="return event.charCode >= 48 && event.charCode <= 57"
             :class="[
               'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
               formErrors[formObject.id]
@@ -241,7 +310,7 @@
             </div>
           </div>
 
-          <div v-else-if="formObject.objecttype === 'CHECKBOX'">
+          <div v-else-if="formObject.objecttype === 'OPTION'">
             <div
               v-for="option in formObject.options"
               :key="option.id"
@@ -267,7 +336,8 @@
             <div class="flex justify-between items-center">
               <!-- Flex container -->
               <input
-                disabled
+                @focus="openModal(formObject.id)"
+                readonly
                 type="text"
                 v-model="formDisplays[formObject.id]"
                 maxlength="55"
@@ -281,9 +351,24 @@
               />
               <button
                 @click="openModal(formObject.id)"
-                class="ml-2 px-10 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg"
+                class="ml-2 px-4 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg"
               >
-                Search
+                <svg
+                  class="w-6 h-6 text-gray-800 dark:text-white"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-width="2"
+                    d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+                  />
+                </svg>
               </button>
             </div>
           </div>
@@ -354,7 +439,7 @@
         </button>
       </div>
     </div>
-  </form>
+  </div>
 
   <div
     v-if="showModal"
@@ -362,18 +447,40 @@
   >
     <div class="w-full max-w-6xl bg-white shadow-lg rounded-lg p-6 relative">
       <!-- Search Input -->
-      <input
-        type="text"
-        v-model="searchQuery"
-        @keydown.enter="debouncedSearch(storeId)"
-        placeholder="Search"
-        class="w-full p-4 rounded border border-gray-600 focus:outline-none"
-      />
-
+      <div class="flex gap-1 mb-1">
+        <input
+          type="text"
+          v-model="searchQuery"
+          @keydown.enter="debouncedSearch(storeId)"
+          placeholder="Search"
+          class="w-full p-4 h-11 rounded border border-gray-600 focus:outline-none"
+        />
+        <button
+          @click="debouncedSearch(storeId)"
+          class="py-3 px-4 h-11 bg-blue-500 text-white rounded-md hover:bg-blue-700"
+        >
+          <svg
+            class="w-6 h-6 text-gray-800 dark:text-white"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-width="2"
+              d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+            />
+          </svg>
+        </button>
+      </div>
       <!-- Dynamic Table -->
       <div class="bg-white max-h-96 overflow-auto flex flex-col rounded">
         <div class="flex flex-col">
-          <div class=" pb-4">
+          <div class="pb-4">
             <div class="min-w-full inline-block align-middle">
               <div class="border rounded-md border-gray-300">
                 <div v-if="loading" class="p-2 text-center text-gray-500">
@@ -385,7 +492,7 @@
                   class="table-auto min-w-full rounded-xl"
                 >
                   <thead>
-                    <tr class="bg-gray-50">
+                    <tr class="bg-gray-50 sticky top-0">
                       <!-- Dynamically generate headers based on data -->
                       <th
                         v-for="header in Object.keys(
@@ -455,6 +562,9 @@ import {
   formTitles,
   getFormDetails,
   formDetails,
+  searchTitle,
+  lastSearched,
+  highlightedIndex,
 } from "~/js/fetchForm";
 import LoadingModal from "~/components/modal/LoadingModal.vue";
 import {
@@ -467,6 +577,7 @@ import { fetchCanAccess, nenunames } from "~/js/fetchMenu";
 
 const router = useRouter();
 const paramid = ref();
+const isOpen = ref(false);
 const { $swal } = useNuxtApp();
 const formId = ref("");
 const formAnswers = ref({});
@@ -477,10 +588,81 @@ const errorAnchor = ref(null);
 const showModal = ref(false);
 const storeId = ref();
 const formDisplays = ref({});
+const selectedTitle = ref(null);
+const searchInputRef = ref(null);
+const dropdownRef = ref(null);
+const scrollContainer = ref(null);
+
+const toggleDropdown = () => {
+  isOpen.value = !isOpen.value;
+  if (isOpen.value) {
+    nextTick(() => {
+      searchInputRef.value?.focus();
+    });
+  }
+};
+
+const moveUp = () => {
+  if (highlightedIndex.value > 0) highlightedIndex.value--;
+};
+const moveDown = () => {
+  if (
+    Array.isArray(formTitles.value) &&
+    highlightedIndex.value < formTitles.value.length - 1
+  ) {
+    highlightedIndex.value++;
+  }
+};
+const handleEnterKey = async () => {
+  const approvers = formTitles.value || [];
+  const shouldRefetch = searchTitle.value !== lastSearched.value;
+
+  if (approvers.length === 0 || shouldRefetch) {
+    await getFormTitle(); // just fetch
+    return; // stop here — don't select
+  }
+
+  const appr = approvers[highlightedIndex.value];
+  if (appr) {
+    selectForm(appr);
+  }
+};
+
+watch(highlightedIndex, async (newIndex) => {
+  await nextTick();
+  const items = scrollContainer.value?.querySelectorAll(".cursor-pointer");
+  if (items && items[newIndex]) {
+    items[newIndex].scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+});
+
+const handleClickOutside = (event) => {
+  if (dropdownRef.value && !dropdownRef.value.contains(event.target)) {
+    isOpen.value = false;
+  }
+};
+
+const selectForm = (formTitle) => {
+  selectedTitle.value = formTitle.title;
+  formId.value = formTitle.id;
+  searchTitle.value = "";
+  getFormTitle();
+  getDetails();
+  isOpen.value = false;
+  // do your @change logic here (like getDetails)
+};
+
+function clearSearch() {
+  searchTitle.value = "";
+  getFormTitle();
+}
+
 function clearFormId() {
   formAnswers.value = {};
   formId.value = "";
   formDetails.value = null;
+  searchTitle.value = "";
+  selectedTitle.value = "";
 }
 
 const selectEmployee = (id, justification) => {
@@ -523,7 +705,7 @@ const handleNumberInput = (event, id) => {
 
 const openModal = (id) => {
   searchQuery.value = "";
-  justifications.value= "";
+  justifications.value = "";
   storeId.value = id;
   showModal.value = true;
 };
@@ -604,7 +786,7 @@ const submitAnswers = async () => {
       timer: 1000, // auto-close after 2 seconds
       showConfirmButton: false,
     });
-
+    searchTitle.value = "";
     clearFormId();
   } catch (error) {
     console.error("Error submitting form:", error);
@@ -627,7 +809,7 @@ const submitAnswers = async () => {
     isSubmitting.value = false; // Stop loading indicator
   }
 };
-nenunames.value = [...nenunames.value, "Add Request"];
+
 onMounted(async () => {
   getTitle();
   getDetails();
@@ -636,5 +818,11 @@ onMounted(async () => {
   paramid.value = parts[parts.length - 2];
   await fetchCanAccess(paramid.value);
   nenunames.value.push("Create");
+
+  document.addEventListener("click", handleClickOutside);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener("click", handleClickOutside);
 });
 </script>

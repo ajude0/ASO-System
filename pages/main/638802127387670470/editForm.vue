@@ -48,8 +48,27 @@
   </div>
   <div v-else max-w-full m-10 mx-auto p-6 bg-white shadow-lg rounded-lg>
     <div ref="errorAnchor" class="mb-7"></div>
-    <h1 class="text-2xl font-bold mb-4">Edit Form</h1>
-
+    <div class="flex justify-between">
+      <h1 class="text-2xl font-bold mb-4">Edit Form</h1>
+      <div class="flex items-center gap-3">
+        <span class="font-medium">Status:</span>
+        <button
+          @click="toggleStatus"
+          :class="[
+            'w-14 h-8 flex items-center rounded-full p-1 duration-300',
+            forms.status === 1 ? 'bg-green-500' : 'bg-gray-400',
+          ]"
+        >
+          <div
+            :class="[
+              'bg-white w-6 h-6 rounded-full shadow-md transform duration-300',
+              forms.status === 1 ? 'translate-x-6' : 'translate-x-0',
+            ]"
+          ></div>
+        </button>
+        <span>{{ forms.status === 1 ? "Active" : "Inactive" }}</span>
+      </div>
+    </div>
     <div class="mb-4">
       <label class="block font-medium" :class="{ 'text-red-500': errors.title }"
         >Title <span class="text-red-500 text-sm"> * </span></label
@@ -158,7 +177,7 @@
               <div
                 v-if="
                   element.objectType === 'LIST' ||
-                  element.objectType === 'CHECKBOX' ||
+                  element.objectType === 'OPTION' ||
                   element.objectType === 'CHOICES'
                 "
                 class="col-span-1"
@@ -207,6 +226,10 @@
                   type="text"
                   maxlength="255"
                   class="border p-2 w-full rounded"
+                  @keydown.space.prevent
+                  @input="
+                    () => (element.data = element.data.replace(/\s+/g, ''))
+                  "
                   :class="{ 'border-red-500': errors[index]?.data }"
                 />
                 <p v-if="errors[index]?.data" class="text-red-500 text-sm mt-1">
@@ -231,6 +254,11 @@
                   maxlength="255"
                   class="border p-2 w-full rounded"
                   :class="{ 'border-red-500': errors[index]?.display }"
+                  @keydown.space.prevent
+                  @input="
+                    () =>
+                      (element.display = element.display.replace(/\s+/g, ''))
+                  "
                 />
                 <p
                   v-if="errors[index]?.display"
@@ -279,7 +307,7 @@
               </p>
             </div>
             <!-- Remove Form Button -->
-            <div class="flex justify-end mt-1">
+            <div v-if="forms.formObjects.length > 1" class="flex justify-end mt-4" >
               <button
                 @click="removeFormObject(index)"
                 class="px-4 py-2 bg-red-600 text-white rounded"
@@ -567,34 +595,63 @@
     class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]"
   >
     <div class="w-full max-w-4xl bg-white shadow-lg rounded-lg p-6 relative">
-      <input
-        type="text"
-        v-model="query.search"
-        @input="getEmployees"
-        placeholder="Search Approver..."
-        class="w-full p-4 rounded border border-gray-600 focus:outline-none"
-      />
-
-      <div class="max-h-60 overflow-y-auto border border-gray-300 rounded mt-2">
-        <div
-          v-for="appr in availableApprovers"
-          :key="appr.emplId"
-          @click="selectApprover(appr)"
-          class="p-2 hover:bg-gray-200 cursor-pointer"
+      <div class="flex gap-2">
+        <input
+          type="text"
+          v-model="query.search"
+          @keydown.enter.prevent="handleEnterKey"
+          @keydown.down.prevent="moveDown"
+          @keydown.up.prevent="moveUp"
+          placeholder="Search Approver..."
+          class="w-full p-4 rounded border border-gray-600 focus:outline-none"
+        />
+        <button
+          @click="getEmployees"
+          class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700"
         >
-          {{ appr.employeename2 }}
-        </div>
-        <!-- <div
+          <svg
+            class="w-6 h-6 text-gray-800 dark:text-white"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-width="2"
+              d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="max-h-60 overflow-y-auto border border-gray-300 rounded mt-2"
+        ref="scrollContainer"
+      >
+        <div tabindex="0">
+          <div
+            v-for="(appr, index) in availableApprovers"
+            :key="appr.emplId"
+            @click="selectApprover(appr)"
+            class="px-4 py-2 hover:bg-gray-200 cursor-pointer"
+            :class="{ 'bg-gray-200 font-bold': index === approverIndex }"
+          >
+            {{ appr.employeename2 }}
+          </div>
+          <div
             v-if="availableApprovers.length === 0"
             class="p-2 text-gray-400 text-center"
           >
             No users found.
-          </div> -->
+          </div>
+        </div>
       </div>
-
       <div class="mt-4 flex justify-end gap-2">
         <button
-          @click="showApproverModal = false"
+          @click="cancelButton"
           class="px-4 py-2 bg-red-500 text-white rounded-lg"
         >
           Cancel
@@ -608,29 +665,58 @@
   >
     <div class="w-full max-w-4xl bg-white shadow-lg rounded-lg p-6 relative">
       <h2 class="text-xl font-semibold mb-4">Select Proxy</h2>
-      <input
-        type="text"
-        v-model="query.search"
-        @input="getEmployees"
-        placeholder="Search Approver..."
-        class="w-full p-4 rounded border border-gray-600 focus:outline-none"
-      />
-
-      <div class="max-h-60 overflow-y-auto border border-gray-300 rounded mt-2">
+      <div class="flex gap-2">
+        <input
+          type="text"
+          v-model="query.search"
+          @keydown.enter.prevent="handleProxyEnterKey"
+          @keydown.down.prevent="moveProxyDown"
+          @keydown.up.prevent="moveProxyUp"
+          placeholder="Search Approver..."
+          class="w-full p-4 rounded border border-gray-600 focus:outline-none"
+        />
+        <button
+          @click="getEmployees"
+          class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700"
+        >
+          <svg
+            class="w-6 h-6 text-gray-800 dark:text-white"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-width="2"
+              d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="max-h-60 overflow-y-auto border border-gray-300 rounded mt-2"
+        ref="proxyScrollContainer"
+      >
         <div
-          v-for="appr in availableApprovers"
+          v-for="(appr, index) in availableApprovers"
           :key="appr.emplId"
           @click="setSelectedProxy(appr)"
           class="p-2 hover:bg-gray-200 cursor-pointer"
+          :class="{ 'bg-gray-200 font-bold': index === proxyIndex }"
         >
           {{ appr.employeename2 }}
         </div>
-        <!-- <div
-            v-if="availableApprovers.length === 0"
-            class="p-2 text-gray-400 text-center"
-          >
-            No users found.
-          </div> -->
+
+        <div
+          v-if="availableApprovers.length === 0"
+          class="p-2 text-gray-400 text-center"
+        >
+          No users found.
+        </div>
       </div>
 
       <h2 class="text-xl font-semibold mb-4">Select Proxy To</h2>
@@ -651,7 +737,7 @@
 
       <div class="mt-4 flex justify-end gap-2">
         <button
-          @click="showProxyModal = false"
+          @click="cancelButton"
           class="px-4 py-2 bg-red-500 text-white rounded-lg"
         >
           Cancel
@@ -672,16 +758,27 @@ import { reactive } from "vue";
 const { $swal } = useNuxtApp();
 import draggable from "vuedraggable";
 import { getFormObject, forms, loading } from "~/js/fetchFormObject";
-import { getEmployees, availableApprovers, query } from "~/js/fetchEmployees";
+import {
+  getEmployees,
+  availableApprovers,
+  query,
+  lastSearched,
+  approverIndex,
+  proxyIndex,
+} from "~/js/fetchEmployees";
 import { API_BASE_URL } from "~/config";
 import { getFormId, getToken } from "~/js/cryptoToken";
 import LoadingModal from "~/components/modal/LoadingModal.vue";
 import { getDropdowns, dropdowns } from "~/js/fetchDrowdown";
+import { setStatus } from "~/js/formStatus";
 
 const router = useRouter();
 const paramid = ref();
+
 const isSubmitting = ref(false);
 const errors = ref([]);
+const scrollContainer = ref(null);
+const proxyScrollContainer = ref(null);
 const errorAnchor = ref(null);
 const scrollAnchor = ref(null);
 const showApproverModal = ref(false);
@@ -691,7 +788,6 @@ const selectedProxyIndex = ref(null);
 const selectedProxy = ref(null);
 const selectedProxyTo = ref(null);
 const immediateHeadAdded = ref(false);
-const scrollContainer = ref(null);
 const draggableOptions = ref({
   scroll: true,
   scrollSensitivity: 200,
@@ -703,6 +799,36 @@ const nenunames = ref(["ASO", "Maintence", "Edit Form"]);
 const backButton = () => {
   router.push("/main/638802127387670470");
 };
+
+const toggleStatus = async () => {
+  const isCurrentlyActive = forms.value.status === 1
+  const newStatus = isCurrentlyActive ? 0 : 1
+
+  const result = await $swal.fire({
+    title: isCurrentlyActive ? 'Deactivate this form?' : 'Activate this form?',
+    text: isCurrentlyActive
+      ? 'This will mark the form as inactive.'
+      : 'This will mark the form as active.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonText: 'Yes, continue',
+    cancelButtonText: 'Cancel'
+  })
+  if (result.isConfirmed) {
+    setStatus(newStatus)
+
+    await $swal.fire({
+      icon: newStatus === 1 ? 'success' : 'info',
+      title: newStatus === 1 ? 'Activated!' : 'Deactivated!',
+      text: newStatus === 1
+        ? 'The form is now active.'
+        : 'The form is now inactive.',
+      timer: 1500,
+      showConfirmButton: false
+    })
+    getFormObject();
+  }
+}
 const addFormObject = () => {
   forms.value.formObjects.push({
     id: 0,
@@ -761,23 +887,49 @@ const selectApprover = (approver) => {
       approverId: approver.emplId,
       approverName: approver.employeename2,
       approverEmail: approver.emailaddress,
-      approverContact: String(approver.mobileno.split("/")[0]),
+      approverContact: String((approver?.mobileno || "").split("/")[0]),
     };
   } else {
-    forms.value.approvers.push({
-      id: 0,
-      type: "Additional Approver",
-      approverId: approver.emplId,
-      approverName: approver.employeename2,
-      approverEmail: approver.emailaddress,
-      approverContact: String(approver.mobileno.split("/")[0]),
+    const exists = forms.value.approvers.some((a) => {
+      const aEmail = (a?.approverEmail || "").trim().toLowerCase();
+      const bEmail = (approver?.emailaddress || "").trim().toLowerCase();
+      return aEmail === bEmail;
     });
+    if (exists) {
+      $swal.fire({
+        title: "Validation Error",
+        text: "This approver has already been added.",
+        icon: "warning",
+        timer: 2000,
+        showConfirmButton: false,
+        focusConfirm: false,
+      });
+    } else {
+      forms.value.approvers.push({
+        type: "Additional Approver",
+        approverId: approver.emplId,
+        approverName: approver.employeename2,
+        approverEmail: approver.emailaddress,
+        approverContact: String((approver?.mobileno || "").split("/")[0]),
+      });
+    }
   }
 
   updateSequences();
   showApproverModal.value = false;
   query.value.search = null;
   availableApprovers.value = "";
+};
+
+const cancelButton = () => {
+  showApproverModal.value = false;
+  availableApprovers.value = "";
+  selectedApproverIndex.value = null;
+  selectedProxyIndex.value = null;
+  selectedProxy.value = null;
+  selectedProxyTo.value = null;
+  showProxyModal.value = false;
+  query.value.search = null;
 };
 
 const addApprover = () => {
@@ -863,7 +1015,27 @@ const setSelectedProxyTo = (proxyTo) => {
 
 const submitProxySelection = () => {
   if (!selectedProxy.value || !selectedProxyTo.value) {
-    alert("Please select both a Proxy and a Proxy To before submitting.");
+    $swal.fire({
+      title: "Validation Error",
+      text: "Please select both a Proxy and a Proxy To before submitting.",
+      icon: "warning",
+      timer: 2000,
+      showConfirmButton: false,
+      focusConfirm: false,
+    });
+    return;
+  }
+  if (
+    selectedProxyTo.value.approverEmail === selectedProxy.value.emailaddress
+  ) {
+    $swal.fire({
+      title: "Validation Error",
+      text: "Proxy and Proxy To cannot be the same person.",
+      icon: "warning",
+      timer: 2000,
+      showConfirmButton: false,
+      focusConfirm: false,
+    });
     return;
   }
 
@@ -874,13 +1046,36 @@ const submitProxySelection = () => {
     approverEmail: selectedProxy.value.emailaddress,
     approverNumber: selectedProxyTo.value.approverNumber,
     approverId: selectedProxy.value.emplId,
-    approverContact: String(selectedProxy.value.mobileno.split("/")[0]),
+    approverContact: String(
+      (selectedProxy.value?.mobileno || "").split("/")[0]
+    ),
   };
-
-  if (selectedProxyIndex.value !== null) {
-    forms.value.proxies[selectedProxyIndex.value] = proxyData;
+  const exists = forms.value.proxies.some((a) => {
+    const existingEmail_1 = (a?.existingapproveremail || "")
+      .trim()
+      .toLowerCase();
+    const existingEmail_2 = (proxyData?.existingApproverEmail || "")
+      .trim()
+      .toLowerCase();
+    const email_2 = (a?.approverEmail || "").trim().toLowerCase();
+    const email_1 = (proxyData?.approverEmail || "").trim().toLowerCase();
+    return existingEmail_1 === existingEmail_2 && email_1 === email_2;
+  });
+  if (exists) {
+    $swal.fire({
+      title: "Validation Error",
+      text: "This approver has already been added.",
+      icon: "warning",
+      timer: 2000,
+      showConfirmButton: false,
+      focusConfirm: false,
+    });
   } else {
-    forms.value.proxies.push(proxyData);
+    if (selectedProxyIndex.value !== null) {
+      forms.value.proxies[selectedProxyIndex.value] = proxyData;
+    } else {
+      forms.value.proxies.push(proxyData);
+    }
   }
   selectedProxyIndex.value = null;
   selectedProxy.value = null;
@@ -898,6 +1093,74 @@ const removeProxy = (index) => {
   forms.value.proxies.splice(index, 1);
 };
 
+const moveUp = () => {
+  if (approverIndex.value > 0) approverIndex.value--;
+};
+
+const moveDown = () => {
+  if (
+    Array.isArray(availableApprovers.value) &&
+    approverIndex.value < availableApprovers.value.length - 1
+  ) {
+    approverIndex.value++;
+  }
+};
+
+const handleEnterKey = async () => {
+  const approvers = availableApprovers.value || [];
+  const shouldRefetch = query.value.search !== lastSearched.value;
+
+  if (approvers.length === 0 || shouldRefetch) {
+    await getEmployees(); // just fetch
+    return; // stop here — don't select
+  }
+
+  const appr = approvers[approverIndex.value];
+  if (appr) {
+    selectApprover(appr);
+  }
+};
+
+watch(approverIndex, async (newIndex) => {
+  await nextTick();
+  const items = scrollContainer.value?.querySelectorAll(".cursor-pointer");
+  if (items && items[newIndex]) {
+    items[newIndex].scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+});
+
+// Keyboard logic
+const handleProxyEnterKey = async () => {
+  const shouldRefetch = query.value.search !== lastSearched.value;
+  if (availableApprovers.value.length === 0 || shouldRefetch) {
+    await getEmployees();
+    return;
+  }
+
+  const selected = availableApprovers.value[proxyIndex.value];
+  if (selected) {
+    setSelectedProxy(selected);
+  }
+};
+
+const moveProxyUp = () => {
+  if (proxyIndex.value > 0) proxyIndex.value--;
+};
+
+const moveProxyDown = () => {
+  if (proxyIndex.value < availableApprovers.value.length - 1)
+    proxyIndex.value++;
+};
+
+// Scroll into view on index change
+watch(proxyIndex, async (newIndex) => {
+  await nextTick();
+  const items = proxyScrollContainer.value?.querySelectorAll(".cursor-pointer");
+  if (items && items[newIndex]) {
+    items[newIndex].scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+});
+
 const validateForm = () => {
   console.log("Before Validation:", forms.value);
   errors.value = {}; // Reset errors
@@ -909,10 +1172,6 @@ const validateForm = () => {
 
   if (!forms.value.description.trim()) {
     errors.value.description = "Description is required.";
-  }
-
-  if (!forms.value.approvers || forms.value.approvers.length === 0) {
-    errors.value.approver = "At least One Approver is required.";
   }
 
   forms.value.formObjects.forEach((formObject, index) => {
@@ -929,7 +1188,7 @@ const validateForm = () => {
       hasError = true;
     }
     if (
-      (formObject.objectType === "TEXTFROMSOURCE") &&
+      formObject.objectType === "TEXTFROMSOURCE" &&
       (!formObject.datasourcescript || !formObject.datasourcescript.trim())
     ) {
       errors.value[index].datasourcescript = "Datasourcescript is required.";
@@ -937,14 +1196,14 @@ const validateForm = () => {
     }
 
     if (
-      (formObject.objectType === "TEXTFROMSOURCE") &&
+      formObject.objectType === "TEXTFROMSOURCE" &&
       (!formObject.data || !formObject.data.trim())
     ) {
       errors.value[index].data = "Data is required.";
       hasError = true;
     }
     if (
-      (formObject.objectType === "TEXTFROMSOURCE") &&
+      formObject.objectType === "TEXTFROMSOURCE" &&
       (!formObject.display || !formObject.display.trim())
     ) {
       errors.value[index].display = "Display is required.";
@@ -953,7 +1212,7 @@ const validateForm = () => {
 
     if (
       (formObject.objectType === "LIST" ||
-        formObject.objectType === "CHECKBOX" ||
+        formObject.objectType === "OPTION" ||
         formObject.objectType === "CHOICES") &&
       (!formObject.formObjectLists || formObject.formObjectLists.length < 2)
     ) {
@@ -1030,6 +1289,75 @@ const saveFormObjects = async () => {
     isSubmitting.value = false; // Start loading
   }
 };
+watch(
+  forms,
+  (newForm) => {
+    // Clear general title error
+    if (errors.value.title && newForm.title.trim()) {
+      delete errors.value.title;
+    }
+
+    // Clear general description error
+    if (errors.value.description && newForm.description.trim()) {
+      delete errors.value.description;
+    }
+
+    // Loop through formObjects
+    newForm.formObjects.forEach((formObject, index) => {
+      const fieldErrors = errors.value[index];
+      if (!fieldErrors) return;
+
+      // Clear label error
+      if (fieldErrors.label && formObject.label?.trim()) {
+        delete errors.value[index].label;
+      }
+
+      // Clear objectType error
+      if (fieldErrors.objectType && formObject.objectType?.trim()) {
+        delete errors.value[index].objectType;
+      }
+
+      // Clear datasourcescript, data, display
+      if (
+        formObject.objectType === "TEXTFROMSOURCE" &&
+        fieldErrors.datasourcescript &&
+        formObject.datasourcescript?.trim()
+      ) {
+        delete errors.value[index].datasourcescript;
+      }
+      if (
+        formObject.objectType === "TEXTFROMSOURCE" &&
+        fieldErrors.data &&
+        formObject.data?.trim()
+      ) {
+        delete errors.value[index].data;
+      }
+      if (
+        formObject.objectType === "TEXTFROMSOURCE" &&
+        fieldErrors.display &&
+        formObject.display?.trim()
+      ) {
+        delete errors.value[index].display;
+      }
+
+      // Clear objectType error for LIST/OPTION/CHOICES if at least two values exist
+      if (
+        ["LIST", "OPTION", "CHOICES"].includes(formObject.objectType) &&
+        fieldErrors.objectType &&
+        formObject.formObjectLists?.[0]?.values?.length >= 2
+      ) {
+        delete errors.value[index].objectType;
+      }
+
+      // If no errors left in that index, remove the object
+      if (Object.keys(errors.value[index]).length === 0) {
+        delete errors.value[index];
+      }
+    });
+  },
+  { deep: true }
+);
+
 
 definePageMeta({
   middleware: "auth",

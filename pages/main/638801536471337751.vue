@@ -218,7 +218,7 @@
             ]"
           />
 
-          <div v-else-if="formObject.objecttype === 'CHECKBOX'">
+          <div v-else-if="formObject.objecttype === 'OPTION'">
             <div
               v-for="option in formObject.options"
               :key="option.id"

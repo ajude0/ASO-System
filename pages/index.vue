@@ -23,6 +23,11 @@
               id="website-admin"
               ref="inputRef"
               v-model="formData.loginname"
+              @input="
+                () =>
+                  (formData.loginname = formData.loginname.replace(/\s+/g, ''))
+              "
+              @keydown.space.prevent
               class="w-full rounded border bg-gray-50 px-3 py-2 text-gray-800 outline-none ring-indigo-300 transition duration-100 focus:ring"
             />
           </div>
@@ -110,7 +115,6 @@ import { ref, onMounted } from "vue";
 import { API_BASE_URL } from "~/config";
 import { encryptData } from "~/js/cryptoToken";
 
-
 const { $swal } = useNuxtApp();
 const isChecked = ref(false);
 const formData = ref({ loginname: "", password: "" });
@@ -147,7 +151,7 @@ const login = async () => {
       body: JSON.stringify(formData.value),
     });
 
-    localStorage.setItem("aso_token", encryptData(response.stringParam1));
+    localStorage.setItem("user_token_aso", encryptData(response.stringParam1));
     router.push("/main/dashboard");
   } catch (error) {
     console.error("Login Error:", error);

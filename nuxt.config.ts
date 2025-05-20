@@ -1,4 +1,3 @@
-import axios from 'axios';
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   devtools: { enabled: true },
@@ -16,5 +15,12 @@ export default defineNuxtConfig({
   },
   app: {
     baseURL:'/aso', //add baseurl when generating the project
+  },
+  runtimeConfig: {
+    // Public config (available on client and server)
+    public: {
+      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL,
+     
+    }
   }
 })

@@ -1,5 +1,29 @@
 <template>
   <BreadCrumbs :nenunames="nenunames" />
+  <button
+    @click="backButton"
+    type="button"
+    class="flex items-center ms-6 mt-8 text-gray-700 hover:text-blue-600 transition-colors duration-200"
+  >
+    <svg
+      class="w-9 h-9"
+      aria-hidden="true"
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <path
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M5 12h14M5 12l4-4m-4 4 4 4"
+      />
+    </svg>
+    <span class="text-lg font-bold">Back</span>
+  </button>
   <div ref="errorAnchor" class="mb-7"></div>
   <div v-if="isLoading">
     <!-- Skeleton Loader -->
@@ -28,10 +52,10 @@
       </h1>
     </div>
     <div class="rounded-t-lg">
-        <h1 class="text-lg font-semibold text-gray-700 mb-6 border-b p-5">
-          {{ transactions.description }}
-        </h1>
-      </div>
+      <h1 class="text-lg font-semibold text-gray-700 mb-6 border-b p-5">
+        {{ transactions.description }}
+      </h1>
+    </div>
     <div
       v-for="(item, index) in transactions.formObjects"
       :key="index"
@@ -76,7 +100,7 @@
             </option>
           </select>
 
-          <div v-else-if="item.objecttype === 'CHECKBOX'">
+          <div v-else-if="item.objecttype === 'OPTION'">
             <div
               v-for="(option, optIndex) in item.options"
               :key="optIndex"
@@ -109,7 +133,6 @@
                 : 'border-gray-300 focus:ring-blue-500',
             ]"
           />
-
 
           <div v-else-if="item.objecttype === 'CHOICES'">
             <div
@@ -151,7 +174,8 @@
             <div class="flex justify-between items-center">
               <!-- Flex container -->
               <input
-                disabled
+                @focus="openModal(index, item.formObjectId)"
+                readonly
                 type="text"
                 v-model="item.textFromSourceValue.display"
                 maxlength="55"
@@ -165,9 +189,24 @@
               />
               <button
                 @click="openModal(index, item.formObjectId)"
-                class="ml-2 px-10 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg"
+                class="ml-2 px-4 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg"
               >
-                Search
+                <svg
+                  class="w-6 h-6 text-gray-800 dark:text-white"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-width="2"
+                    d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+                  />
+                </svg>
               </button>
             </div>
           </div>
@@ -282,7 +321,7 @@
       <input
         type="text"
         v-model="searchQuery"
-         @keydown.enter="debouncedSearch(storeId)"
+        @keydown.enter="debouncedSearch(storeId)"
         placeholder="Search"
         class="w-full p-4 rounded border border-gray-600 focus:outline-none"
       />
@@ -301,7 +340,7 @@
                   class="table-auto min-w-full rounded-xl"
                 >
                   <thead>
-                    <tr class="bg-gray-50">
+                    <tr class="bg-gray-50 sticky top-0">
                       <!-- Dynamically generate headers based on data -->
                       <th
                         v-for="header in Object.keys(
@@ -389,6 +428,10 @@ const showModal = ref(false);
 const storeIndex = ref();
 const storeId = ref();
 const paramid = ref();
+
+const backButton = () => {
+  router.push("/main/638799853882007798");
+};
 
 const toggleChecklist = (item, option) => {
   if (!Array.isArray(item.values)) {
@@ -521,7 +564,6 @@ onMounted(async () => {
   const hash = window.location.hash;
   const parts = hash.split("/");
   paramid.value = parts[parts.length - 2];
-
   await fetchCanAccess(paramid.value);
   nenunames.value.push("Edit");
 });

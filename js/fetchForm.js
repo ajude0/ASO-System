@@ -6,6 +6,7 @@ export const loading = ref(false);
 export const formTitles = ref([]);
 export const formDetails = ref({});
 export const forms = ref({});
+export const highlightedIndex = ref(0);
 export const totalEntries = ref(0);
 export const totalPages = ref(0);
 export const query = ref({
@@ -15,6 +16,8 @@ export const query = ref({
   PageNumber: 1,
   PageSize: 5,
 });
+export const lastSearched = ref();
+export const searchTitle = ref();
 
 export const getFormTitle = async () => {
     const token = getToken();
@@ -23,9 +26,12 @@ export const getFormTitle = async () => {
         headers: {
           token: token,
         },
+        params: {
+          formTitle: searchTitle.value || '', // safe fallback to fetch all
+        },
       });
       formTitles.value = response;
-    
+      lastSearched.value = searchTitle.value
     } catch (error) {
       console.error("Error fetching menus:", error);
     } 

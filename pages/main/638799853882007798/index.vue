@@ -44,6 +44,7 @@ import ListApprovalRequest from "~/components/ListApprovalRequest.vue";
 import BreadCrumbs from "~/components/BreadCrumbs.vue";
 import { fetchCanAccess, canEdit, canDelete, nenunames } from "~/js/fetchMenu";
 
+
 const paramid = ref();
 const router = useRouter();
 const activeTab = ref("transactions");
@@ -59,4 +60,5 @@ onMounted(async () => {
   paramid.value = parts[parts.length - 1];
   await fetchCanAccess(paramid.value);
 });
+
 </script>

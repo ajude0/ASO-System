@@ -155,7 +155,7 @@
               <div
                 v-if="
                   formObject.objectType === 'LIST' ||
-                  formObject.objectType === 'CHECKBOX' ||
+                  formObject.objectType === 'OPTION' ||
                   formObject.objectType == 'CHOICES'
                 "
                 class="col-span-1"
@@ -194,7 +194,10 @@
               </div>
 
               <!-- Data -->
-              <div v-if="formObject.objectType === 'TEXTFROMSOURCE'" class="col-span-1 mt-1">
+              <div
+                v-if="formObject.objectType === 'TEXTFROMSOURCE'"
+                class="col-span-1 mt-1"
+              >
                 <label
                   class="block font-medium"
                   :class="{ 'text-red-500': errors[index]?.data }"
@@ -202,23 +205,27 @@
                   Data <span class="text-red-500 text-sm"> * </span>
                 </label>
                 <input
-                  
                   v-model="formObject.data"
                   type="text"
                   maxlength="255"
                   class="border p-2 w-full rounded"
+                  @keydown.space.prevent
+                  @input="
+                    () =>
+                      (formObject.data = formObject.data.replace(/\s+/g, ''))
+                  "
                   :class="{ 'border-red-500': errors[index]?.data }"
                 />
-                <p
-                  v-if="errors[index]?.data"
-                  class="text-red-500 text-sm mt-1"
-                >
+                <p v-if="errors[index]?.data" class="text-red-500 text-sm mt-1">
                   {{ errors[index]?.data }}
                 </p>
               </div>
 
               <!-- Display -->
-              <div v-if="formObject.objectType === 'TEXTFROMSOURCE'" class="col-span-1 mt-1">
+              <div
+                v-if="formObject.objectType === 'TEXTFROMSOURCE'"
+                class="col-span-1 mt-1"
+              >
                 <label
                   class="block font-medium"
                   :class="{ 'text-red-500': errors[index]?.display }"
@@ -230,6 +237,14 @@
                   type="text"
                   maxlength="255"
                   class="border p-2 w-full rounded"
+                  @keydown.space.prevent
+                  @input="
+                    () =>
+                      (formObject.display = formObject.display.replace(
+                        /\s+/g,
+                        ''
+                      ))
+                  "
                   :class="{ 'border-red-500': errors[index]?.display }"
                 />
                 <p
@@ -241,7 +256,12 @@
               </div>
 
               <!-- Is Required -->
-              <div v-if="formObject.objectType !== 'LABEL'">
+              <div
+                v-if="
+                  formObject.objectType !== 'LABEL' &&
+                  formObject.objectType !== 'LINKTOOBJECT'
+                "
+              >
                 <label class="block font-medium">Is Required</label>
                 <select
                   v-model="formObject.isRequired"
@@ -253,7 +273,10 @@
               </div>
 
               <!-- Datasourcescript -->
-              <div v-if="formObject.objectType === 'TEXTFROMSOURCE'" class="col-span-1 mt-1">
+              <div
+                v-if="formObject.objectType === 'TEXTFROMSOURCE'"
+                class="col-span-3 mt-1"
+              >
                 <label
                   class="block font-medium"
                   :class="{ 'text-red-500': errors[index]?.datasourcescript }"
@@ -275,10 +298,44 @@
                   {{ errors[index]?.datasourcescript }}
                 </p>
               </div>
+
+              <!-- Label From TEXTFROMSOURCE -->
+              <div  v-if="formObject.objectType === 'LINKTOOBJECT'" class="col-span-2 mt-1">
+                <label
+                  class="block font-medium"
+                  :class="{ 'text-red-500': errors[index]?.objectType }"
+                >
+                  Label (textfromsource)
+                  <span class="text-red-500 text-sm"> * </span>
+                </label>
+                <select
+                  v-model="formObject.textfromsourcelabel"
+                  class="border p-2 w-full rounded"
+                  :class="{ 'border-red-500': errors[index]?.objectType }"
+                >
+                  <option value="" disabled>Select Label</option>
+                  <option
+                    v-for="(label, index) in textFromSourceLabels"
+                    :key="index"
+                    :value="label"
+                  >
+                    {{ label }}
+                  </option>
+                </select>
+                <p
+                  v-if="errors[index]?.objectType"
+                  class="text-red-500 text-sm mt-1"
+                >
+                  {{ errors[index]?.objectType }}
+                </p>
+              </div>
             </div>
 
             <!-- Remove Form Button -->
-            <div class="flex justify-end mt-4">
+            <div
+              v-if="form.formObjects.length > 1"
+              class="flex justify-end mt-4"
+            >
               <button
                 @click="removeFormObject(index)"
                 class="px-4 py-2 bg-red-600 text-white rounded"
@@ -566,34 +623,63 @@
     class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]"
   >
     <div class="w-full max-w-4xl bg-white shadow-lg rounded-lg p-6 relative">
-      <input
-        type="text"
-        v-model="query.search"
-        @keydown.enter="getEmployees"
-        placeholder="Search Approver..."
-        class="w-full p-4 rounded border border-gray-600 focus:outline-none"
-      />
-
-      <div class="max-h-60 overflow-y-auto border border-gray-300 rounded mt-2">
-        <div
-          v-for="appr in availableApprovers"
-          :key="appr.emplId"
-          @click="selectApprover(appr)"
-          class="p-2 hover:bg-gray-200 cursor-pointer"
+      <div class="flex gap-2">
+        <input
+          type="text"
+          v-model="query.search"
+          @keydown.enter.prevent="handleEnterKey"
+          @keydown.down.prevent="moveDown"
+          @keydown.up.prevent="moveUp"
+          placeholder="Search Approvers..."
+          class="w-full h-11 p-4 rounded border border-gray-600 focus:outline-none"
+        />
+        <button
+          @click="getEmployees"
+          class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700"
         >
-          {{ appr.employeename2 }}
-        </div>
-        <div
-          v-if="availableApprovers.length === 0"
-          class="p-2 text-gray-400 text-center"
-        >
-          No users found.
+          <svg
+            class="w-6 h-6 text-gray-800 dark:text-white"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-width="2"
+              d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="max-h-60 overflow-y-auto border border-gray-300 rounded mt-2"
+        ref="scrollContainer"
+      >
+        <div tabindex="0">
+          <div
+            v-for="(appr, index) in availableApprovers"
+            :key="index"
+            @click="selectApprover(appr)"
+            class="px-4 py-2 hover:bg-gray-200 cursor-pointer"
+            :class="{ 'bg-gray-200 font-bold': index === approverIndex }"
+          >
+            {{ appr.employeename2 }}
+          </div>
+          <div
+            v-if="availableApprovers.length === 0"
+            class="p-2 text-gray-400 text-center"
+          >
+            No users found.
+          </div>
         </div>
       </div>
-
       <div class="mt-4 flex justify-end gap-2">
         <button
-          @click="showApproverModal = false"
+          @click="cancelButton"
           class="px-4 py-2 bg-red-500 text-white rounded-lg"
         >
           Cancel
@@ -607,23 +693,52 @@
   >
     <div class="w-full max-w-4xl bg-white shadow-lg rounded-lg p-6 relative">
       <h2 class="text-xl font-semibold mb-4">Select Proxy</h2>
-      <input
-        type="text"
-        v-model="query.search"
-        @keydown.enter="getEmployees"
-        placeholder="Search Approver..."
-        class="w-full p-4 rounded border border-gray-600 focus:outline-none"
-      />
-
-      <div class="max-h-60 overflow-y-auto border border-gray-300 rounded mt-2">
+      <div class="flex gap-2">
+        <input
+          type="text"
+          v-model="query.search"
+          @keydown.enter.prevent="handleProxyEnterKey"
+          @keydown.down.prevent="moveProxyDown"
+          @keydown.up.prevent="moveProxyUp"
+          placeholder="Search Approver..."
+          class="w-full h-11 p-4 rounded border border-gray-600 focus:outline-none"
+        />
+        <button
+          @click="getEmployees"
+          class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700"
+        >
+          <svg
+            class="w-6 h-6 text-gray-800 dark:text-white"
+            aria-hidden="true"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke="currentColor"
+              stroke-linecap="round"
+              stroke-width="2"
+              d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
+            />
+          </svg>
+        </button>
+      </div>
+      <div
+        class="max-h-60 overflow-y-auto border border-gray-300 rounded mt-2"
+        ref="proxyScrollContainer"
+      >
         <div
-          v-for="appr in availableApprovers"
+          v-for="(appr, index) in availableApprovers"
           :key="appr.emplId"
           @click="setSelectedProxy(appr)"
           class="p-2 hover:bg-gray-200 cursor-pointer"
+          :class="{ 'bg-gray-200 font-bold': index === proxyIndex }"
         >
           {{ appr.employeename2 }}
         </div>
+
         <div
           v-if="availableApprovers.length === 0"
           class="p-2 text-gray-400 text-center"
@@ -650,7 +765,7 @@
 
       <div class="mt-4 flex justify-end gap-2">
         <button
-          @click="showProxyModal = false"
+          @click="cancelButton"
           class="px-4 py-2 bg-red-500 text-white rounded-lg"
         >
           Cancel
@@ -670,7 +785,14 @@ import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { getToken } from "~/js/cryptoToken";
 import { API_BASE_URL } from "~/config";
-import { getEmployees, availableApprovers, query } from "~/js/fetchEmployees";
+import {
+  getEmployees,
+  availableApprovers,
+  query,
+  lastSearched,
+  approverIndex,
+  proxyIndex,
+} from "~/js/fetchEmployees";
 import { fetchCanAccess, nenunames } from "~/js/fetchMenu";
 import { getDropdowns, dropdowns } from "~/js/fetchDrowdown";
 import draggable from "vuedraggable";
@@ -678,6 +800,8 @@ import draggable from "vuedraggable";
 const router = useRouter();
 const { $swal } = useNuxtApp();
 const errors = ref([]);
+const scrollContainer = ref(null);
+const proxyScrollContainer = ref(null);
 const showApproverModal = ref(false);
 const errorAnchor = ref(null);
 const scrollAnchor = ref(null);
@@ -697,9 +821,9 @@ const form = ref({
       label: "",
       objectType: "",
       isRequired: 0,
-      datasourcescript:"",
-      data:"",
-      display:"",
+      datasourcescript: "",
+      data: "",
+      display: "",
       formObjectLists: [{ values: [""] }],
     },
   ],
@@ -723,10 +847,6 @@ const validateForm = () => {
     errors.value.description = "Description is required.";
   }
 
-  if (!form.value.approvers || form.value.approvers.length === 0) {
-    errors.value.approver = "At least One Approver is required.";
-  }
-
   form.value.formObjects.forEach((formObject, index) => {
     let hasError = false;
     errors.value[index] = {}; // Initialize error object
@@ -741,21 +861,21 @@ const validateForm = () => {
       hasError = true;
     }
     if (
-      (formObject.objectType === "TEXTFROMSOURCE") &&
+      formObject.objectType === "TEXTFROMSOURCE" &&
       (!formObject.datasourcescript || !formObject.datasourcescript.trim())
     ) {
       errors.value[index].datasourcescript = "Datasourcescript is required.";
       hasError = true;
     }
     if (
-      (formObject.objectType === "TEXTFROMSOURCE") &&
+      formObject.objectType === "TEXTFROMSOURCE" &&
       (!formObject.data || !formObject.data.trim())
     ) {
       errors.value[index].data = "Data is required.";
       hasError = true;
     }
     if (
-      (formObject.objectType === "TEXTFROMSOURCE") &&
+      formObject.objectType === "TEXTFROMSOURCE" &&
       (!formObject.display || !formObject.display.trim())
     ) {
       errors.value[index].display = "Display is required.";
@@ -763,13 +883,13 @@ const validateForm = () => {
     }
 
     if (
-      (formObject.objectType === "LIST" ||
-        formObject.objectType === "CHECKBOX" ||
-        formObject.objectType === "CHOICES") &&
-      (!formObject.formObjectLists ||
+      ["LIST", "OPTION", "CHOICES"].includes(formObject.objectType) &&
+      (!Array.isArray(formObject.formObjectLists) ||
         formObject.formObjectLists.length === 0 ||
-        !formObject.formObjectLists[0].values ||
-        formObject.formObjectLists[0].values.length < 2)
+        !Array.isArray(formObject.formObjectLists[0].values) ||
+        formObject.formObjectLists[0].values.filter(
+          (v) => v && v.toString().trim() !== ""
+        ).length < 2)
     ) {
       errors.value[index].objectType = "At least two options are required.";
       hasError = true;
@@ -780,6 +900,74 @@ const validateForm = () => {
       delete errors.value[index];
     }
   });
+  watch(
+    form,
+    (newForm) => {
+      // Clear general title error
+      if (errors.value.title && newForm.title.trim()) {
+        delete errors.value.title;
+      }
+
+      // Clear general description error
+      if (errors.value.description && newForm.description.trim()) {
+        delete errors.value.description;
+      }
+
+      // Loop through formObjects
+      newForm.formObjects.forEach((formObject, index) => {
+        const fieldErrors = errors.value[index];
+        if (!fieldErrors) return;
+
+        // Clear label error
+        if (fieldErrors.label && formObject.label?.trim()) {
+          delete errors.value[index].label;
+        }
+
+        // Clear objectType error
+        if (fieldErrors.objectType && formObject.objectType?.trim()) {
+          delete errors.value[index].objectType;
+        }
+
+        // Clear datasourcescript, data, display
+        if (
+          formObject.objectType === "TEXTFROMSOURCE" &&
+          fieldErrors.datasourcescript &&
+          formObject.datasourcescript?.trim()
+        ) {
+          delete errors.value[index].datasourcescript;
+        }
+        if (
+          formObject.objectType === "TEXTFROMSOURCE" &&
+          fieldErrors.data &&
+          formObject.data?.trim()
+        ) {
+          delete errors.value[index].data;
+        }
+        if (
+          formObject.objectType === "TEXTFROMSOURCE" &&
+          fieldErrors.display &&
+          formObject.display?.trim()
+        ) {
+          delete errors.value[index].display;
+        }
+
+        // Clear objectType error for LIST/OPTION/CHOICES if at least two values exist
+        if (
+          ["LIST", "OPTION", "CHOICES"].includes(formObject.objectType) &&
+          fieldErrors.objectType &&
+          formObject.formObjectLists?.[0]?.values?.length >= 2
+        ) {
+          delete errors.value[index].objectType;
+        }
+
+        // If no errors left in that index, remove the object
+        if (Object.keys(errors.value[index]).length === 0) {
+          delete errors.value[index];
+        }
+      });
+    },
+    { deep: true }
+  );
 
   console.log("After Validation:", JSON.stringify(errors.value, null, 2));
   console.log("Errors Length:", Object.keys(errors.value).length);
@@ -830,21 +1018,40 @@ const addImmediateHead = () => {
 
 const selectApprover = (approver) => {
   if (selectedApproverIndex.value !== null) {
+    console.log(approver);
     form.value.approvers[selectedApproverIndex.value] = {
       type: "Additional Approver",
       approverId: approver.emplId,
       approverName: approver.employeename2,
       approverEmail: approver.emailaddress,
-      approverContact: String(approver.mobileno.split("/")[0]),
+      approverContact: String((approver.mobileno || "").split("/")[0]),
     };
   } else {
-    form.value.approvers.push({
-      type: "Additional Approver",
-      approverId: approver.emplId,
-      approverName: approver.employeename2,
-      approverEmail: approver.emailaddress,
-      approverContact: String(approver.mobileno.split("/")[0]),
+    const exists = form.value.approvers.some((a) => {
+      const aEmail = (a?.approverEmail || "").trim().toLowerCase();
+      const bEmail = (approver?.emailaddress || "").trim().toLowerCase();
+
+      console.log("Comparing:", aEmail, bEmail);
+      return aEmail === bEmail;
     });
+    if (exists) {
+      $swal.fire({
+        title: "Validation Error",
+        text: "This approver has already been added.",
+        icon: "warning",
+        timer: 2000,
+        showConfirmButton: false,
+        focusConfirm: false,
+      });
+    } else {
+      form.value.approvers.push({
+        type: "Additional Approver",
+        approverId: approver.emplId,
+        approverName: approver.employeename2,
+        approverEmail: approver.emailaddress,
+        approverContact: String((approver?.mobileno || "").split("/")[0]),
+      });
+    }
   }
 
   updateSequences();
@@ -856,6 +1063,17 @@ const selectApprover = (approver) => {
 const addApprover = () => {
   selectedApproverIndex.value = null;
   showApproverModal.value = true;
+};
+
+const cancelButton = () => {
+  showApproverModal.value = false;
+  availableApprovers.value = "";
+  selectedApproverIndex.value = null;
+  selectedProxyIndex.value = null;
+  selectedProxy.value = null;
+  selectedProxyTo.value = null;
+  showProxyModal.value = false;
+  query.value.search = null;
 };
 
 const removeApprover = (index) => {
@@ -935,10 +1153,29 @@ const setSelectedProxyTo = (proxyTo) => {
 
 const submitProxySelection = () => {
   if (!selectedProxy.value || !selectedProxyTo.value) {
-    alert("Please select both a Proxy and a Proxy To before submitting.");
+    $swal.fire({
+      title: "Validation Error",
+      text: "Please select both a Proxy and a Proxy To before submitting.",
+      icon: "warning",
+      timer: 2000,
+      showConfirmButton: false,
+      focusConfirm: false,
+    });
     return;
   }
-
+  if (
+    selectedProxyTo.value.approverEmail === selectedProxy.value.emailaddress
+  ) {
+    $swal.fire({
+      title: "Validation Error",
+      text: "Proxy and Proxy To cannot be the same person.",
+      icon: "warning",
+      timer: 2000,
+      showConfirmButton: false,
+      focusConfirm: false,
+    });
+    return;
+  }
   const proxyData = {
     existingapprovername: selectedProxyTo.value.approverName,
     existingapproveremail: selectedProxyTo.value.approverEmail,
@@ -946,13 +1183,38 @@ const submitProxySelection = () => {
     approverEmail: selectedProxy.value.emailaddress,
     approverNumber: selectedProxyTo.value.approverNumber,
     approverId: selectedProxy.value.emplId,
-    approverContact: String(selectedProxy.value.mobileno.split("/")[0]),
+    approverContact: String(
+      (selectedProxy.value?.mobileno || "").split("/")[0]
+    ),
   };
 
-  if (selectedProxyIndex.value !== null) {
-    form.value.proxies[selectedProxyIndex.value] = proxyData;
+  const exists = form.value.proxies.some((a) => {
+    const existingEmail_1 = (a?.existingapproveremail || "")
+      .trim()
+      .toLowerCase();
+    const existingEmail_2 = (proxyData?.existingapproveremail || "")
+      .trim()
+      .toLowerCase();
+    const email_2 = (a?.approverEmail || "").trim().toLowerCase();
+    const email_1 = (proxyData?.approverEmail || "").trim().toLowerCase();
+
+    return existingEmail_1 === existingEmail_2 && email_1 === email_2;
+  });
+  if (exists) {
+    $swal.fire({
+      title: "Validation Error",
+      text: "This approver has already been added.",
+      icon: "warning",
+      timer: 2000,
+      showConfirmButton: false,
+      focusConfirm: false,
+    });
   } else {
-    form.value.proxies.push(proxyData);
+    if (selectedProxyIndex.value !== null) {
+      form.value.proxies[selectedProxyIndex.value] = proxyData;
+    } else {
+      form.value.proxies.push(proxyData);
+    }
   }
   selectedProxyIndex.value = null;
   selectedProxy.value = null;
@@ -969,6 +1231,75 @@ const addProxy = () => {
 const removeProxy = (index) => {
   form.value.proxies.splice(index, 1);
 };
+
+const moveUp = () => {
+  if (approverIndex.value > 0) approverIndex.value--;
+};
+const moveDown = () => {
+  if (approverIndex.value < availableApprovers.value.length - 1)
+    approverIndex.value++;
+};
+
+const handleEnterKey = async () => {
+  const shouldRefetch = query.value.search !== lastSearched.value;
+
+  if (availableApprovers.value.length === 0 || shouldRefetch) {
+    await getEmployees(); // just fetch
+    return; // stop here — don't select
+  }
+
+  // else: list is fresh and not changed → select current item
+  const appr = availableApprovers.value[approverIndex.value];
+  if (appr) {
+    selectApprover(appr);
+  }
+};
+
+watch(approverIndex, async (newIndex) => {
+  await nextTick();
+  const items = scrollContainer.value?.querySelectorAll(".cursor-pointer");
+  if (items && items[newIndex]) {
+    items[newIndex].scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+});
+
+// Keyboard logic
+const handleProxyEnterKey = async () => {
+  const shouldRefetch = query.value.search !== lastSearched.value;
+  if (availableApprovers.value.length === 0 || shouldRefetch) {
+    await getEmployees();
+    return;
+  }
+
+  const selected = availableApprovers.value[proxyIndex.value];
+  if (selected) {
+    setSelectedProxy(selected);
+  }
+};
+
+const moveProxyUp = () => {
+  if (proxyIndex.value > 0) proxyIndex.value--;
+};
+
+const moveProxyDown = () => {
+  if (proxyIndex.value < availableApprovers.value.length - 1)
+    proxyIndex.value++;
+};
+
+// Scroll into view on index change
+watch(proxyIndex, async (newIndex) => {
+  await nextTick();
+  const items = proxyScrollContainer.value?.querySelectorAll(".cursor-pointer");
+  if (items && items[newIndex]) {
+    items[newIndex].scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+});
+
+const textFromSourceLabels = computed(() => {
+  return form.value.formObjects
+    .filter((obj) => obj.objectType === "TEXTFROMSOURCE")
+    .map((obj) => obj.label);
+});
 
 const submitForm = async () => {
   if (!validateForm()) {
@@ -996,37 +1327,38 @@ const submitForm = async () => {
 
   const token = getToken();
   isSubmitting.value = true; // Start loading
+  console.log(form.value);
 
-  try {
-    await $fetch(`${API_BASE_URL}/api/form`, {
-      method: "POST",
-      headers: {
-        token: token,
-      },
-      body: form.value,
-    });
+  // try {
+  //   await $fetch(`${API_BASE_URL}/api/form`, {
+  //     method: "POST",
+  //     headers: {
+  //       token: token,
+  //     },
+  //     body: form.value,
+  //   });
 
-    await $swal.fire({
-      title: "Success",
-      text: "Form submitted successfully!",
-      icon: "success",
-      timer: 1000, // auto-close after 2 seconds
-      showConfirmButton: false,
-    });
-    window.location.reload();
-  } catch (error) {
-    console.error("Error creating form:", error);
+  //   await $swal.fire({
+  //     title: "Success",
+  //     text: "Form submitted successfully!",
+  //     icon: "success",
+  //     timer: 1000, // auto-close after 2 seconds
+  //     showConfirmButton: false,
+  //   });
+  //   window.location.reload();
+  // } catch (error) {
+  //   console.error("Error creating form:", error);
 
-    await $swal.fire({
-      title: "Error",
-      text: "Failed to create form. Please try again.",
-      icon: "error",
-      timer: 1000, // auto-close after 2 seconds
-      showConfirmButton: false,
-    });
-  } finally {
-    isSubmitting.value = false; // Stop loading
-  }
+  //   await $swal.fire({
+  //     title: "Error",
+  //     text: "Failed to create form. Please try again.",
+  //     icon: "error",
+  //     timer: 1000, // auto-close after 2 seconds
+  //     showConfirmButton: false,
+  //   });
+  // } finally {
+  //   isSubmitting.value = false; // Stop loading
+  // }
 };
 
 onMounted(async () => {

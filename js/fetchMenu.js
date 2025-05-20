@@ -1,7 +1,9 @@
 import { API_BASE_URL } from "~/config";
 import { getToken } from "./cryptoToken";
+
 export const nenunames = ref([]);
 export const menuList = ref([]);
+export const sysdescription = ref();
 export const sidemenuspinner = ref(false);
 export const canAdd = ref(false);
 export const canDelete = ref(false);
@@ -9,6 +11,7 @@ export const canEdit = ref(false);
 export const userId = ref(77943); // Replace with real user ID
 export const systemCode = ref(84); // Replace with your system code
 export const allPageNames = ref([]);
+export const loading = ref(false);
 const router = useRouter();
 
 export const handleChildMenuClick = (menuCode) => {
@@ -16,8 +19,8 @@ export const handleChildMenuClick = (menuCode) => {
 };
 
 export const fetchUserMenu = async () => {
-
   const token = getToken();
+  loading.value = true;
   sidemenuspinner.value = false;
   try {
     const data = await $fetch(`${API_BASE_URL}/api/Menu/get-user-menu`, {
@@ -35,7 +38,12 @@ export const fetchUserMenu = async () => {
       sidemenuspinner.value = true;
     }
   } catch (error) {
-    alert("Failed to load menu list.");
+    if (confirm("Unauthorized")) {
+      localStorage.clear();
+      return navigateTo("/"); 
+    }
+  } finally{
+    loading.value = false;
   }
 };
 
@@ -55,15 +63,20 @@ export const fetchCanAccess = async (menucode) => {
     });
 
     if (data) {
+      sysdescription.value = data.sysdescription;
       canAdd.value = data.canadd;
       canDelete.value = data.candelete;
       canEdit.value = data.canedit;
       nenunames.value = data.nenunames.split("->");
     }
   } catch (error) {
-    alert("Failed to load menu list.");
+    if (confirm("Unauthorizeds")) {
+      localStorage.clear();
+      return navigateTo("/"); 
+    }
   }
 };
+
 export const getAllPageNames = (menuItems) => {
   const pageNames = [];
 
@@ -83,4 +96,25 @@ export const getAllPageNames = (menuItems) => {
 
   extractNames(menuItems);
   return pageNames;
+};
+
+export const fetchSysDescription = async () => {
+  const token = getToken();
+  try {
+    const data = await $fetch(`${API_BASE_URL}/api/Menu/system-description`, {
+      method: "GET",
+      headers: {
+        token: token,
+      },
+    });
+    if (data) {
+      sysdescription.value = data;
+    }
+  } catch (error) {
+    if (confirm("Unauthorized")) {
+      localStorage.clear();
+      // Redirect to login or logout page
+      return navigateTo("/"); 
+    }
+  }
 };
