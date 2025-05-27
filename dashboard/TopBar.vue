@@ -1,5 +1,5 @@
 <template>
-  <header class="relative z-10 h-10 py-9 w-full items-center bg-white shadow md:h-10 lg:rounded-br-1xl">
+  <header class="relative h-10 py-9 w-full items-center bg-white shadow md:h-10 lg:rounded-br-1xl">
     <div class="relative mx-auto flex h-full flex-col justify-center px-3">
       <div class="relative flex w-full items-center pl-1 sm:ml-0 sm:pr-2">
         <div class="relative left-0 flex h-full w-3/4">
@@ -29,7 +29,7 @@
             </svg>
           </button>
           <ul v-if="isDropdownOpen"
-            class='absolute block shadow-lg bg-white py-2 z-[1000] min-w-full w-max rounded-lg max-h-96 overflow-auto'>
+            class='absolute block shadow-lg bg-white py-2 z-[10] min-w-full w-max rounded-lg max-h-96 overflow-auto'>
             <!-- <li class='py-2.5 px-5 flex items-center hover:bg-gray-100 text-[#333] text-sm cursor-pointer'>
               <svg xmlns=" http://www.w3.org/2000/svg" fill="currentColor" class="w-4 h-4 mr-3" viewBox="0 0 512 512">
                 <path
@@ -47,12 +47,10 @@
               </svg>
               Dashboard
             </li>
-            <li @click = "storeEncryptedDataInCookie()"
+            <li @click="storeEncryptedDataInCookie('https://apps.fastlogistics.com.ph/utility/#/Setting/Account')"
               class='py-2.5 px-5 flex items-center hover:bg-gray-100 text-[#333] text-sm cursor-pointer'>
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor" class="w-4 h-4 mr-3">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z" />
-              </svg>
-              Change Password
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-3" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"><path d="M18 31h20V5"/><path d="M30 21H10v22m34-32l-6-6l-6 6"/><path d="m16 37l-6 6l-6-6"/></g></svg>
+              Account Settings
             </li>
             <li @click="Logout()"
               class='py-2.5 px-5 flex items-center hover:bg-gray-100 text-[#333] text-sm cursor-pointer'>
@@ -64,6 +62,30 @@
               Logout
             </li>
           </ul>
+        </div>
+      </div>
+    </div>
+    <div
+      v-if="show"
+      class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-50 before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif] "
+    >
+      <div class="bg-white rounded-xl shadow-lg max-w-4xl w-full p-4 relative">
+        <!-- Close Button -->
+        <button
+          @click="show = false"
+          class="absolute top-2 right-2 text-gray-500 hover:text-black text-3xl"
+        >
+          &times;
+        </button>
+ 
+        <!-- Iframe -->
+        <div class="aspect-video z-50 ">
+          <iframe
+            class="w-full h-full z50"
+            :src="link"
+            frameborder="0"
+            allowfullscreen
+          ></iframe>
         </div>
       </div>
     </div>
@@ -115,32 +137,63 @@ function Dashboard() {
   router.push('/main/dashboard')
 }
 
-async function storeEncryptedDataInCookie() {
-const token = getToken();
-  const payload = {
-    systemid: 84,
-    userhashcode: user.value.hashcode,
-    token: token,
-  };
+// async function storeEncryptedDataInCookie() {
+// const token = getToken();
+//   const payload = {
+//     systemid: 84,
+//     userhashcode: user.value.hashcode,
+//     token: token,
+//   };
 
+//   const key = await getKey(); // You can share the password securely across systems
+//   const encrypted = await encryptData(payload, key);
+
+//   // Calculate expiration time (30 minutes from now)
+//   const expirationDate = new Date();
+//   expirationDate.setMinutes(expirationDate.getMinutes() + 30);
+
+//   // Set cookie (secure, strict, and expires in 30 minutes)
+//   document.cookie = `utility=${encrypted}; path=/; secure; samesite=strict; expires=${expirationDate.toUTCString()}`;
+
+//   localStorage.setItem(
+//     "sourceapplication",
+//     "https://apps.fastlogistics.com.ph/aso/#/"
+//   );
+//   window.location.href =
+//     "https://apps.fastlogistics.com.ph/utility/#/ChangePassword/Change";
+// }
+const show = ref(false)
+const link = ref('')
+async function storeEncryptedDataInCookie(iframeUrl) {
+  isDropdownOpen.value = false;
+  const token = getToken();
+  const payload = {
+    systemid: 83,
+    userhashcode: user.value.hashcode,
+    token:token,
+    userid: user.value.userId,
+    employeename: user.value.requestorname,
+    employeeid: user.value.empid,
+    position:user.value.positionname,
+    emailadd: user.value.emailadd,
+    department: user.value.department,
+    sex: user.value.sex
+  };
+ 
   const key = await getKey(); // You can share the password securely across systems
   const encrypted = await encryptData(payload, key);
-
+ 
   // Calculate expiration time (30 minutes from now)
   const expirationDate = new Date();
   expirationDate.setMinutes(expirationDate.getMinutes() + 30);
-
+ 
   // Set cookie (secure, strict, and expires in 30 minutes)
   document.cookie = `utility=${encrypted}; path=/; secure; samesite=strict; expires=${expirationDate.toUTCString()}`;
-
-  localStorage.setItem(
-    "sourceapplication",
-    "https://apps.fastlogistics.com.ph/aso/#/"
-  );
-  window.location.href =
-    "https://apps.fastlogistics.com.ph/utility/#/ChangePassword/Change";
+  link.value = iframeUrl
+  show.value = true
+  // localStorage.setItem('sourceapplication', 'https://apps.fastlogistics.com.ph/fpma2/');
+  // window.location.href = 'https://apps.fastlogistics.com.ph/utility/#/ChangePassword/Change';
 }
-
 onMounted(async () => {
   getProfile();
   fetchSysDescription();

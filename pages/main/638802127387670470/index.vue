@@ -235,20 +235,20 @@
                     {{ form.title }}
                   </td>
                   <td
-                    class="p-5 text-sm leading-6 font-medium text-gray-900 br"
+                    class="p-5 text-sm leading-6 font-medium text-gray-900 break"
                     :title="form.description"
                   >
-                    <div>
+                    <div class="flex flex-col 2xl:flex-row gap-2">
                       <div>
                         {{
                           expandedIndex === index
                             ? form.description
-                            : form.description.length > 15
-                            ? form.description.slice(0, 15) + "..."
+                            : form.description.length > 30
+                            ? form.description.slice(0, 30) + "..."
                             : form.description
                         }}
                       </div>
-                      <div v-if="form.description.length > 15">
+                      <div v-if="form.description.length > 30">
                         <button
                           @click="
                             expandedIndex =
@@ -426,7 +426,14 @@
         </a>
 
         <template v-for="page in generatePagination()" :key="page">
+          <span
+            v-if="typeof page === 'string'"
+            class="px-2 py-1 sm:px-4 sm:py-2 ml-1 mt-2 text-gray-400 border rounded-lg cursor-default"
+          >
+            {{ page }}
+          </span>
           <a
+            v-else
             @click="changePage(page)"
             :class="{
               'ring ring-primary bg-primary/20': query.PageNumber === page,

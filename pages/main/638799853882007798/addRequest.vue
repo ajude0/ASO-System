@@ -254,6 +254,7 @@
             style="text-transform: uppercase"
           ></textarea>
 
+
           <select
             v-else-if="formObject.objecttype === 'LIST'"
             v-model="formAnswers[formObject.id]"
@@ -373,6 +374,21 @@
             </div>
           </div>
 
+          <input
+            v-else-if="formObject.objecttype === 'LINKTOOBJECT'"
+            disabled
+            type="text"
+            v-model="formAnswers[formObject.id]"
+          
+            :class="[
+              'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+              formErrors[formObject.id]
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-blue-500',
+            ]"
+            style="text-transform: uppercase"
+          />
+
           <p v-else class="text-red-500 font-medium">
             Unknown type: {{ formObject.objecttype }}
           </p>
@@ -483,9 +499,7 @@
           <div class="pb-4">
             <div class="min-w-full inline-block align-middle">
               <div class="border rounded-md border-gray-300">
-                <div v-if="loading" class="p-2 text-center text-gray-500">
-                  Loading...
-                </div>
+               
                 <!-- Table for Dynamic Columns -->
                 <table
                   v-if="!loading && justifications.length"
@@ -532,8 +546,11 @@
                 >
                   No results found.
                 </div>
+                <div v-else-if="loading" class="p-2 text-gray-400 text-center">
+                  Loading...
+                </div>
                 <div v-else class="p-2 text-gray-400 text-center">
-                  No results found.
+                  No results found
                 </div>
               </div>
             </div>
@@ -666,10 +683,29 @@ function clearFormId() {
 }
 
 const selectEmployee = (id, justification) => {
-  formAnswers.value[id] = justification.data; // Save hidden data
-  formDisplays.value[id] = justification.display; // Save visible text
+  // Save hidden and visible data
+  formAnswers.value[id] = justification.data;
+  formDisplays.value[id] = justification.display;
+
+  // Filter formObjects where formobjectsourceid matches selected ID
+  const matchedFormObjects = formDetails.value?.formObjects?.filter(formObject => 
+    formObject?.linkobjets?.formobjectsourceid === id
+  );
+
+  matchedFormObjects?.forEach((formObject) => {
+    const key = formObject?.linkobjets?.columnvalue;
+    const labelId = formObject?.id;
+
+    if (key && labelId && justification.all?.hasOwnProperty(key)) {
+      const value = justification.all[key];
+      formAnswers.value[labelId] = value;
+    }
+  });
+
   showModal.value = false;
 };
+
+
 
 const getTitle = async () => {
   isLoading.value = true;
@@ -769,7 +805,7 @@ const submitAnswers = async () => {
             ]
     ),
   };
-
+  
   try {
     await $fetch(`${API_BASE_URL}/api/FormObject/submit-answers`, {
       method: "POST",

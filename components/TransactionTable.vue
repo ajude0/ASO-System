@@ -312,30 +312,39 @@
                         transaction.currentApprovers.length
                       "
                     >
-                      <div
-                        v-for="(
-                          approver, index
-                        ) in transaction.currentApprovers"
-                        :key="index"
-                        class="flex items-center gap-2 mb-2"
-                      >
-                        <span
-                          :class="
-                            approver.mainapprover === 1
-                              ? 'bg-green-50 text-green-600'
-                              : 'bg-amber-50 text-amber-600'
-                          "
-                          class="px-2 py-0.5 rounded-full text-xs font-semibold"
+                      <div class="gap-2">
+                        <div
+                          v-for="(approver, index) in getDisplayedApprovers(
+                            transaction
+                          )"
+                          :key="index"
+                          class="items-center gap-2 mb-2"
                         >
-                          {{ approver.mainapprover === 1 ? "Main" : "Proxy" }}
-                        </span>
-                        <span> - </span>
-                        <span class="text-gray-700">
-                          {{ approver.approvername }}
-                        </span>
+                          <span
+                            :class="
+                              approver.mainapprover === 1
+                                ? 'bg-green-50 text-green-600'
+                                : 'bg-amber-50 text-amber-600'
+                            "
+                            class="px-2 py-0.5 rounded-full text-xs font-semibold"
+                          >
+                            {{ approver.mainapprover === 1 ? "Main" : "Proxy" }}
+                          </span>
+                          <span> - </span>
+                          <span class="text-gray-700">
+                            {{ approver.approvername }}
+                          </span>
+                        </div>
+
+                        <button
+                          v-if="transaction.currentApprovers.length > 1"
+                          @click="showAllApprovers = !showAllApprovers"
+                          class="text-blue-500 text-xs hover:underline ml-2"
+                        >
+                          {{ showAllApprovers ? "See less" : "See more" }}
+                        </button>
                       </div>
                     </div>
-
                     <!-- Message when there are no approvers -->
                     <div v-else class="text-sm text-gray-400 italic mt-2">
                       No current approvers available.
@@ -516,7 +525,14 @@
         </a>
 
         <template v-for="page in generatePagination()" :key="page">
+          <span
+            v-if="typeof page === 'string'"
+            class="px-2 py-1 sm:px-4 sm:py-2 ml-1 mt-2 text-gray-400 border rounded-lg cursor-default"
+          >
+            {{ page }}
+          </span>
           <a
+            v-else
             @click="changePage(page)"
             :class="{
               'ring ring-primary bg-primary/20': query.PageNumber === page,
@@ -668,7 +684,7 @@
                     getApprovalStatus(approverGroup) === "approved"
                       ? "Approved"
                       : getApprovalStatus(approverGroup) === "rejected"
-                      ? "Rejected"
+                      ? "Disapproved"
                       : getGroupVisibilityStatus(
                           transactions.approvers,
                           approverNumber
@@ -747,6 +763,7 @@ const showModal = ref(false);
 const isApprovedOpen = ref(false);
 const { $swal } = useNuxtApp();
 const router = useRouter();
+const showAllApprovers = ref(false);
 
 function goToCreateRequest() {
   router.push("/main/638799853882007798/addRequest");
@@ -757,6 +774,11 @@ const editTransaction = async (id) => {
   router.push("/main/638799853882007798/editRequest");
 };
 
+const getDisplayedApprovers = (transaction) => {
+  if (!transaction?.currentApprovers) return [];
+  if (showAllApprovers.value) return transaction.currentApprovers;
+  return transaction.currentApprovers.slice(0, 1);
+};
 function closeModal() {
   showModal.value = false;
 }

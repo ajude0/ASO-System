@@ -229,6 +229,21 @@
           />
 
           <!-- TEXT -->
+
+          <input
+            v-else-if="item.objecttype === 'LINKTOOBJECT'"
+            v-model="item.value"
+            type="text"
+            disabled
+            :class="[
+              'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+              formErrors[index]
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-blue-500',
+            ]"
+            style="text-transform: uppercase"
+          />
+
           <input
             v-else
             v-model="item.value"
@@ -331,9 +346,7 @@
           <div class="pb-4">
             <div class="min-w-full inline-block align-middle">
               <div class="border rounded-md border-gray-300">
-                <div v-if="loading" class="p-2 text-center text-gray-500">
-                  Loading...
-                </div>
+               
                 <!-- Table for Dynamic Columns -->
                 <table
                   v-if="!loading && justifications.length"
@@ -379,6 +392,9 @@
                   class="p-2 text-gray-400 text-center"
                 >
                   No results found.
+                </div>
+                <div v-else-if="loading" class="p-2 text-gray-400 text-center">
+                  Loading...
                 </div>
                 <div v-else class="p-2 text-gray-400 text-center">
                   No results found.
@@ -461,12 +477,30 @@ const openModal = (index, id) => {
 };
 
 const selectEmployee = (id, justification) => {
+  // Set initial value and display for selected formObject
   transactions.value.formObjects[id].value = justification.data;
-  transactions.value.formObjects[id].textFromSourceValue.display =
-    justification.display;
-  showModal.value = false; // Close the modal after selection
-};
+  transactions.value.formObjects[id].textFromSourceValue.display = justification.display;
+  showModal.value = false;
 
+  // Filter related formObjects where formobjectsourceid matches storeId
+  const matchedFormObjects = transactions.value.formObjects.filter(formObject =>
+    formObject?.linkobject?.formobjectsourceid === storeId.value
+  );
+
+  matchedFormObjects.forEach((formObject) => {
+    const key = formObject?.linkobject?.columnvalue;
+    const labelId = formObject?.id;
+
+    // ✅ Get the index in transactions.value.formObjects
+    const originalIndex = transactions.value.formObjects.findIndex(f => f?.id === formObject?.id);
+   
+
+    if (key && labelId && justification.all?.hasOwnProperty(key)) {
+      const value = justification.all[key];
+      transactions.value.formObjects[originalIndex].value = value;
+    }
+  });
+};
 const saveForm = async () => {
   isSubmitting.value = true;
   formErrors.value = {};

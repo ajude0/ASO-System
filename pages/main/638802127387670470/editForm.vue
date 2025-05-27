@@ -121,7 +121,9 @@
 
             <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <!-- Label -->
-              <div class="col-span-1 mt-1">
+              <div
+                class="col-span-1 mt-1"
+              >
                 <label
                   class="block font-medium"
                   :class="{ 'text-red-500': errors[index]?.label }"
@@ -173,6 +175,61 @@
                 </p>
               </div>
 
+              <div
+              v-if="element.objectType === 'LINKTOOBJECT'"
+              class="col-span-2 mt-1"
+            >
+              <label
+                class="block font-medium"
+                :class="{ 'text-red-500': errors[index]?.textfromsourcelabel }"
+              >
+                Label (textfromsource)
+                <span class="text-red-500 text-sm"> * </span>
+              </label>
+              <select
+                v-model="element.textfromsourcelabel"
+                class="border p-2 w-full rounded"
+                :class="{ 'border-red-500': errors[index]?.textfromsourcelabel }"
+              >
+                <option value="" disabled>Select Label</option>
+                <option
+                  v-for="(label, index) in textFromSourceLabels"
+                  :key="index"
+                  :value="label"
+                >
+                  {{ label }}
+                </option>
+              </select>
+              <p
+                v-if="errors[index]?.textfromsourcelabel"
+                class="text-red-500 text-sm mt-1"
+              >
+                {{ errors[index]?.textfromsourcelabel }}
+              </p>
+            </div>
+
+              <div
+                v-if="element.objectType === 'LINKTOOBJECT'"
+                class="col-span-1 mt-1"
+              >
+                <label
+                  class="block font-medium"
+                  :class="{ 'text-red-500': errors[index]?.columnvalue }"
+                >
+                  Columnvalue 
+                </label>
+                <input
+                  v-model="element.columnvalue"
+                  type="text"
+                  maxlength="255"
+                  class="border p-2 w-full rounded"
+                  :class="{ 'border-red-500': errors[index]?.columnvalue }"
+                />
+                <p v-if="errors[index]?.columnvalue" class="text-red-500 text-sm mt-1">
+                  {{ errors[index]?.columnvalue }}
+                </p>
+              </div>
+              
               <!-- Options -->
               <div
                 v-if="
@@ -268,7 +325,12 @@
                 </p>
               </div>
               <!-- Is Required -->
-              <div v-if="element.objectType !== 'LABEL'">
+              <div
+                v-if="
+                  element.objectType !== 'LABEL' &&
+                  element.objectType !== 'LINKTOOBJECT'
+                "
+              >
                 <label class="block font-medium">Is Required</label>
                 <select
                   v-model="element.isRequired"
@@ -279,7 +341,7 @@
                 </select>
               </div>
             </div>
-
+          
             <!-- Datasourcescript -->
             <div
               v-if="element.objectType === 'TEXTFROMSOURCE'"
@@ -306,8 +368,13 @@
                 {{ errors[index]?.datasourcescript }}
               </p>
             </div>
+            
+
             <!-- Remove Form Button -->
-            <div v-if="forms.formObjects.length > 1" class="flex justify-end mt-4" >
+            <div
+              v-if="forms.formObjects.length > 1"
+              class="flex justify-end mt-4"
+            >
               <button
                 @click="removeFormObject(index)"
                 class="px-4 py-2 bg-red-600 text-white rounded"
@@ -801,34 +868,35 @@ const backButton = () => {
 };
 
 const toggleStatus = async () => {
-  const isCurrentlyActive = forms.value.status === 1
-  const newStatus = isCurrentlyActive ? 0 : 1
+  const isCurrentlyActive = forms.value.status === 1;
+  const newStatus = isCurrentlyActive ? 0 : 1;
 
   const result = await $swal.fire({
-    title: isCurrentlyActive ? 'Deactivate this form?' : 'Activate this form?',
+    title: isCurrentlyActive ? "Deactivate this form?" : "Activate this form?",
     text: isCurrentlyActive
-      ? 'This will mark the form as inactive.'
-      : 'This will mark the form as active.',
-    icon: 'warning',
+      ? "This will mark the form as inactive."
+      : "This will mark the form as active.",
+    icon: "warning",
     showCancelButton: true,
-    confirmButtonText: 'Yes, continue',
-    cancelButtonText: 'Cancel'
-  })
+    confirmButtonText: "Yes, continue",
+    cancelButtonText: "Cancel",
+  });
   if (result.isConfirmed) {
-    setStatus(newStatus)
+    setStatus(newStatus);
 
     await $swal.fire({
-      icon: newStatus === 1 ? 'success' : 'info',
-      title: newStatus === 1 ? 'Activated!' : 'Deactivated!',
-      text: newStatus === 1
-        ? 'The form is now active.'
-        : 'The form is now inactive.',
+      icon: newStatus === 1 ? "success" : "info",
+      title: newStatus === 1 ? "Activated!" : "Deactivated!",
+      text:
+        newStatus === 1
+          ? "The form is now active."
+          : "The form is now inactive.",
       timer: 1500,
-      showConfirmButton: false
-    })
+      showConfirmButton: false,
+    });
     getFormObject();
   }
-}
+};
 const addFormObject = () => {
   forms.value.formObjects.push({
     id: 0,
@@ -1211,6 +1279,21 @@ const validateForm = () => {
     }
 
     if (
+      formObject.objectType === "LINKTOOBJECT" &&
+      (!formObject.columnvalue || !formObject.columnvalue.trim())
+    ) {
+      errors.value[index].columnvalue = "Columnvalue is required.";
+      hasError = true;
+    }
+
+    if (
+      formObject.objectType === "LINKTOOBJECT" &&
+      (!formObject.columnvalue || !formObject.columnvalue.trim())
+    ) {
+      errors.value[index].textfromsourcelabel = "Label (Textfromsource) is required.";
+      hasError = true;
+    }
+    if (
       (formObject.objectType === "LIST" ||
         formObject.objectType === "OPTION" ||
         formObject.objectType === "CHOICES") &&
@@ -1259,7 +1342,7 @@ const saveFormObjects = async () => {
   const formId = getFormId();
   const token = getToken();
   isSubmitting.value = true;
-
+  console.log(forms.value);
   try {
     await $fetch(`${API_BASE_URL}/api/Form/update/${formId}`, {
       method: "POST",
@@ -1357,7 +1440,11 @@ watch(
   },
   { deep: true }
 );
-
+const textFromSourceLabels = computed(() => {
+  return forms.value.formObjects
+    .filter((obj) => obj.objectType === "TEXTFROMSOURCE")
+    .map((obj) => obj.label);
+});
 
 definePageMeta({
   middleware: "auth",

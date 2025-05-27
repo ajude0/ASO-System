@@ -665,7 +665,7 @@
                     getApprovalStatus(approverGroup) === "approved"
                       ? "Approved"
                       : getApprovalStatus(approverGroup) === "rejected"
-                      ? "Rejected"
+                      ? "Disapproved"
                       : getGroupVisibilityStatus(
                           transactions.approvers,
                           approverNumber

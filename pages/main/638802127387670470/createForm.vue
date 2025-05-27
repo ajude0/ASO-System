@@ -275,7 +275,7 @@
               <!-- Datasourcescript -->
               <div
                 v-if="formObject.objectType === 'TEXTFROMSOURCE'"
-                class="col-span-3 mt-1"
+                class="col-span-2 mt-1"
               >
                 <label
                   class="block font-medium"
@@ -300,10 +300,15 @@
               </div>
 
               <!-- Label From TEXTFROMSOURCE -->
-              <div  v-if="formObject.objectType === 'LINKTOOBJECT'" class="col-span-2 mt-1">
+              <div
+                v-if="formObject.objectType === 'LINKTOOBJECT'"
+                class="col-span-1 mt-1"
+              >
                 <label
                   class="block font-medium"
-                  :class="{ 'text-red-500': errors[index]?.objectType }"
+                  :class="{
+                    'text-red-500': errors[index]?.textfromsourcelabel,
+                  }"
                 >
                   Label (textfromsource)
                   <span class="text-red-500 text-sm"> * </span>
@@ -311,7 +316,9 @@
                 <select
                   v-model="formObject.textfromsourcelabel"
                   class="border p-2 w-full rounded"
-                  :class="{ 'border-red-500': errors[index]?.objectType }"
+                  :class="{
+                    'border-red-500': errors[index]?.textfromsourcelabel,
+                  }"
                 >
                   <option value="" disabled>Select Label</option>
                   <option
@@ -323,10 +330,44 @@
                   </option>
                 </select>
                 <p
-                  v-if="errors[index]?.objectType"
+                  v-if="errors[index]?.textfromsourcelabel"
                   class="text-red-500 text-sm mt-1"
                 >
-                  {{ errors[index]?.objectType }}
+                  {{ errors[index]?.textfromsourcelabel }}
+                </p>
+              </div>
+
+              <!-- Columnvalue -->
+              <div
+                v-if="formObject.objectType === 'LINKTOOBJECT'"
+                class="col-span-1 mt-1"
+              >
+                <label
+                  class="block font-medium"
+                  :class="{ 'text-red-500': errors[index]?.columnvalue }"
+                >
+                  Columnvalue
+                </label>
+                <input
+                  v-model="formObject.columnvalue"
+                  type="text"
+                  maxlength="255"
+                  class="border p-2 w-full rounded"
+                  @keydown.space.prevent
+                  @input="
+                    () =>
+                      (formObject.columnvalue = formObject.columnvalue.replace(
+                        /\s+/g,
+                        ''
+                      ))
+                  "
+                  :class="{ 'border-red-500': errors[index]?.columnvalue }"
+                />
+                <p
+                  v-if="errors[index]?.columnvalue"
+                  class="text-red-500 text-sm mt-1"
+                >
+                  {{ errors[index]?.columnvalue }}
                 </p>
               </div>
             </div>
@@ -784,7 +825,6 @@
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import { getToken } from "~/js/cryptoToken";
-import { API_BASE_URL } from "~/config";
 import {
   getEmployees,
   availableApprovers,
@@ -796,6 +836,7 @@ import {
 import { fetchCanAccess, nenunames } from "~/js/fetchMenu";
 import { getDropdowns, dropdowns } from "~/js/fetchDrowdown";
 import draggable from "vuedraggable";
+import { API_BASE_URL } from "~/config";
 
 const router = useRouter();
 const { $swal } = useNuxtApp();
@@ -824,6 +865,8 @@ const form = ref({
       datasourcescript: "",
       data: "",
       display: "",
+      textfromsourcelabel: "",
+      columnvalue: "",
       formObjectLists: [{ values: [""] }],
     },
   ],
@@ -879,6 +922,24 @@ const validateForm = () => {
       (!formObject.display || !formObject.display.trim())
     ) {
       errors.value[index].display = "Display is required.";
+      hasError = true;
+    }
+
+    if (
+      formObject.objectType === "LINKTOOBJECT" &&
+      (!formObject.columnvalue || !formObject.columnvalue.trim())
+    ) {
+      errors.value[index].columnvalue = "Columnvalue is required.";
+      hasError = true;
+    }
+
+    if (
+      formObject.objectType === "LINKTOOBJECT" &&
+      (!formObject.textfromsourcelabel ||
+        !formObject.textfromsourcelabel.trim())
+    ) {
+      errors.value[index].textfromsourcelabel =
+        "Textfromsource Label is required.";
       hasError = true;
     }
 
@@ -949,6 +1010,22 @@ const validateForm = () => {
           formObject.display?.trim()
         ) {
           delete errors.value[index].display;
+        }
+
+        if (
+          formObject.objectType === "LINKTOOBJECT" &&
+          fieldErrors.columnvalue &&
+          formObject.columnvalue?.trim()
+        ) {
+          delete errors.value[index].columnvalue;
+        }
+
+        if (
+          formObject.objectType === "LINKTOOBJECT" &&
+          fieldErrors.textfromsourcelabel &&
+          formObject.textfromsourcelabel?.trim()
+        ) {
+          delete errors.value[index].textfromsourcelabel;
         }
 
         // Clear objectType error for LIST/OPTION/CHOICES if at least two values exist
@@ -1327,38 +1404,37 @@ const submitForm = async () => {
 
   const token = getToken();
   isSubmitting.value = true; // Start loading
-  console.log(form.value);
 
-  // try {
-  //   await $fetch(`${API_BASE_URL}/api/form`, {
-  //     method: "POST",
-  //     headers: {
-  //       token: token,
-  //     },
-  //     body: form.value,
-  //   });
+  try {
+    await $fetch(`${API_BASE_URL}/api/form`, {
+      method: "POST",
+      headers: {
+        token: token,
+      },
+      body: form.value,
+    });
 
-  //   await $swal.fire({
-  //     title: "Success",
-  //     text: "Form submitted successfully!",
-  //     icon: "success",
-  //     timer: 1000, // auto-close after 2 seconds
-  //     showConfirmButton: false,
-  //   });
-  //   window.location.reload();
-  // } catch (error) {
-  //   console.error("Error creating form:", error);
+    await $swal.fire({
+      title: "Success",
+      text: "Form submitted successfully!",
+      icon: "success",
+      timer: 1000, // auto-close after 2 seconds
+      showConfirmButton: false,
+    });
+    window.location.reload();
+  } catch (error) {
+    console.error("Error creating form:", error);
 
-  //   await $swal.fire({
-  //     title: "Error",
-  //     text: "Failed to create form. Please try again.",
-  //     icon: "error",
-  //     timer: 1000, // auto-close after 2 seconds
-  //     showConfirmButton: false,
-  //   });
-  // } finally {
-  //   isSubmitting.value = false; // Stop loading
-  // }
+    await $swal.fire({
+      title: "Error",
+      text: "Failed to create form. Please try again.",
+      icon: "error",
+      timer: 1000, // auto-close after 2 seconds
+      showConfirmButton: false,
+    });
+  } finally {
+    isSubmitting.value = false; // Stop loading
+  }
 };
 
 onMounted(async () => {

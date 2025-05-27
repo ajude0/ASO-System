@@ -70,7 +70,7 @@ export const fetchCanAccess = async (menucode) => {
       nenunames.value = data.nenunames.split("->");
     }
   } catch (error) {
-    if (confirm("Unauthorizeds")) {
+    if (confirm("Unauthorized")) {
       localStorage.clear();
       return navigateTo("/"); 
     }
@@ -111,10 +111,6 @@ export const fetchSysDescription = async () => {
       sysdescription.value = data;
     }
   } catch (error) {
-    if (confirm("Unauthorized")) {
-      localStorage.clear();
-      // Redirect to login or logout page
-      return navigateTo("/"); 
-    }
+    
   }
 };
