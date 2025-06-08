@@ -1,6 +1,6 @@
 import { getToken } from "./cryptoToken";
 import { API_BASE_URL } from "~/config";
-export const user = ref();
+export const user = ref({});
 
 export const getProfile = async () => {
   
@@ -12,6 +12,7 @@ export const getProfile = async () => {
       },
     });
     user.value = response;
+   
   } catch (error) {
     console.error("Error fetching menus:", error);
   }

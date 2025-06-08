@@ -195,7 +195,7 @@
 
               <!-- Data -->
               <div
-                v-if="formObject.objectType === 'TEXTFROMSOURCE'"
+                v-if="formObject.objectType === 'TEXTFROMSOURCE' || formObject.objectType =='DYNAMICSIGNATORY'"
                 class="col-span-1 mt-1"
               >
                 <label
@@ -223,7 +223,7 @@
 
               <!-- Display -->
               <div
-                v-if="formObject.objectType === 'TEXTFROMSOURCE'"
+                v-if="formObject.objectType === 'TEXTFROMSOURCE' || formObject.objectType =='DYNAMICSIGNATORY'"
                 class="col-span-1 mt-1"
               >
                 <label
@@ -274,7 +274,7 @@
 
               <!-- Datasourcescript -->
               <div
-                v-if="formObject.objectType === 'TEXTFROMSOURCE'"
+                v-if="formObject.objectType === 'TEXTFROMSOURCE' || formObject.objectType =='DYNAMICSIGNATORY'"
                 class="col-span-2 mt-1"
               >
                 <label
@@ -395,9 +395,22 @@
       </button>
     </div>
     <div class="mb-6 p-4 border rounded bg-gray-50">
-      <h2 class="font-semibold mb-4">
-        Approvers <span class="text-red-500 text-sm"> * </span>
-      </h2>
+      <div class="flex items-center mb-4 space-x-4">
+        <h2 class="font-semibold">
+          Approvers <span class="text-red-500 text-sm"> * </span>
+        </h2>
+        <div class="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="approvers-checkbox"
+            class="scale-150 accent-blue-600"
+             v-model="form.isinorder"
+          />
+          <label for="approvers-checkbox" class="text-md text-gray-700" 
+            >In Order</label
+          >
+        </div>
+      </div>
       <div class="flex justify-end mb-2 gap-4 mt-4">
         <button
           v-if="!immediateHeadAdded"
@@ -710,8 +723,11 @@
           >
             {{ appr.employeename2 }}
           </div>
+          <div v-if="loading" class="p-2 text-gray-400 text-center">
+            Loading users...
+          </div>
           <div
-            v-if="availableApprovers.length === 0"
+            v-else-if="availableApprovers.length === 0"
             class="p-2 text-gray-400 text-center"
           >
             No users found.
@@ -779,9 +795,11 @@
         >
           {{ appr.employeename2 }}
         </div>
-
+        <div v-if="loading" class="p-2 text-gray-400 text-center">
+          Loading users...
+        </div>
         <div
-          v-if="availableApprovers.length === 0"
+          v-else-if="availableApprovers.length === 0"
           class="p-2 text-gray-400 text-center"
         >
           No users found.
@@ -832,6 +850,7 @@ import {
   lastSearched,
   approverIndex,
   proxyIndex,
+  loading,
 } from "~/js/fetchEmployees";
 import { fetchCanAccess, nenunames } from "~/js/fetchMenu";
 import { getDropdowns, dropdowns } from "~/js/fetchDrowdown";
@@ -857,6 +876,7 @@ const paramid = ref();
 const form = ref({
   title: "",
   description: "",
+  isinorder:false,
   formObjects: [
     {
       label: "",
@@ -904,21 +924,21 @@ const validateForm = () => {
       hasError = true;
     }
     if (
-      formObject.objectType === "TEXTFROMSOURCE" &&
+      (formObject.objectType === "TEXTFROMSOURCE" || formObject.objectType =='DYNAMICSIGNATORY') &&
       (!formObject.datasourcescript || !formObject.datasourcescript.trim())
     ) {
       errors.value[index].datasourcescript = "Datasourcescript is required.";
       hasError = true;
     }
     if (
-      formObject.objectType === "TEXTFROMSOURCE" &&
+      (formObject.objectType === "TEXTFROMSOURCE" || formObject.objectType =='DYNAMICSIGNATORY') &&
       (!formObject.data || !formObject.data.trim())
     ) {
       errors.value[index].data = "Data is required.";
       hasError = true;
     }
     if (
-      formObject.objectType === "TEXTFROMSOURCE" &&
+      (formObject.objectType === "TEXTFROMSOURCE" || formObject.objectType =='DYNAMICSIGNATORY')&&
       (!formObject.display || !formObject.display.trim())
     ) {
       errors.value[index].display = "Display is required.";
@@ -1401,7 +1421,11 @@ const submitForm = async () => {
 
     return;
   }
-
+  const payload = {
+  ...form.value,
+  isinorder: form.value.isinorder ? 1 : 0,
+  }
+ 
   const token = getToken();
   isSubmitting.value = true; // Start loading
 
@@ -1411,7 +1435,7 @@ const submitForm = async () => {
       headers: {
         token: token,
       },
-      body: form.value,
+      body: payload,
     });
 
     await $swal.fire({

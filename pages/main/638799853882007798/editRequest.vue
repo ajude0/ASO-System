@@ -129,7 +129,7 @@
             :class="[
               'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
               formErrors[index]
-                ? 'border-red-500 focus:ring-red-500'
+                ? 'border-red-500 w-full focus:ring-red-500'
                 : 'border-gray-300 focus:ring-blue-500',
             ]"
           />
@@ -138,7 +138,13 @@
             <div
               v-for="(option, optIndex) in item.options"
               :key="optIndex"
-              class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition"
+
+              :class="[
+              'flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition',
+              formErrors[index]
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-blue-500',
+            ]"
             >
               <input
                 type="checkbox"
@@ -174,7 +180,7 @@
             <div class="flex justify-between items-center">
               <!-- Flex container -->
               <input
-                @focus="openModal(index, item.formObjectId)"
+                @focus="openModal(index, item.formObjectId,'textfromsource')"
                 readonly
                 type="text"
                 v-model="item.textFromSourceValue.display"
@@ -188,7 +194,7 @@
                 style="text-transform: uppercase"
               />
               <button
-                @click="openModal(index, item.formObjectId)"
+                @click="openModal(index, item.formObjectId, 'textfromsource')"
                 class="ml-2 px-4 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg"
               >
                 <svg
@@ -228,7 +234,69 @@
             ]"
           />
 
-          <!-- TEXT -->
+          <div v-else-if="item.objecttype === 'DYNAMICSIGNATORY'">
+            <div
+              v-for="(dynamicValue, valueIndex) in item?.values"
+              :key="dynamicValue.id ?? valueIndex"
+         
+              :class="[
+              'mb-2 flex items-center gap-2',
+              formErrors[index]
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-blue-500',
+            ]"
+            >
+              <div
+                v-if="dynamicValue.formobjecttype === 'DYNAMICSIGNATORY'"
+                class="flex justify-between w-full"
+              >
+                <input
+                  readonly
+                  type="text"
+                  class="border p-3 rounded-md w-full focus:outline-none focus:ring-2"
+                  v-model="dynamicValue.value"
+                  style="text-transform: uppercase"
+                />
+                <button
+                  type="button"
+                    @click="removeAnswer(index, valueIndex)"
+                  class="text-red-600 hover:text-red-800 ml-4"
+                  title="Remove"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <!-- Add button placed outside loop, using last index -->
+            <div class="flex justify-center mt-2">
+              <button
+                @click="
+                  openModal(
+                    item?.values?.length ?? 0,
+                    item.formObjectId,
+                    'dynamicsignatory'
+                  )
+                "
+                class="w-full flex items-center justify-center px-4 py-3 bg-gray-400 hover:bg-gray-500 text-white rounded-lg"
+              >
+                <svg
+                  class="w-6 h-6 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 12h14m-7 7V5"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
 
           <input
             v-else-if="item.objecttype === 'LINKTOOBJECT'"
@@ -346,7 +414,6 @@
           <div class="pb-4">
             <div class="min-w-full inline-block align-middle">
               <div class="border rounded-md border-gray-300">
-               
                 <!-- Table for Dynamic Columns -->
                 <table
                   v-if="!loading && justifications.length"
@@ -444,6 +511,7 @@ const showModal = ref(false);
 const storeIndex = ref();
 const storeId = ref();
 const paramid = ref();
+const objecttype = ref();
 
 const backButton = () => {
   router.push("/main/638799853882007798");
@@ -468,39 +536,80 @@ const toggleChecklist = (item, option) => {
   }
 };
 
-const openModal = (index, id) => {
+const openModal = (index, id, type) => {  
+  console.log(type);
   storeIndex.value = index;
   storeId.value = id;
   showModal.value = true;
   searchQuery.value = "";
   justifications.value = "";
+  objecttype.value = type;
 };
 
 const selectEmployee = (id, justification) => {
   // Set initial value and display for selected formObject
-  transactions.value.formObjects[id].value = justification.data;
-  transactions.value.formObjects[id].textFromSourceValue.display = justification.display;
-  showModal.value = false;
+  if (objecttype.value == "textfromsource") {
+    transactions.value.formObjects[id].value = justification.data;
+    transactions.value.formObjects[id].textFromSourceValue.display =
+      justification.display;
+    showModal.value = false;
 
-  // Filter related formObjects where formobjectsourceid matches storeId
-  const matchedFormObjects = transactions.value.formObjects.filter(formObject =>
-    formObject?.linkobject?.formobjectsourceid === storeId.value
-  );
+    // Filter related formObjects where formobjectsourceid matches storeId
+    const matchedFormObjects = transactions.value.formObjects.filter(
+      (formObject) =>
+        formObject?.linkobject?.formobjectsourceid === storeId.value
+    );
 
-  matchedFormObjects.forEach((formObject) => {
-    const key = formObject?.linkobject?.columnvalue;
-    const labelId = formObject?.id;
+    matchedFormObjects.forEach((formObject) => {
+      const key = formObject?.linkobject?.columnvalue;
+      const labelId = formObject?.id;
 
-    // ✅ Get the index in transactions.value.formObjects
-    const originalIndex = transactions.value.formObjects.findIndex(f => f?.id === formObject?.id);
-   
+      // ✅ Get the index in transactions.value.formObjects
+      const originalIndex = transactions.value.formObjects.findIndex(
+        (f) => f?.id === formObject?.id
+      );
 
-    if (key && labelId && justification.all?.hasOwnProperty(key)) {
-      const value = justification.all[key];
-      transactions.value.formObjects[originalIndex].value = value;
+      if (key && labelId && justification.all?.hasOwnProperty(key)) {
+        const value = justification.all[key];
+        transactions.value.formObjects[originalIndex].value = value;
+      }
+    });
+  } else {
+
+    const formObject = transactions.value.formObjects.find((f) => f.formObjectId === storeId.value);
+
+    if (!formObject) {
+      console.warn("Form object not found");
+      return;
     }
-  });
+
+    // Ensure `values` array exists
+    if (!Array.isArray(formObject.values)) {
+      formObject.values = [];
+    }
+
+    // Construct new value entry
+    const newEntry = {
+      id: 0, // Temp unique ID until saved
+      formobjectId: formObject.formObjectId,
+      formobjecttype: "DYNAMICSIGNATORY",
+      value: justification.data,
+      display: justification.display, 
+    };
+
+    // Push into values
+    formObject.values.push(newEntry);
+  }
+  showModal.value = false;
 };
+
+function removeAnswer(itemIndex, valueIndex) {
+  const formObject = transactions.value.formObjects?.[itemIndex];
+  if (formObject?.values?.length > valueIndex) {
+    formObject.values.splice(valueIndex, 1);
+  }
+}
+
 const saveForm = async () => {
   isSubmitting.value = true;
   formErrors.value = {};
@@ -555,9 +664,11 @@ const saveForm = async () => {
       ? item.values.map((val) => ({
           id: val.id ?? 0, // Default to 0 if val.id is undefined
           value: val.value ?? "", // Default to empty string if val.value is undefined
+          display: val.display ?? "",
         }))
       : [],
   }));
+  console.log(payload);
 
   try {
     await $fetch(`${API_BASE_URL}/api/Transaction/update-transaction`, {

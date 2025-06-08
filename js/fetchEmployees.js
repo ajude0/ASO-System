@@ -3,6 +3,7 @@ import { getToken } from "./cryptoToken";
 export const availableApprovers = ref([]);
 export const lastSearched = ref();
 export const approverIndex = ref(0);
+export const loading = ref(false);
 export const proxyIndex = ref(0);
 export const query = ref({
   search: null,
@@ -10,6 +11,7 @@ export const query = ref({
 
 export const getEmployees = async () => {
   const token = getToken();
+  loading.value = true;
   try {
     const response = await $fetch(
       `${API_BASE_URL}/api/Account/get-all-profile`,
@@ -26,6 +28,8 @@ export const getEmployees = async () => {
     lastSearched.value = query.value.search
   } catch (error) {
     console.error("Error fetching menus:", error);
+  } finally{
+    loading.value = false;
   }
 };
 

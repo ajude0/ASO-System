@@ -315,20 +315,33 @@
                       <div class="gap-2">
                         <div
                           v-for="(approver, index) in getDisplayedApprovers(
-                            transaction
+                            transaction,
+                            index
                           )"
                           :key="index"
                           class="items-center gap-2 mb-2"
                         >
                           <span
-                            :class="
+                            :class="[
                               approver.mainapprover === 1
                                 ? 'bg-green-50 text-green-600'
-                                : 'bg-amber-50 text-amber-600'
-                            "
+                                : approver.mainapprover === 0
+                                ? 'bg-amber-50 text-amber-600'
+                                : approver.mainapprover === 3
+                                ? 'bg-blue-50 text-blue-600'
+                                : '',
+                            ]"
                             class="px-2 py-0.5 rounded-full text-xs font-semibold"
                           >
-                            {{ approver.mainapprover === 1 ? "Main" : "Proxy" }}
+                            {{
+                              approver.mainapprover === 1
+                                ? "Main"
+                                : approver.mainapprover === 0
+                                ? "Proxy"
+                                : approver.mainapprover === 3
+                                ? "Signatory"
+                                : ""
+                            }}
                           </span>
                           <span> - </span>
                           <span class="text-gray-700">
@@ -336,13 +349,16 @@
                           </span>
                         </div>
 
-                        <button
-                          v-if="transaction.currentApprovers.length > 1"
-                          @click="showAllApprovers = !showAllApprovers"
-                          class="text-blue-500 text-xs hover:underline ml-2"
-                        >
-                          {{ showAllApprovers ? "See less" : "See more" }}
-                        </button>
+                        <div v-if="transaction.currentApprovers?.length > 1">
+                          <button
+                            class="text-blue-600 text-sm font-medium hover:underline"
+                            @click="toggleApprovers(index)"
+                          >
+                            {{
+                              showAllApprovers[index] ? "See less" : "See more"
+                            }}
+                          </button>
+                        </div>
                       </div>
                     </div>
                     <!-- Message when there are no approvers -->
@@ -636,11 +652,57 @@
                 {{ item.label }}
               </h3>
             </div>
-            <div v-else class="border p-3 rounded-md w-full text-gray-800">
+            <div
+              v-else-if="item.objectType != 'DYNAMICSIGNATORY'"
+              class="border p-3 rounded-md w-full text-gray-800"
+            >
               <span v-for="(value, index) in item.values" :key="index">
                 {{ value
                 }}<span v-if="index !== item.values.length - 1"> , </span>
               </span>
+            </div>
+            <div v-else-if="item.objectType === 'DYNAMICSIGNATORY'">
+              <div
+                v-for="(group, groupIndex) in item?.dynamicsignatoriesvalues"
+                :key="groupIndex"
+              >
+                <div
+                  v-for="(dynamic, index) in group.value"
+                  :key="index"
+                  class="mb-6"
+                >
+                  <div
+                    class="flex items-center justify-between p-4 border rounded-lg bg-gray-50 shadow-sm mb-4"
+                  >
+                    <!-- Left: Name / Value -->
+                    <div class="text-gray-800 font-medium">
+                      {{ dynamic.value }}
+                    </div>
+
+                    <!-- Right: Status -->
+                    <div>
+                      <span
+                        v-if="dynamic.response == 1"
+                        class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full"
+                      >
+                        APPROVED
+                      </span>
+                      <span
+                        v-else-if="dynamic.response == 0"
+                        class="inline-block px-3 py-1 text-sm font-semibold text-yellow-800 bg-yellow-100 rounded-full"
+                      >
+                        PENDING
+                      </span>
+                      <span
+                        v-else
+                        class="inline-block px-3 py-1 text-sm font-semibold text-gray-600 bg-gray-200 rounded-full"
+                      >
+                        UNKNOWN
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <div
@@ -763,7 +825,7 @@ const showModal = ref(false);
 const isApprovedOpen = ref(false);
 const { $swal } = useNuxtApp();
 const router = useRouter();
-const showAllApprovers = ref(false);
+const showAllApprovers = ref({});
 
 function goToCreateRequest() {
   router.push("/main/638799853882007798/addRequest");
@@ -774,24 +836,29 @@ const editTransaction = async (id) => {
   router.push("/main/638799853882007798/editRequest");
 };
 
-const getDisplayedApprovers = (transaction) => {
+const getDisplayedApprovers = (transaction, index) => {
   if (!transaction?.currentApprovers) return [];
-  if (showAllApprovers.value) return transaction.currentApprovers;
+  if (showAllApprovers.value[index]) return transaction.currentApprovers;
   return transaction.currentApprovers.slice(0, 1);
 };
-function closeModal() {
-  showModal.value = false;
-}
 
-function clearSearch() {
+const toggleApprovers = (index) => {
+  showAllApprovers.value[index] = !showAllApprovers.value[index];
+};
+
+const closeModal = () => {
+  showModal.value = false;
+};
+
+const clearSearch = () => {
   query.value.Search = "";
   getMyTransactions();
-}
+};
 
-function clearStatus() {
+const clearStatus = () => {
   query.value.Status = "";
   getMyTransactions();
-}
+};
 
 const viewTransaction = async (transactionId) => {
   showModal.value = true;
@@ -834,6 +901,7 @@ const getApprovalStatus = (approverGroup) => {
 
   return "pending"; // fallback
 };
+
 const wasPreviousGroupRejected = (allGroups, currentIndex) => {
   const keys = Object.keys(allGroups)
     .map(Number)
@@ -860,7 +928,7 @@ const areAllPreviousGroupsApproved = (allGroups, currentIndex) => {
   return true;
 };
 
-const getGroupVisibilityStatus = (allGroups, currentIndex) => {
+const getGroupVisibilityStatus = (allGroups, currentIndex, form) => {
   if (wasPreviousGroupRejected(allGroups, currentIndex)) {
     return "hidden";
   }
@@ -870,6 +938,9 @@ const getGroupVisibilityStatus = (allGroups, currentIndex) => {
     return "pending";
   }
   if (areAllPreviousGroupsApproved(allGroups, currentIndex)) {
+    return "pending";
+  }
+  if (transactions?.value.isinorder === 0) {
     return "pending";
   }
   return "waiting";

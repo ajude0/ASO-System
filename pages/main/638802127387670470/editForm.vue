@@ -269,7 +269,7 @@
               </div>
               <!-- Data -->
               <div
-                v-if="element.objectType === 'TEXTFROMSOURCE'"
+                v-if="element.objectType === 'TEXTFROMSOURCE' || element.objectType === 'DYNAMICSIGNATORY' "
                 class="col-span-1 mt-1"
               >
                 <label
@@ -296,7 +296,7 @@
 
               <!-- Display -->
               <div
-                v-if="element.objectType === 'TEXTFROMSOURCE'"
+                v-if="element.objectType === 'TEXTFROMSOURCE' || element.objectType === 'DYNAMICSIGNATORY'"
                 class="col-span-1 mt-1"
               >
                 <label
@@ -344,7 +344,7 @@
           
             <!-- Datasourcescript -->
             <div
-              v-if="element.objectType === 'TEXTFROMSOURCE'"
+              v-if="element.objectType === 'TEXTFROMSOURCE' || element.objectType === 'DYNAMICSIGNATORY'"
               class="col-span-1 mt-1"
             >
               <label
@@ -394,9 +394,22 @@
       </button>
     </div>
     <div class="mb-6 p-4 border rounded bg-gray-50">
-      <h2 class="font-semibold mb-4">
-        Approvers <span class="text-red-500 text-sm"> * </span>
-      </h2>
+      <div class="flex items-center mb-4 space-x-4">
+        <h2 class="font-semibold">
+          Approvers <span class="text-red-500 text-sm"> * </span>
+        </h2>
+        <div class="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="approvers-checkbox"
+            class="scale-150 accent-blue-600"
+             v-model="isInOrderBoolean"
+          />
+          <label for="approvers-checkbox" class="text-md text-gray-700" 
+            >In Order</label
+          >
+        </div>
+      </div>
       <div class="flex justify-end mb-2 gap-4 mt-4">
         <button
           v-if="!immediateHeadAdded"
@@ -1256,7 +1269,7 @@ const validateForm = () => {
       hasError = true;
     }
     if (
-      formObject.objectType === "TEXTFROMSOURCE" &&
+      (formObject.objectType === "TEXTFROMSOURCE" || formObject.objectType === 'DYNAMICSIGNATORY') &&
       (!formObject.datasourcescript || !formObject.datasourcescript.trim())
     ) {
       errors.value[index].datasourcescript = "Datasourcescript is required.";
@@ -1264,14 +1277,14 @@ const validateForm = () => {
     }
 
     if (
-      formObject.objectType === "TEXTFROMSOURCE" &&
+      (formObject.objectType === "TEXTFROMSOURCE" || formObject.objectType === 'DYNAMICSIGNATORY') &&
       (!formObject.data || !formObject.data.trim())
     ) {
       errors.value[index].data = "Data is required.";
       hasError = true;
     }
     if (
-      formObject.objectType === "TEXTFROMSOURCE" &&
+      (formObject.objectType === "TEXTFROMSOURCE" || formObject.objectType === 'DYNAMICSIGNATORY')  &&
       (!formObject.display || !formObject.display.trim())
     ) {
       errors.value[index].display = "Display is required.";
@@ -1314,6 +1327,12 @@ const validateForm = () => {
 
   return Object.keys(errors.value).length === 0;
 };
+const isInOrderBoolean = computed({
+  get: () => forms.value.isinorder === 1,
+  set: (val) => {
+    forms.value.isinorder = val ? 1 : 0;
+  },
+});
 
 const saveFormObjects = async () => {
   if (!validateForm()) {

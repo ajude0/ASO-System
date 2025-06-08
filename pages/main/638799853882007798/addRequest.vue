@@ -254,7 +254,6 @@
             style="text-transform: uppercase"
           ></textarea>
 
-
           <select
             v-else-if="formObject.objecttype === 'LIST'"
             v-model="formAnswers[formObject.id]"
@@ -337,7 +336,7 @@
             <div class="flex justify-between items-center">
               <!-- Flex container -->
               <input
-                @focus="openModal(formObject.id)"
+                @focus="openModal(formObject.id, 'textfromsource')"
                 readonly
                 type="text"
                 v-model="formDisplays[formObject.id]"
@@ -351,7 +350,7 @@
                 style="text-transform: uppercase"
               />
               <button
-                @click="openModal(formObject.id)"
+                @click="openModal(formObject.id, 'textfromsource')"
                 class="ml-2 px-4 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg"
               >
                 <svg
@@ -374,12 +373,67 @@
             </div>
           </div>
 
+          <div v-else-if="formObject.objecttype === 'DYNAMICSIGNATORY'">
+            <!-- Render each name as its own input -->
+            <div
+              v-for="(name, index) in formAnswers[formObject.id] || []"
+              :key="index"
+              class="mb-2 flex items-center gap-2"
+            >
+              <input
+               
+                readonly
+                type="text"
+                v-model="getDisplayBinding(formObject.id, index).value"
+                maxlength="55"
+                :class="[
+                  'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+                  formErrors[formObject.id]
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-gray-300 focus:ring-blue-500',
+                ]"
+                style="text-transform: uppercase"
+              />
+
+              <!-- Remove Button -->
+              <button
+                type="button"
+                @click="removeAnswer(formObject.id, index)"
+                class="text-red-600 hover:text-red-800"
+                title="Remove"
+              >
+                ✕
+              </button>
+            </div>
+
+            <!-- Button to add new name (via modal) -->
+            <div class="flex justify-center mt-2">
+              <button
+                @click="openModal(formObject.id, 'dynamicsignatory')"
+                class="w-full flex items-center justify-center px-4 py-3 bg-gray-400 hover:bg-gray-500 text-white rounded-lg"
+              >
+                <svg
+                  class="w-6 h-6 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 12h14m-7 7V5"
+                  />
+                </svg>
+              </button>
+            </div>
+          </div>
           <input
             v-else-if="formObject.objecttype === 'LINKTOOBJECT'"
             disabled
             type="text"
             v-model="formAnswers[formObject.id]"
-          
             :class="[
               'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
               formErrors[formObject.id]
@@ -499,7 +553,6 @@
           <div class="pb-4">
             <div class="min-w-full inline-block align-middle">
               <div class="border rounded-md border-gray-300">
-               
                 <!-- Table for Dynamic Columns -->
                 <table
                   v-if="!loading && justifications.length"
@@ -609,7 +662,8 @@ const selectedTitle = ref(null);
 const searchInputRef = ref(null);
 const dropdownRef = ref(null);
 const scrollContainer = ref(null);
-
+const objecttype = ref();
+const index = ref();
 const toggleDropdown = () => {
   isOpen.value = !isOpen.value;
   if (isOpen.value) {
@@ -684,28 +738,75 @@ function clearFormId() {
 
 const selectEmployee = (id, justification) => {
   // Save hidden and visible data
-  formAnswers.value[id] = justification.data;
-  formDisplays.value[id] = justification.display;
+  if (objecttype.value == "textfromsource") {
+    formAnswers.value[id] = justification.data;
+    formDisplays.value[id] = justification.display;
 
-  // Filter formObjects where formobjectsourceid matches selected ID
-  const matchedFormObjects = formDetails.value?.formObjects?.filter(formObject => 
-    formObject?.linkobjets?.formobjectsourceid === id
-  );
+    // Filter formObjects where formobjectsourceid matches selected ID
+    const matchedFormObjects = formDetails.value?.formObjects?.filter(
+      (formObject) => formObject?.linkobjets?.formobjectsourceid === id
+    );
 
-  matchedFormObjects?.forEach((formObject) => {
-    const key = formObject?.linkobjets?.columnvalue;
-    const labelId = formObject?.id;
+    matchedFormObjects?.forEach((formObject) => {
+      const key = formObject?.linkobjets?.columnvalue;
+      const labelId = formObject?.id;
 
-    if (key && labelId && justification.all?.hasOwnProperty(key)) {
-      const value = justification.all[key];
-      formAnswers.value[labelId] = value;
+      if (key && labelId && justification.all?.hasOwnProperty(key)) {
+        const value = justification.all[key];
+        formAnswers.value[labelId] = value;
+      }
+    });
+  } else {
+    if (!Array.isArray(formAnswers.value[id])) {
+      formAnswers.value[id] = [];
     }
-  });
 
+    if (justification.display) {
+      if (typeof index.value === "number" && index.value >= 0) {
+        // ✅ Edit existing value
+        formAnswers.value[id][index.value] = justification.data;
+      } else if (
+        !formAnswers.value[id].some(
+          (item) =>
+            typeof item === "object" &&
+            item.type === "dynammicsignatory" &&
+            item.value === justification.display
+        )
+      ) {
+        // ✅ Push new value with type = "dynammicsignatory" (if not duplicate)
+        formAnswers.value[id].push({
+          type: "dynammicsignatory",
+          value: justification.data, // 🔒 save this as actual value
+          display: justification.display, // 👁️ used only for displaying in input
+        });
+      }
+    }
+  }
+  index.value = "";
   showModal.value = false;
 };
+const getDisplayBinding = (formId, index) => computed({
+  get: () => {
+    const item = formAnswers.value[formId][index];
+    return typeof item === 'object' ? item.value : item;
+  },
+  set: (newDisplay) => {
+    const item = formAnswers.value[formId][index];
+    if (typeof item === 'object') {
+      item.value = newDisplay;
+      // optional: update item.value based on new display, if needed
+      // item.value = transformDisplayToValue(newDisplay);
+    } else {
+      formAnswers.value[formId][index] = newDisplay;
+    }
+  }
+});
 
-
+function removeAnswer(formId, index) {
+  if (formAnswers.value[formId]) {
+    formAnswers.value[formId].splice(index, 1);
+  }
+}
 
 const getTitle = async () => {
   isLoading.value = true;
@@ -739,11 +840,13 @@ const handleNumberInput = (event, id) => {
   formAnswers.value[id] = value; // Keep as string to allow leading zeros
 };
 
-const openModal = (id) => {
+const openModal = (id, type, inx) => {
   searchQuery.value = "";
   justifications.value = "";
   storeId.value = id;
   showModal.value = true;
+  objecttype.value = type;
+  index.value = inx;
 };
 
 const submitAnswers = async () => {
@@ -796,16 +899,35 @@ const submitAnswers = async () => {
     formObjectAnswerDtos: Object.entries(formAnswers.value).flatMap(
       ([id, value]) =>
         Array.isArray(value)
-          ? value.map((v) => ({ formObjectId: parseInt(id), value: v })) // Separate each item
+          ? value.map((v) =>
+              typeof v === "object" && v !== null && "value" in v
+                ? {
+                    formObjectId: parseInt(id),
+                    value: v.value,
+                    type: v.type,
+                    display: v.display, // add display if present
+                  }
+                : {
+                    formObjectId: parseInt(id),
+                    value: v,
+                  }
+            )
           : [
-              {
-                formObjectId: parseInt(id),
-                value: value?.toString().trim() || "",
-              },
+              typeof value === "object" && value !== null && "value" in value
+                ? {
+                    formObjectId: parseInt(id),
+                    value: value.value,
+                    type: value.type,
+                    display: value.display, // add display if present
+                  }
+                : {
+                    formObjectId: parseInt(id),
+                    value: value?.toString().trim() || "",
+                  },
             ]
     ),
   };
-  
+
   try {
     await $fetch(`${API_BASE_URL}/api/FormObject/submit-answers`, {
       method: "POST",

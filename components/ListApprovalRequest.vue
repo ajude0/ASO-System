@@ -1,79 +1,79 @@
 <template>
   <div class="flex flex-col md:flex-row justify-between">
     <div class="flex gap-2">
-    <div class="relative text-gray-500 focus-within:text-gray-900 mb-4">
-      <!-- Left Icon -->
-      <div
-        class="absolute inset-y-0 left-3 flex items-center pointer-events-none"
-      >
-        <svg
-          class="w-5 h-5"
-          viewBox="0 0 20 20"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
+      <div class="relative text-gray-500 focus-within:text-gray-900 mb-4">
+        <!-- Left Icon -->
+        <div
+          class="absolute inset-y-0 left-3 flex items-center pointer-events-none"
         >
-          <path
-            d="M17.5 17.5L15.4167 15.4167M15.8333 9.16667C15.8333 5.48477 12.8486 2.5 9.16667 2.5C5.48477 2.5 2.5 5.48477 2.5 9.16667C2.5 12.8486 5.48477 15.8333 9.16667 15.8333C11.0005 15.8333 12.6614 15.0929 13.8667 13.8947C15.0814 12.6872 15.8333 11.0147 15.8333 9.16667Z"
-            stroke="#9CA3AF"
-            stroke-width="1.6"
-            stroke-linecap="round"
-          />
-        </svg>
-      </div>
+          <svg
+            class="w-5 h-5"
+            viewBox="0 0 20 20"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M17.5 17.5L15.4167 15.4167M15.8333 9.16667C15.8333 5.48477 12.8486 2.5 9.16667 2.5C5.48477 2.5 2.5 5.48477 2.5 9.16667C2.5 12.8486 5.48477 15.8333 9.16667 15.8333C11.0005 15.8333 12.6614 15.0929 13.8667 13.8947C15.0814 12.6872 15.8333 11.0147 15.8333 9.16667Z"
+              stroke="#9CA3AF"
+              stroke-width="1.6"
+              stroke-linecap="round"
+            />
+          </svg>
+        </div>
 
-      <!-- Right Icon -->
-      <div
-        v-if="query.Search"
-        class="absolute inset-y-0 md:left-72 left-44 flex items-center"
+        <!-- Right Icon -->
+        <div
+          v-if="query.Search"
+          class="absolute inset-y-0 md:left-72 left-44 flex items-center"
+        >
+          <svg
+            @click="clearSearch"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            class="size-6 cursor-pointer text-red-700"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+            />
+          </svg>
+        </div>
+
+        <!-- Input Field -->
+        <input
+          type="text"
+          id="default-search"
+          v-model="query.Search"
+          @keydown.enter="getListOfTransactions"
+          class="block w-52 md:w-80 h-11 pr-10 pl-10 py-2.5 text-base font-normal shadow-xs text-gray-900 bg-transparent border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none"
+          placeholder="Search"
+        />
+      </div>
+      <button
+        @click="getListOfTransactions"
+        class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700"
       >
         <svg
-          @click="clearSearch"
+          class="w-6 h-6 text-gray-800 dark:text-white"
+          aria-hidden="true"
           xmlns="http://www.w3.org/2000/svg"
+          width="24"
+          height="24"
           fill="none"
           viewBox="0 0 24 24"
-          stroke-width="1.5"
-          stroke="currentColor"
-          class="size-6 cursor-pointer text-red-700"
         >
           <path
+            stroke="currentColor"
             stroke-linecap="round"
-            stroke-linejoin="round"
-            d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
+            stroke-width="2"
+            d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
           />
         </svg>
-      </div>
-
-      <!-- Input Field -->
-      <input
-        type="text"
-        id="default-search"
-        v-model="query.Search"
-        @keydown.enter="getListOfTransactions"
-        class="block w-52 md:w-80 h-11 pr-10 pl-10 py-2.5 text-base font-normal shadow-xs text-gray-900 bg-transparent border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none"
-        placeholder="Search"
-      />
-    </div>
-    <button
-      @click="getListOfTransactions"
-      class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700"
-    >
-      <svg
-        class="w-6 h-6 text-gray-800 dark:text-white"
-        aria-hidden="true"
-        xmlns="http://www.w3.org/2000/svg"
-        width="24"
-        height="24"
-        fill="none"
-        viewBox="0 0 24 24"
-      >
-        <path
-          stroke="currentColor"
-          stroke-linecap="round"
-          stroke-width="2"
-          d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
-        />
-      </svg>
-    </button>
+      </button>
     </div>
     <div>
       <div class="relative inline-block mr-4 mb-2">
@@ -252,6 +252,23 @@
                         >Proxy</span
                       >
                     </div>
+                    <div
+                      v-if="transaction.mainapprover == '3'"
+                      class="py-1.5 px-2.5 bg-blue-50 rounded-full flex items-center justify-center w-20 gap-1"
+                    >
+                      <svg
+                        width="5"
+                        height="6"
+                        viewBox="0 0 5 6"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <circle cx="2.5" cy="3" r="2.5" fill="#2563EB"></circle>
+                      </svg>
+                      <span class="font-medium text-xs text-blue-600"
+                        >Signatory</span
+                      >
+                    </div>
                   </td>
 
                   <td
@@ -288,7 +305,7 @@
                         <circle cx="2.5" cy="3" r="2.5" fill="#DC2626"></circle>
                       </svg>
                       <span class="font-medium text-xs text-red-600"
-                        >Disaaproved</span
+                        >Disaproved</span
                       >
                     </div>
                     <div
@@ -322,8 +339,8 @@
                     >
                       <ul class="space-y-2">
                         <li
-                          v-for="approver in transaction.listofapproved"
-                          :key="approver.approvername"
+                          v-for="(approver, index) in displayedApprovers(transaction)"
+                          :key="index"
                           class="flex items-start space-x-2"
                         >
                           <div class="flex-shrink-0">
@@ -370,6 +387,20 @@
                           </div>
                         </li>
                       </ul>
+
+                      <!-- See more / See less button -->
+                      <div v-if="transaction.listofapproved?.length > 1">
+                          <button
+                            class="text-blue-600 text-sm font-medium hover:underline"
+                            @click="toggleApprovers(transaction.id)"
+                          >
+                            {{
+                              showAllApprovers[transaction.id]
+                                ? "See less"
+                                : "See more"
+                            }}
+                          </button>
+                        </div>
                     </div>
 
                     <!-- 2) Always show “rejected” if status is rejected -->
@@ -615,11 +646,85 @@
                 {{ item.label }}
               </h3>
             </div>
-            <div v-else class="border p-3 rounded-md w-full text-gray-800">
+            <div
+              v-else-if="item.objectType != 'DYNAMICSIGNATORY'"
+              class="border p-3 rounded-md w-full text-gray-800"
+            >
               <span v-for="(value, index) in item.values" :key="index">
                 {{ value
                 }}<span v-if="index !== item.values.length - 1"> , </span>
               </span>
+            </div>
+            <div v-else-if="item.objectType === 'DYNAMICSIGNATORY'">
+              <div
+                v-for="(group, groupIndex) in item?.dynamicsignatoriesvalues"
+                :key="groupIndex"
+              >
+                <div
+                  v-for="(dynamic, index) in group.value"
+                  :key="index"
+                  class="mb-6"
+                >
+                  <div
+                    class="flex items-center justify-between p-4 border rounded-lg bg-gray-50 shadow-sm mb-4"
+                  >
+                    <!-- Left: Name / Value -->
+                    <div
+                      class="text-gray-800 font-medium flex items-center gap-2"
+                    >
+                      {{ dynamic.value }}
+                      <span
+                        v-if="dynamic.currentuser"
+                        class="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full"
+                      >
+                        YOU
+                      </span>
+                    </div>
+
+                    <!-- Right: Status / Button -->
+                    <div>
+                      <!-- If current user and response is 0, show approve button -->
+                      <button
+                        v-if="dynamic.currentuser && dynamic.response === 0"
+                        class="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-800"
+                        @click="postApprove()"
+                      >
+                        APPROVED
+                      </button>
+
+                      <!-- If current user and response is 1, show approved text -->
+                      <span
+                        v-else-if="
+                          dynamic.currentuser && dynamic.response === 1
+                        "
+                        class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full"
+                      >
+                        APPROVED
+                      </span>
+
+                      <!-- Other statuses for non-current users -->
+                      <span
+                        v-else-if="dynamic.response === 1"
+                        class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full"
+                      >
+                        APPROVED
+                      </span>
+                      <span
+                        v-else-if="dynamic.response === 0"
+                        class="inline-block px-3 py-1 text-sm font-semibold text-yellow-800 bg-yellow-100 rounded-full"
+                      >
+                        PENDING
+                      </span>
+                      <span
+                        v-else
+                        class="inline-block px-3 py-1 text-sm font-semibold text-gray-600 bg-gray-200 rounded-full"
+                      >
+                        UNKNOWN
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -731,12 +836,14 @@
       >
         <button
           @click="postApprove()"
+          v-if="transactions.hasCurrentApprover"
           class="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-800"
         >
           Approve
         </button>
         <button
           @click="postDisapprove()"
+          v-if="transactions.hasCurrentApprover"
           class="py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-800"
         >
           Disapprove
@@ -781,6 +888,7 @@ const showModal = ref(false);
 const isApprovedOpen = ref(false);
 const hasPermission = ref(false);
 const selectedId = ref("");
+const showAllApprovers = ref({});
 
 function clearSearch() {
   query.value.Search = "";
@@ -793,10 +901,27 @@ function clearStatus() {
 }
 
 const viewTransaction = async (transactionId, id, status) => {
+
   showModal.value = true;
   await getTransaction(transactionId);
   hasPermission.value = status === "pending";
-  selectedId.value = id;
+  selectedId.value = transactionId;
+};
+
+// const displayedApprovers = computed(() =>
+//   showAllApprovers.value
+//     ? transactions.listofapproved
+//     : transactions.listofapproved.slice(0, 2)
+// );
+
+const displayedApprovers = (transaction) => {
+  if (!transaction?.listofapproved) return [];
+  if (showAllApprovers.value[transaction.id]) return transaction.listofapproved;
+  return transaction.listofapproved.slice(0, 1);
+};
+
+const toggleApprovers = (id) => {
+  showAllApprovers.value[id] = !showAllApprovers.value[id];
 };
 const getApprovalStatus = (approverGroup) => {
   if (!Array.isArray(approverGroup)) return "pending"; // fallback
@@ -849,6 +974,9 @@ const getGroupVisibilityStatus = (allGroups, currentIndex) => {
     return "pending";
   }
   if (areAllPreviousGroupsApproved(allGroups, currentIndex)) {
+    return "pending";
+  }
+  if (transactions?.value.isinorder === 0) {
     return "pending";
   }
   return "waiting";

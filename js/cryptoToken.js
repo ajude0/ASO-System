@@ -24,3 +24,8 @@ export const getTransactionId = () => {
   return encryptedToken ? decryptData(encryptedToken) : null;
 };
 
+export const getUrlTransactionId = () => {
+  const encryptedToken = localStorage.getItem("aso_urltransactionId");
+  return encryptedToken ? decryptData(encryptedToken) : null;
+};
+

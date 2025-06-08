@@ -152,7 +152,14 @@ const login = async () => {
     });
 
     localStorage.setItem("user_token_aso", encryptData(response.stringParam1));
-    router.push("/main/dashboard");
+     const transactionId = localStorage.getItem('aso_urltransactionId')
+ 
+
+    if (transactionId) {
+      router.push(`main/transactions`)
+    } else {
+      router.push('main/dashboard')
+    }
   } catch (error) {
     console.error("Login Error:", error);
 

@@ -20,7 +20,7 @@
         </div>
         <div class="relative font-[sans-serif] w-max mx-auto m:right-auto sm:mr-0" ref="dropdownRef">
           <button type="button" @click="toggleDropdown" class="px-4 py-2 flex items-center text-sm ">
-            <img src="../static/images/UserIcon.png" class="w-8 h-8 mr-3 rounded-full shrink-0"></img>
+            <img :src="`https://apps.fastlogistics.com.ph/fpma2api/api/Access/get-employee-picture?userid=${user.userid}&empid=${user.empid}`" class="w-8 h-8 mr-3 rounded-full shrink-0"></img>
             {{user? `${user.lastname}, ${user.firstname}` : 'Test User'}}
             <svg xmlns="http://www.w3.org/2000/svg" class="w-3 fill-gray-400 inline ml-3" viewBox="0 0 24 24">
               <path fill-rule="evenodd"
@@ -97,7 +97,7 @@ import { toggleSidebar } from "./store";
 import { getProfile, user} from "~/js/fetchUserProfile";
 import { getKey,encryptData } from '~/encrpyt';
 import { getToken } from '~/js/cryptoToken';
-import { fetchSysDescription,sysdescription } from '~/js/fetchMenu';
+import { fetchSysDescription,sysdescription, userId } from '~/js/fetchMenu';
 const router = useRouter();
 
 watch(sysdescription, (newTitle) => {
@@ -168,7 +168,7 @@ async function storeEncryptedDataInCookie(iframeUrl) {
   isDropdownOpen.value = false;
   const token = getToken();
   const payload = {
-    systemid: 83,
+    systemid: 84,
     userhashcode: user.value.hashcode,
     token:token,
     userid: user.value.userId,
@@ -195,7 +195,8 @@ async function storeEncryptedDataInCookie(iframeUrl) {
   // window.location.href = 'https://apps.fastlogistics.com.ph/utility/#/ChangePassword/Change';
 }
 onMounted(async () => {
-  getProfile();
+ await getProfile();
+  console.log(user.value)
   fetchSysDescription();
   document.addEventListener('click', handleClickOutside);
 });
