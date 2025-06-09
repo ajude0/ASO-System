@@ -537,7 +537,6 @@ const toggleChecklist = (item, option) => {
 };
 
 const openModal = (index, id, type) => {  
-  console.log(type);
   storeIndex.value = index;
   storeId.value = id;
   showModal.value = true;

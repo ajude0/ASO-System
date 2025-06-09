@@ -403,7 +403,6 @@ definePageMeta({
 onMounted(async () => {
   urltransactionId.value = getUrlTransactionId();
   await getTransaction(urltransactionId.value);
-  console.log(transactions.value);
   if (!transactions.value.iscurrentuser) {
     if (
       transactions.value &&
