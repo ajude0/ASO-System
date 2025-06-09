@@ -12,16 +12,25 @@
             </button>
             <div class="flex ml-5 md:mr-24 md:flex hidden">
               <a class="flex">
-                <span @click="Dashboard()" class="cursor-pointer self-center text-xl font-semibold sm:text-2xl whitespace-nowrap ">{{ sysdescription }}</span>
+                <span @click="Dashboard()"
+                  class="cursor-pointer self-center text-xl font-semibold sm:text-2xl whitespace-nowrap ">{{
+                    sysdescription }}</span>
               </a>
             </div>
           </div>
-    
+
         </div>
         <div class="relative font-[sans-serif] w-max mx-auto m:right-auto sm:mr-0" ref="dropdownRef">
           <button type="button" @click="toggleDropdown" class="px-4 py-2 flex items-center text-sm ">
-            <img :src="`https://apps.fastlogistics.com.ph/fpma2api/api/Access/get-employee-picture?userid=${user.userid}&empid=${user.empid}`" class="w-8 h-8 mr-3 rounded-full shrink-0"></img>
-            {{user? `${user.lastname}, ${user.firstname}` : 'Test User'}}
+            <span v-if="isLoading" class="mr-4"> <svg class="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg"
+                fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 100 16v-4l-3 3 3 3v-4a8 8 0 01-8-8z"></path>
+              </svg></span>
+            <img v-else :src="isImageError ? '../static/images/UserIcon.png' : userImage"
+              class="w-6 h-6 mr-3 rounded-full shrink-0"></img>
+            {{ user ? `${user.lastname}, ${user.firstname}` : 'Test User' }}
             <svg xmlns="http://www.w3.org/2000/svg" class="w-3 fill-gray-400 inline ml-3" viewBox="0 0 24 24">
               <path fill-rule="evenodd"
                 d="M11.99997 18.1669a2.38 2.38 0 0 1-1.68266-.69733l-9.52-9.52a2.38 2.38 0 1 1 3.36532-3.36532l7.83734 7.83734 7.83734-7.83734a2.38 2.38 0 1 1 3.36532 3.36532l-9.52 9.52a2.38 2.38 0 0 1-1.68266.69734z"
@@ -49,7 +58,13 @@
             </li>
             <li @click="storeEncryptedDataInCookie('https://apps.fastlogistics.com.ph/utility/#/Setting/Account')"
               class='py-2.5 px-5 flex items-center hover:bg-gray-100 text-[#333] text-sm cursor-pointer'>
-              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-3" viewBox="0 0 48 48"><g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4"><path d="M18 31h20V5"/><path d="M30 21H10v22m34-32l-6-6l-6 6"/><path d="m16 37l-6 6l-6-6"/></g></svg>
+              <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-3" viewBox="0 0 48 48">
+                <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="4">
+                  <path d="M18 31h20V5" />
+                  <path d="M30 21H10v22m34-32l-6-6l-6 6" />
+                  <path d="m16 37l-6 6l-6-6" />
+                </g>
+              </svg>
               Account Settings
             </li>
             <li @click="Logout()"
@@ -65,27 +80,17 @@
         </div>
       </div>
     </div>
-    <div
-      v-if="show"
-      class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-50 before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif] "
-    >
+    <div v-if="show"
+      class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-50 before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif] ">
       <div class="bg-white rounded-xl shadow-lg max-w-4xl w-full p-4 relative">
         <!-- Close Button -->
-        <button
-          @click="show = false"
-          class="absolute top-2 right-2 text-gray-500 hover:text-black text-3xl"
-        >
+        <button @click="show = false" class="absolute top-2 right-2 text-gray-500 hover:text-black text-3xl">
           &times;
         </button>
- 
+
         <!-- Iframe -->
         <div class="aspect-video z-50 ">
-          <iframe
-            class="w-full h-full z50"
-            :src="link"
-            frameborder="0"
-            allowfullscreen
-          ></iframe>
+          <iframe class="w-full h-full z50" :src="link" frameborder="0" allowfullscreen></iframe>
         </div>
       </div>
     </div>
@@ -94,12 +99,38 @@
 <script setup>
 import { ref } from 'vue';
 import { toggleSidebar } from "./store";
-import { getProfile, user} from "~/js/fetchUserProfile";
-import { getKey,encryptData } from '~/encrpyt';
+import { getProfile, user } from "~/js/fetchUserProfile";
+import { getKey, encryptData } from '~/encrpyt';
 import { getToken } from '~/js/cryptoToken';
-import { fetchSysDescription,sysdescription, userId } from '~/js/fetchMenu';
+import { fetchSysDescription, sysdescription, userId } from '~/js/fetchMenu';
 const router = useRouter();
+const userImage = ref("")
+const isImageError = ref(false)
+const isLoading = ref(false);
 
+function getUserImage(userId, employeeId) {
+  try {
+    isLoading.value = true;
+    const imageUrl = `https://apps.fastlogistics.com.ph/fpma2api/api/Access/get-employee-picture?userid=${userId}&empid=${employeeId}`
+    const img = new Image()
+
+    img.onload = () => {
+      userImage.value = imageUrl
+      isImageError.value = false
+      isLoading.value = false;
+    }
+
+    img.onerror = () => {
+      isImageError.value = true
+      console.error("Failed to load user image.")
+    }
+
+    img.src = imageUrl
+  } catch (error) {
+    console.error("Error fetching user image:", error)
+    isImageError.value = true
+  }
+}
 watch(sysdescription, (newTitle) => {
   if (newTitle) {
     useHead({
@@ -170,23 +201,23 @@ async function storeEncryptedDataInCookie(iframeUrl) {
   const payload = {
     systemid: 84,
     userhashcode: user.value.hashcode,
-    token:token,
+    token: token,
     userid: user.value.userId,
     employeename: user.value.requestorname,
     employeeid: user.value.empid,
-    position:user.value.positionname,
+    position: user.value.positionname,
     emailadd: user.value.emailadd,
     department: user.value.department,
     sex: user.value.sex
   };
- 
+
   const key = await getKey(); // You can share the password securely across systems
   const encrypted = await encryptData(payload, key);
- 
+
   // Calculate expiration time (30 minutes from now)
   const expirationDate = new Date();
   expirationDate.setMinutes(expirationDate.getMinutes() + 30);
- 
+
   // Set cookie (secure, strict, and expires in 30 minutes)
   document.cookie = `utility=${encrypted}; path=/; secure; samesite=strict; expires=${expirationDate.toUTCString()}`;
   link.value = iframeUrl
@@ -195,9 +226,10 @@ async function storeEncryptedDataInCookie(iframeUrl) {
   // window.location.href = 'https://apps.fastlogistics.com.ph/utility/#/ChangePassword/Change';
 }
 onMounted(async () => {
- await getProfile();
+  await getProfile();
   console.log(user.value)
-  fetchSysDescription();
+  await fetchSysDescription();
+  getUserImage(user.value.userid, user.value.empid)
   document.addEventListener('click', handleClickOutside);
 });
 onUnmounted(async () => {
