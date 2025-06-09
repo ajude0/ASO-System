@@ -339,7 +339,9 @@
                     >
                       <ul class="space-y-2">
                         <li
-                          v-for="(approver, index) in displayedApprovers(transaction)"
+                          v-for="(approver, index) in displayedApprovers(
+                            transaction
+                          )"
                           :key="index"
                           class="flex items-start space-x-2"
                         >
@@ -390,17 +392,17 @@
 
                       <!-- See more / See less button -->
                       <div v-if="transaction.listofapproved?.length > 1">
-                          <button
-                            class="text-blue-600 text-sm font-medium hover:underline"
-                            @click="toggleApprovers(transaction.id)"
-                          >
-                            {{
-                              showAllApprovers[transaction.id]
-                                ? "See less"
-                                : "See more"
-                            }}
-                          </button>
-                        </div>
+                        <button
+                          class="text-blue-600 text-sm font-medium hover:underline"
+                          @click="toggleApprovers(transaction.id)"
+                        >
+                          {{
+                            showAllApprovers[transaction.id]
+                              ? "See less"
+                              : "See more"
+                          }}
+                        </button>
+                      </div>
                     </div>
 
                     <!-- 2) Always show “rejected” if status is rejected -->
@@ -841,6 +843,9 @@
         >
           Approve
         </button>
+
+        <Signaturepad v-model="showSignatureModal" @save="onSignatureSaved" />
+        
         <button
           @click="postDisapprove()"
           v-if="transactions.hasCurrentApprover"
@@ -882,7 +887,18 @@ import {
   loading,
 } from "~/js/fetchListApprovalRequest";
 import LoadingModal from "./modal/LoadingModal.vue";
+import Signaturepad from "./Signaturepad.vue";
+import { encryptSignatureUrl } from "~/js/cryptoToken";
 
+const showPad = ref(false);
+const signatureImage = ref("");
+const showSignatureModal = ref(false);
+const pendingRemarks = ref("");
+const pendingSignature = ref("");
+
+function onSignatureSave(dataUrl) {
+  signatureImage.value = dataUrl;
+}
 const { $swal } = useNuxtApp();
 const showModal = ref(false);
 const isApprovedOpen = ref(false);
@@ -901,7 +917,6 @@ function clearStatus() {
 }
 
 const viewTransaction = async (transactionId, id, status) => {
-
   showModal.value = true;
   await getTransaction(transactionId);
   hasPermission.value = status === "pending";
@@ -983,6 +998,7 @@ const getGroupVisibilityStatus = (allGroups, currentIndex) => {
 };
 
 const postApprove = async () => {
+  console.log("sample");
   const confirm = await $swal.fire({
     title: "Are you sure?",
     text: "Do you really want to approve this request?",
@@ -995,19 +1011,33 @@ const postApprove = async () => {
   });
 
   if (confirm.isConfirmed) {
-    const remarks = confirm.value; // Get the remarks entered by the user (if any)
-    await confirmApproval(selectedId.value, remarks);
-
-    $swal.fire({
-      title: "Approved!",
-      text: "The request has been approved.",
-      icon: "success",
-      timer: 1000, // auto-close after 1 second
-      showConfirmButton: false,
-    });
-
-    showModal.value = false;
+    pendingRemarks.value = confirm.value || "";
+    showSignatureModal.value = true; // show signature modal next
   }
+};
+
+// Called when user saves a signature
+const onSignatureSaved = async (signatureDataUrl) => {
+  const encrypt = encryptSignatureUrl(signatureDataUrl);
+  pendingSignature.value = signatureDataUrl;
+ 
+  console.log(encrypt);
+
+  // Now submit the approval
+  // await confirmApproval(selectedId.value, {
+  //   remarks: pendingRemarks.value,
+  //   signature: pendingSignature.value,
+  // })
+
+  $swal.fire({
+    title: "Approved!",
+    text: "The request has been approved.",
+    icon: "success",
+    timer: 1000,
+    showConfirmButton: false,
+  });
+
+  showModal.value = false;
 };
 
 const postDisapprove = async () => {
