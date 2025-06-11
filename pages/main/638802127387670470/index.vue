@@ -398,10 +398,11 @@
       </div>
 
       <div class="flex justify-left mt-10 space-x-2">
-        <span>
-          Showing {{ totalEntries === 0 ? 0 : query.PageNumber }} out of
-          {{ totalPages }} Pages ({{ totalEntries }} Entries)
-        </span>
+        Showing {{ totalEntries === 0 ? 0 : query.PageNumber }} out of
+          {{ totalPages }} {{ totalPages === 1 ? "Page" : "Pages" }} ({{
+            totalEntries
+          }}
+          {{ totalEntries === 1 ? "Entry" : "Entries" }})
       </div>
 
       <div class="flex justify-center mt-10 space-x-2 mb-2">

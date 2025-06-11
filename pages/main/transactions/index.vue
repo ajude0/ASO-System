@@ -86,9 +86,9 @@
                     <button
                       v-if="dynamic.currentuser && dynamic.response === 0"
                       class="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-800"
-                      @click="postApprove()"
+                      @click="postSigned()"
                     >
-                      APPROVED
+                      SIGN
                     </button>
 
                     <!-- If current user and response is 1, show approved text -->
@@ -96,16 +96,41 @@
                       v-else-if="dynamic.currentuser && dynamic.response === 1"
                       class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full"
                     >
-                      APPROVED
+                      SIGNED -   {{
+                          new Date(dynamic.responsedate).toLocaleString(
+                            "en-US",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "numeric",
+                              hour12: true, // optional, for 12-hour format with AM/PM
+                            }
+                          )
+                        }}
                     </span>
 
                     <!-- Other statuses for non-current users -->
                     <span
-                      v-else-if="dynamic.response === 1"
-                      class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full"
-                    >
-                      APPROVED
-                    </span>
+                        v-else-if="dynamic.response === 1"
+                        class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full"
+                      >
+                        SIGNED -
+                        {{
+                          new Date(dynamic.responsedate).toLocaleString(
+                            "en-US",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "numeric",
+                              hour12: true, // optional, for 12-hour format with AM/PM
+                            }
+                          )
+                        }}
+                      </span>
                     <span
                       v-else-if="dynamic.response === 0"
                       class="inline-block px-3 py-1 text-sm font-semibold text-yellow-800 bg-yellow-100 rounded-full"
@@ -363,6 +388,34 @@ const postApprove = async () => {
   }
 };
 
+const postSigned = async () => {
+  const confirm = await $swal.fire({
+    title: "Are you sure?",
+    text: "Do you really want to sign this request?",
+    icon: "warning",
+    input: "textarea",
+    inputPlaceholder: "Enter remarks here (optional)...",
+    showCancelButton: true,
+    confirmButtonText: "Yes, sign it!",
+    cancelButtonText: "No, cancel",
+  });
+
+  if (confirm.isConfirmed) {
+    const remarks = confirm.value; // Get the remarks entered by the user (if any)\
+
+    await confirmApproval(urltransactionId.value, remarks);
+
+    $swal.fire({
+      title: "Signed!",
+      text: "The request has been signed.",
+      icon: "success",
+      timer: 1000, // auto-close after 1 second
+      showConfirmButton: false,
+    });
+
+    return navigateTo("/main/dashboard");
+  }
+};
 const postDisapprove = async () => {
   const { value: remarks } = await $swal.fire({
     title: "Are you sure?",
@@ -404,22 +457,27 @@ onMounted(async () => {
   urltransactionId.value = getUrlTransactionId();
   await getTransaction(urltransactionId.value);
   if (!transactions.value.iscurrentuser) {
-    if (
-      transactions.value &&
-      !transactions.value.hasSignatory &&
-      !transactions.value.hasCurrentApprover
-    ) {
-      await $swal.fire({
-        title: "Access Denied",
-        text: "You are not allowed to view this transaction.",
-        icon: "error",
-        timer: 1000,
-        showConfirmButton: false,
-      });
+  if (
+    transactions.value &&
+    !transactions.value.hasSignatory &&
+    !transactions.value.hasCurrentApprover
+  ) {
+    const result = await $swal.fire({
+      title: "Access Denied",
+      text: "You are not allowed to view this transaction.",
+      icon: "error",
+      confirmButtonText: "Close", // Button at the bottom
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+    });
 
-      router.push("/main/dashboard"); // or your dashboard route
+    // Redirect only if the user clicks the "Close" button
+    if (result.isConfirmed) {
+      router.push("/main/dashboard");
     }
   }
+}
+
 
   readyToRender.value = true; // Set only if access is granted
 });

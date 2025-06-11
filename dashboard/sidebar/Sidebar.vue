@@ -98,6 +98,7 @@ function handleChildMenuClick(menuCode) {
             >
             <a
               @click="dashboard"
+               :href="`#/main/dashboard`"
               :class="[
                 'cursor-pointer flex items-center px-3 py-2 text-gray-600 transition-colors duration-300 transform rounded-lg dark:black-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-200 hover:text-gray-700',
                 { 'bg-gray-800 text-white': $route.path === '/main/dashboard' },
@@ -327,6 +328,7 @@ function handleChildMenuClick(menuCode) {
                   <a
                     v-for="(child, childIndex) in parent.pages"
                     :key="childIndex"
+                     :href="`#/main/${child.stage}`"
                     @click="handleChildMenuClick(child.stage)"
                     :class="[
                       'cursor-pointer flex items-center px-3 py-2 text-gray-600 transition-colors duration-300 transform rounded-lg dark:black-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-200 hover:text-gray-700',

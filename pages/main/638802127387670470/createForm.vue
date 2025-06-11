@@ -56,7 +56,7 @@
       <textarea
         v-model="form.description"
         class="border p-2 w-full rounded"
-        maxlength="90"
+        maxlength="240"
         :class="{ 'border-red-500': errors.description }"
       ></textarea>
       <p v-if="errors.description" class="text-red-500 text-sm mt-1">
@@ -1115,7 +1115,6 @@ const addImmediateHead = () => {
 
 const selectApprover = (approver) => {
   if (selectedApproverIndex.value !== null) {
-    console.log(approver);
     form.value.approvers[selectedApproverIndex.value] = {
       type: "Additional Approver",
       approverId: approver.emplId,

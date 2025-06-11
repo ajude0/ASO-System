@@ -93,7 +93,7 @@
       >
       <textarea
         v-model="forms.description"
-        maxlength="90"
+        maxlength="240"
         class="border p-2 w-full rounded"
         :class="{ 'border-red-500': errors.description }"
       ></textarea>

@@ -337,9 +337,13 @@
                       "
                       class="space-y-2"
                     >
+                    
+
                       <ul class="space-y-2">
                         <li
-                          v-for="(approver, index) in displayedApprovers(transaction)"
+                          v-for="(approver, index) in displayedApprovers(
+                            transaction
+                          )"
                           :key="index"
                           class="flex items-start space-x-2"
                         >
@@ -390,17 +394,23 @@
 
                       <!-- See more / See less button -->
                       <div v-if="transaction.listofapproved?.length > 1">
-                          <button
-                            class="text-blue-600 text-sm font-medium hover:underline"
-                            @click="toggleApprovers(transaction.id)"
-                          >
-                            {{
-                              showAllApprovers[transaction.id]
-                                ? "See less"
-                                : "See more"
-                            }}
-                          </button>
-                        </div>
+                        <button
+                          class="text-blue-600 text-sm font-medium hover:underline"
+                          @click="toggleApprovers(transaction.id)"
+                        >
+                          {{
+                            showAllApprovers[transaction.id]
+                              ? "See less"
+                              : "See more"
+                          }}
+                        </button>
+                      </div>
+                      <div
+                        class="font-semibold h-5 rounded-xl bg-green-600 text-white p-2 flex items-center justify-center"
+                      >
+                        {{ transaction.totalApproved }} /
+                        {{ transaction.totalApprovers }} - Approved
+                      </div>
                     </div>
 
                     <!-- 2) Always show “rejected” if status is rejected -->
@@ -422,7 +432,7 @@
                       "
                       class="text-sm text-gray-400 italic mt-2"
                     >
-                      No one has approved yet
+                    No one has approved yet
                     </div>
                   </td>
                   <td
@@ -515,10 +525,11 @@
       </div>
 
       <div class="flex justify-left mt-10 space-x-2">
-        <span>
-          Showing {{ totalEntries === 0 ? 0 : query.PageNumber }} out of
-          {{ totalPages }} Pages ({{ totalEntries }} Entries)
-        </span>
+        Showing {{ totalEntries === 0 ? 0 : query.PageNumber }} out of
+          {{ totalPages }} {{ totalPages === 1 ? "Page" : "Pages" }} ({{
+            totalEntries
+          }}
+          {{ totalEntries === 1 ? "Entry" : "Entries" }})
       </div>
 
       <div class="flex justify-center mt-10 space-x-2 mb-2">
@@ -687,9 +698,9 @@
                       <button
                         v-if="dynamic.currentuser && dynamic.response === 0"
                         class="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-800"
-                        @click="postApprove()"
+                        @click="postSigned()"
                       >
-                        APPROVED
+                        SIGN
                       </button>
 
                       <!-- If current user and response is 1, show approved text -->
@@ -699,7 +710,20 @@
                         "
                         class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full"
                       >
-                        APPROVED
+                        SIGNED -
+                        {{
+                          new Date(dynamic.responsedate).toLocaleString(
+                            "en-US",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "numeric",
+                              hour12: true, // optional, for 12-hour format with AM/PM
+                            }
+                          )
+                        }}
                       </span>
 
                       <!-- Other statuses for non-current users -->
@@ -707,7 +731,20 @@
                         v-else-if="dynamic.response === 1"
                         class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full"
                       >
-                        APPROVED
+                        SIGNED -
+                        {{
+                          new Date(dynamic.responsedate).toLocaleString(
+                            "en-US",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "numeric",
+                              hour12: true, // optional, for 12-hour format with AM/PM
+                            }
+                          )
+                        }}
                       </span>
                       <span
                         v-else-if="dynamic.response === 0"
@@ -901,7 +938,6 @@ function clearStatus() {
 }
 
 const viewTransaction = async (transactionId, id, status) => {
-
   showModal.value = true;
   await getTransaction(transactionId);
   hasPermission.value = status === "pending";
@@ -1009,6 +1045,35 @@ const postApprove = async () => {
     showModal.value = false;
   }
 };
+
+const postSigned = async () => {
+  const confirm = await $swal.fire({
+    title: "Are you sure?",
+    text: "Do you really want to sign this request?",
+    icon: "warning",
+    input: "textarea",
+    inputPlaceholder: "Enter remarks here (optional)...",
+    showCancelButton: true,
+    confirmButtonText: "Yes, sign it!",
+    cancelButtonText: "No, cancel",
+  });
+
+  if (confirm.isConfirmed) {
+    const remarks = confirm.value; // Get the remarks entered by the user (if any)
+    await confirmApproval(selectedId.value, remarks);
+
+    $swal.fire({
+      title: "Signed!",
+      text: "The request has been signed.",
+      icon: "success",
+      timer: 1000, // auto-close after 1 second
+      showConfirmButton: false,
+    });
+
+    showModal.value = false;
+  }
+};
+
 
 const postDisapprove = async () => {
   const { value: remarks } = await $swal.fire({

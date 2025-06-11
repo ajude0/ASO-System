@@ -159,7 +159,8 @@ function toggleDropdown() {
 
 
 function Logout() {
-  localStorage.clear();
+  localStorage.removeItem('user_token_aso');
+  localStorage.removeItem('aso_urltransactionId');
   router.push('/')
 }
 
@@ -202,14 +203,15 @@ async function storeEncryptedDataInCookie(iframeUrl) {
     systemid: 84,
     userhashcode: user.value.hashcode,
     token: token,
-    userid: user.value.userId,
+    userid: user.value.userid,
     employeename: user.value.requestorname,
     employeeid: user.value.empid,
-    position: user.value.positionname,
+    position: user.value.position,
     emailadd: user.value.emailadd,
     department: user.value.department,
     sex: user.value.sex
   };
+
 
   const key = await getKey(); // You can share the password securely across systems
   const encrypted = await encryptData(payload, key);
@@ -227,7 +229,6 @@ async function storeEncryptedDataInCookie(iframeUrl) {
 }
 onMounted(async () => {
   await getProfile();
-  console.log(user.value)
   await fetchSysDescription();
   getUserImage(user.value.userid, user.value.empid)
   document.addEventListener('click', handleClickOutside);

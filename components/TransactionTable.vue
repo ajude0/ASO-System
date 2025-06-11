@@ -516,7 +516,10 @@
       <div class="flex justify-left mt-10 space-x-2">
         <span>
           Showing {{ totalEntries === 0 ? 0 : query.PageNumber }} out of
-          {{ totalPages }} Pages ({{ totalEntries }} Entries)
+          {{ totalPages }} {{ totalPages === 1 ? "Page" : "Pages" }} ({{
+            totalEntries
+          }}
+          {{ totalEntries === 1 ? "Entry" : "Entries" }})
         </span>
       </div>
       <div class="flex justify-center mt-10 space-x-2 mb-2">
@@ -657,8 +660,12 @@
               class="border p-3 rounded-md w-full text-gray-800"
             >
               <span v-for="(value, index) in item.values" :key="index">
-                {{ value
-                }}<span v-if="index !== item.values.length - 1"> , </span>
+                {{
+                  value === null || value === undefined || value === ""
+                    ? "NULL"
+                    : value
+                }}
+                <span v-if="index !== item.values.length - 1"> , </span>
               </span>
             </div>
             <div v-else-if="item.objectType === 'DYNAMICSIGNATORY'">
@@ -685,7 +692,20 @@
                         v-if="dynamic.response == 1"
                         class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full"
                       >
-                        APPROVED
+                        SIGNED -
+                        {{
+                          new Date(dynamic.responsedate).toLocaleString(
+                            "en-US",
+                            {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "numeric",
+                              minute: "numeric",
+                              hour12: true, // optional, for 12-hour format with AM/PM
+                            }
+                          )
+                        }}
                       </span>
                       <span
                         v-else-if="dynamic.response == 0"
