@@ -101,6 +101,93 @@
         {{ errors.description }}
       </p>
     </div>
+
+    <div class="w-full space-y-4 mb-2">
+      <!-- File Input -->
+      <div class="space-y-2">
+        <label
+          class="block font-medium"
+          :class="{ 'text-red-500': errors.templatefile }"
+        >
+          Choose Template File <span class="text-red-500 text-sm"> * </span>
+        </label>
+        <input
+          ref="fileInput"
+          type="file"
+          @change="handleFileChange"
+          class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border"
+          :class="{ 'border-red-500': errors.templatefile }"
+        />
+        <p v-if="errors.templatefile" class="text-red-500 text-sm mt-1">
+          {{ errors.templatefile }}
+        </p>
+      </div>
+
+      <!-- Selected File Info -->
+      <div v-if="forms.newtemplatefile" class="p-3 bg-gray-50 rounded-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-700">
+              <span class="font-medium">File:</span>
+              {{ forms.newtemplatefile.name }}
+            </p>
+            <p class="text-sm text-gray-500">
+              <span class="font-medium">Size:</span>
+              {{ formatFileSize(forms.newtemplatefile.size) }}
+            </p>
+          </div>
+          <button
+            @click="removeFile"
+            class="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50 transition-colors"
+            title="Remove file"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div v-else-if="forms.templatefile" class="p-3 bg-gray-50 rounded-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-700">
+              <span class="font-medium">Current File:</span>
+              {{ existingFileName }}
+            </p>
+          </div>
+          <button
+            @click="clearExistingFile"
+            class="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50 transition-colors"
+            title="Remove existing file"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
     <div ref="scrollContainer" class="overflow-y-auto">
       <draggable
         v-model="forms.formObjects"
@@ -121,9 +208,7 @@
 
             <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
               <!-- Label -->
-              <div
-                class="col-span-1 mt-1"
-              >
+              <div class="col-span-1 mt-1">
                 <label
                   class="block font-medium"
                   :class="{ 'text-red-500': errors[index]?.label }"
@@ -176,37 +261,41 @@
               </div>
 
               <div
-              v-if="element.objectType === 'LINKTOOBJECT'"
-              class="col-span-2 mt-1"
-            >
-              <label
-                class="block font-medium"
-                :class="{ 'text-red-500': errors[index]?.textfromsourcelabel }"
+                v-if="element.objectType === 'LINKTOOBJECT'"
+                class="col-span-2 mt-1"
               >
-                Label (textfromsource)
-                <span class="text-red-500 text-sm"> * </span>
-              </label>
-              <select
-                v-model="element.textfromsourcelabel"
-                class="border p-2 w-full rounded"
-                :class="{ 'border-red-500': errors[index]?.textfromsourcelabel }"
-              >
-                <option value="" disabled>Select Label</option>
-                <option
-                  v-for="(label, index) in textFromSourceLabels"
-                  :key="index"
-                  :value="label"
+                <label
+                  class="block font-medium"
+                  :class="{
+                    'text-red-500': errors[index]?.textfromsourcelabel,
+                  }"
                 >
-                  {{ label }}
-                </option>
-              </select>
-              <p
-                v-if="errors[index]?.textfromsourcelabel"
-                class="text-red-500 text-sm mt-1"
-              >
-                {{ errors[index]?.textfromsourcelabel }}
-              </p>
-            </div>
+                  Label (textfromsource)
+                  <span class="text-red-500 text-sm"> * </span>
+                </label>
+                <select
+                  v-model="element.textfromsourcelabel"
+                  class="border p-2 w-full rounded"
+                  :class="{
+                    'border-red-500': errors[index]?.textfromsourcelabel,
+                  }"
+                >
+                  <option value="" disabled>Select Label</option>
+                  <option
+                    v-for="(label, index) in textFromSourceLabels"
+                    :key="index"
+                    :value="label"
+                  >
+                    {{ label }}
+                  </option>
+                </select>
+                <p
+                  v-if="errors[index]?.textfromsourcelabel"
+                  class="text-red-500 text-sm mt-1"
+                >
+                  {{ errors[index]?.textfromsourcelabel }}
+                </p>
+              </div>
 
               <div
                 v-if="element.objectType === 'LINKTOOBJECT'"
@@ -216,7 +305,7 @@
                   class="block font-medium"
                   :class="{ 'text-red-500': errors[index]?.columnvalue }"
                 >
-                  Columnvalue 
+                  Columnvalue
                 </label>
                 <input
                   v-model="element.columnvalue"
@@ -225,11 +314,14 @@
                   class="border p-2 w-full rounded"
                   :class="{ 'border-red-500': errors[index]?.columnvalue }"
                 />
-                <p v-if="errors[index]?.columnvalue" class="text-red-500 text-sm mt-1">
+                <p
+                  v-if="errors[index]?.columnvalue"
+                  class="text-red-500 text-sm mt-1"
+                >
                   {{ errors[index]?.columnvalue }}
                 </p>
               </div>
-              
+
               <!-- Options -->
               <div
                 v-if="
@@ -269,7 +361,10 @@
               </div>
               <!-- Data -->
               <div
-                v-if="element.objectType === 'TEXTFROMSOURCE' || element.objectType === 'DYNAMICSIGNATORY' "
+                v-if="
+                  element.objectType === 'TEXTFROMSOURCE' ||
+                  element.objectType === 'DYNAMICSIGNATORY'
+                "
                 class="col-span-1 mt-1"
               >
                 <label
@@ -296,7 +391,10 @@
 
               <!-- Display -->
               <div
-                v-if="element.objectType === 'TEXTFROMSOURCE' || element.objectType === 'DYNAMICSIGNATORY'"
+                v-if="
+                  element.objectType === 'TEXTFROMSOURCE' ||
+                  element.objectType === 'DYNAMICSIGNATORY'
+                "
                 class="col-span-1 mt-1"
               >
                 <label
@@ -340,11 +438,36 @@
                   <option :value="1">Yes</option>
                 </select>
               </div>
+
+              <div v-if="element.objectType != 'LABEL'" class="col-span-1 mt-1">
+                <label
+                  class="block font-medium"
+                  :class="{ 'text-red-500': errors[index]?.variable }"
+                >
+                  Variable
+                </label>
+                <input
+                  v-model="element.variable"
+                  type="text"
+                  maxlength="255"
+                  class="border p-2 w-full rounded"
+                  :class="{ 'border-red-500': errors[index]?.variable }"
+                />
+                <p
+                  v-if="errors[index]?.variable"
+                  class="text-red-500 text-sm mt-1"
+                >
+                  {{ errors[index]?.variable }}
+                </p>
+              </div>
             </div>
-          
+
             <!-- Datasourcescript -->
             <div
-              v-if="element.objectType === 'TEXTFROMSOURCE' || element.objectType === 'DYNAMICSIGNATORY'"
+              v-if="
+                element.objectType === 'TEXTFROMSOURCE' ||
+                element.objectType === 'DYNAMICSIGNATORY'
+              "
               class="col-span-1 mt-1"
             >
               <label
@@ -368,7 +491,6 @@
                 {{ errors[index]?.datasourcescript }}
               </p>
             </div>
-            
 
             <!-- Remove Form Button -->
             <div
@@ -403,9 +525,9 @@
             type="checkbox"
             id="approvers-checkbox"
             class="scale-150 accent-blue-600"
-             v-model="isInOrderBoolean"
+            v-model="isInOrderBoolean"
           />
-          <label for="approvers-checkbox" class="text-md text-gray-700" 
+          <label for="approvers-checkbox" class="text-md text-gray-700"
             >In Order</label
           >
         </div>
@@ -835,7 +957,6 @@
 
 <script setup>
 import { reactive } from "vue";
-const { $swal } = useNuxtApp();
 import draggable from "vuedraggable";
 import { getFormObject, forms, loading } from "~/js/fetchFormObject";
 import {
@@ -854,7 +975,7 @@ import { setStatus } from "~/js/formStatus";
 
 const router = useRouter();
 const paramid = ref();
-
+const { $swal } = useNuxtApp();
 const isSubmitting = ref(false);
 const errors = ref([]);
 const scrollContainer = ref(null);
@@ -879,6 +1000,56 @@ const nenunames = ref(["ASO", "Maintence", "Edit Form"]);
 const backButton = () => {
   router.push("/main/638802127387670470");
 };
+
+function handleFileChange(event) {
+  const file = event.target.files[0];
+
+
+  if (file) {
+    if (!file.name.endsWith('.html')) {
+      // alert('Only .html files are allowed.');
+      $swal.fire({
+      title: "Error",
+      text: "Only html files are allowed",
+      icon: "error",
+      timer: 2000, // auto-close after 2 seconds
+      showConfirmButton: false,
+    });
+      event.target.value = ''; // Clear the input
+      forms.value.newtemplatefile = null;
+      return;
+    }
+    forms.value.newtemplatefile = file;
+    forms.value.templatefile = null; // Optional: clear old reference
+  }
+}
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
+// Remove newly selected file
+function removeFile() {
+  forms.value.templatefile = null;
+  forms.value.newtemplatefile = null;
+
+  // Reset file input
+  if (process.client) {
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) fileInput.value = "";
+  }
+}
+
+function clearExistingFile() {
+  forms.value.templatefile = "";
+}
+
+const existingFileName = computed(() => {
+  const path = forms.value.templatefile || "";
+  return path.split(/[/\\]/).pop();
+});
 
 const toggleStatus = async () => {
   const isCurrentlyActive = forms.value.status === 1;
@@ -1255,6 +1426,10 @@ const validateForm = () => {
     errors.value.description = "Description is required.";
   }
 
+  if (!forms.value.templatefile && !forms.value.newtemplatefile) {
+    errors.value.templatefile = "TemplateFile is required.";
+  }
+
   forms.value.formObjects.forEach((formObject, index) => {
     let hasError = false;
     errors.value[index] = {}; // Initialize error object
@@ -1268,8 +1443,17 @@ const validateForm = () => {
       errors.value[index].objectType = "Object type is required.";
       hasError = true;
     }
+
     if (
-      (formObject.objectType === "TEXTFROMSOURCE" || formObject.objectType === 'DYNAMICSIGNATORY') &&
+      formObject.objectType != "LABEL" &&
+      (!formObject.variable || !formObject.variable.trim())
+    ) {
+      errors.value[index].variable = "Variable is required.";
+      hasError = true;
+    }
+    if (
+      (formObject.objectType === "TEXTFROMSOURCE" ||
+        formObject.objectType === "DYNAMICSIGNATORY") &&
       (!formObject.datasourcescript || !formObject.datasourcescript.trim())
     ) {
       errors.value[index].datasourcescript = "Datasourcescript is required.";
@@ -1277,14 +1461,16 @@ const validateForm = () => {
     }
 
     if (
-      (formObject.objectType === "TEXTFROMSOURCE" || formObject.objectType === 'DYNAMICSIGNATORY') &&
+      (formObject.objectType === "TEXTFROMSOURCE" ||
+        formObject.objectType === "DYNAMICSIGNATORY") &&
       (!formObject.data || !formObject.data.trim())
     ) {
       errors.value[index].data = "Data is required.";
       hasError = true;
     }
     if (
-      (formObject.objectType === "TEXTFROMSOURCE" || formObject.objectType === 'DYNAMICSIGNATORY')  &&
+      (formObject.objectType === "TEXTFROMSOURCE" ||
+        formObject.objectType === "DYNAMICSIGNATORY") &&
       (!formObject.display || !formObject.display.trim())
     ) {
       errors.value[index].display = "Display is required.";
@@ -1303,7 +1489,8 @@ const validateForm = () => {
       formObject.objectType === "LINKTOOBJECT" &&
       (!formObject.columnvalue || !formObject.columnvalue.trim())
     ) {
-      errors.value[index].textfromsourcelabel = "Label (Textfromsource) is required.";
+      errors.value[index].textfromsourcelabel =
+        "Label (Textfromsource) is required.";
       hasError = true;
     }
     if (
@@ -1362,13 +1549,92 @@ const saveFormObjects = async () => {
   const token = getToken();
   isSubmitting.value = true;
   console.log(forms.value);
+  const formData = new FormData();
+
+  // Append simple fields
+  formData.append("title", forms.value.title);
+  formData.append("description", forms.value.description);
+  formData.append("isinorder", forms.value.isinorder ? "1" : "0");
+
+  // Append file if any
+  if (forms.value.newtemplatefile) {
+    formData.append("newtemplatefile", forms.value.newtemplatefile);
+  } 
+
+
+  
+  // Append formObjects
+  forms.value.formObjects.forEach((obj, i) => {
+    formData.append(`formObjects[${i}].id`, obj.id);
+    formData.append(`formObjects[${i}].label`, obj.label);
+    formData.append(`formObjects[${i}].objectType`, obj.objectType);
+    formData.append(`formObjects[${i}].variable`, obj.variable);
+    formData.append(`formObjects[${i}].isRequired`, obj.isRequired);
+    formData.append(`formObjects[${i}].datasourcescript`, obj.datasourcescript);
+    if(obj.objectlinkId){
+    formData.append(`formObjects[${i}].objectlinkId`, obj.objectlinkId);
+    }
+    formData.append(`formObjects[${i}].data`, obj.data);
+    formData.append(`formObjects[${i}].display`, obj.display);
+    formData.append(`formObjects[${i}].variable`, obj.variable);
+
+    formData.append(
+      `formObjects[${i}].textfromsourcelabel`,
+      obj.textfromsourcelabel
+    );
+    formData.append(`formObjects[${i}].columnvalue`, obj.columnvalue);
+
+    obj.formObjectLists.forEach((listItem, j) => {
+  formData.append(`formObjects[${i}].formObjectLists[${j}].id`, listItem.id);
+  formData.append(`formObjects[${i}].formObjectLists[${j}].value`, listItem.value);
+});
+  });
+
+  // Append approvers
+  forms.value.approvers.forEach((approver, i) => {
+    formData.append(`approvers[${i}].id`, approver.id ?? "");
+    formData.append(`approvers[${i}].approverId`, approver.approverId ?? "");
+    formData.append(
+      `approvers[${i}].approverName`,
+      approver.approverName ?? ""
+    );
+    formData.append(
+      `approvers[${i}].approverEmail`,
+      approver.approverEmail ?? ""
+    );
+    formData.append(
+      `approvers[${i}].approverContact`,
+      approver.approverContact ?? ""
+    );
+    formData.append(
+      `approvers[${i}].approverNumber`,
+      approver.approverNumber.toString()
+    );
+  });
+
+  // Append proxies
+  forms.value.proxies.forEach((proxy, i) => {
+    formData.append(`proxies[${i}].id`, proxy.id ?? "");
+    formData.append(`proxies[${i}].approverId`, proxy.approverId ?? "");
+    formData.append(`proxies[${i}].approverName`, proxy.approverName ?? "");
+    formData.append(`proxies[${i}].approverEmail`, proxy.approverEmail ?? "");
+    formData.append(
+      `proxies[${i}].approverContact`,
+      proxy.approverContact ?? ""
+    );
+    formData.append(
+      `proxies[${i}].approverNumber`,
+      proxy.approverNumber.toString()
+    );
+  });
+
   try {
     await $fetch(`${API_BASE_URL}/api/Form/update/${formId}`, {
       method: "POST",
       headers: {
         token: token,
       },
-      body: forms.value,
+      body: formData,
     });
     await $swal.fire({
       title: "Success",

@@ -64,6 +64,69 @@
       </p>
     </div>
 
+    <div class="w-full space-y-4 mb-2">
+      <!-- File Input -->
+      <div class="space-y-2">
+        <label class="block font-medium">
+          Choose Template File <span class="text-red-500 text-sm"> * </span>
+        </label>
+        <input
+          ref="fileInput"
+          type="file"
+          @change="handleFileChange"
+          class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border"
+        />
+      </div>
+
+      <!-- Selected File Info -->
+      <div v-if="form.templatefile" class="p-3 bg-gray-50 rounded-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm text-gray-700">
+              <span class="font-medium">File:</span> {{ form.templatefile.name }}
+            </p>
+            <p class="text-sm text-gray-500">
+              <span class="font-medium">Size:</span>
+              {{ formatFileSize(form.templatefile.size) }}
+            </p>
+          </div>
+          <button
+            @click="removeFile"
+            class="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50 transition-colors"
+            title="Remove file"
+          >
+            <svg
+              class="w-5 h-5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              ></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- <div>
+      <label for="templateFile" :class="{ 'text-red-500': errors.templatefile }">Template File:</label>
+      <input
+        @change="handleFileChange"
+        id="templateFile"
+        type="file"
+        required
+         :class="{ 'text-red-500': errors.templatefile }"
+      />
+      <p v-if="errors.templatefile" class="text-red-500 text-sm mt-1">
+        {{ errors.templatefile }}
+      </p>
+    </div> -->
+
     <!-- Form Objects -->
     <div>
       <draggable
@@ -195,7 +258,10 @@
 
               <!-- Data -->
               <div
-                v-if="formObject.objectType === 'TEXTFROMSOURCE' || formObject.objectType =='DYNAMICSIGNATORY'"
+                v-if="
+                  formObject.objectType === 'TEXTFROMSOURCE' ||
+                  formObject.objectType == 'DYNAMICSIGNATORY'
+                "
                 class="col-span-1 mt-1"
               >
                 <label
@@ -223,7 +289,10 @@
 
               <!-- Display -->
               <div
-                v-if="formObject.objectType === 'TEXTFROMSOURCE' || formObject.objectType =='DYNAMICSIGNATORY'"
+                v-if="
+                  formObject.objectType === 'TEXTFROMSOURCE' ||
+                  formObject.objectType == 'DYNAMICSIGNATORY'
+                "
                 class="col-span-1 mt-1"
               >
                 <label
@@ -274,7 +343,10 @@
 
               <!-- Datasourcescript -->
               <div
-                v-if="formObject.objectType === 'TEXTFROMSOURCE' || formObject.objectType =='DYNAMICSIGNATORY'"
+                v-if="
+                  formObject.objectType === 'TEXTFROMSOURCE' ||
+                  formObject.objectType == 'DYNAMICSIGNATORY'
+                "
                 class="col-span-2 mt-1"
               >
                 <label
@@ -370,6 +442,32 @@
                   {{ errors[index]?.columnvalue }}
                 </p>
               </div>
+
+              <!-- Variable -->
+
+              <div v-if="formObject.objectType != 'LABEL'" class="col-span-1">
+                <label
+                  class="block font-medium"
+                  :class="{ 'text-red-500': errors[index]?.variable }"
+                >
+                  Variable <span class="text-red-500 text-sm"> * </span>
+                </label>
+
+                <input
+                  v-if="formObject.objectType != LABEL"
+                  v-model="formObject.variable"
+                  type="text"
+                  maxlength="50"
+                  class="border p-2 w-full rounded"
+                  :class="{ 'border-red-500': errors[index]?.variable }"
+                />
+                <p
+                  v-if="errors[index]?.variable"
+                  class="text-red-500 text-sm mt-1"
+                >
+                  {{ errors[index]?.variable }}
+                </p>
+              </div>
             </div>
 
             <!-- Remove Form Button -->
@@ -404,9 +502,9 @@
             type="checkbox"
             id="approvers-checkbox"
             class="scale-150 accent-blue-600"
-             v-model="form.isinorder"
+            v-model="form.isinorder"
           />
-          <label for="approvers-checkbox" class="text-md text-gray-700" 
+          <label for="approvers-checkbox" class="text-md text-gray-700"
             >In Order</label
           >
         </div>
@@ -876,7 +974,8 @@ const paramid = ref();
 const form = ref({
   title: "",
   description: "",
-  isinorder:false,
+  isinorder: false,
+  templatefile: "",
   formObjects: [
     {
       label: "",
@@ -887,12 +986,48 @@ const form = ref({
       display: "",
       textfromsourcelabel: "",
       columnvalue: "",
+      variable: "",
       formObjectLists: [{ values: [""] }],
     },
   ],
   approvers: [],
   proxies: [],
 });
+
+const handleFileChange = (event) => {
+  const file = event.target.files[0];
+  if (file) {
+    if (!file.name.endsWith('.html')) {
+      // alert('Only .html files are allowed.');
+      $swal.fire({
+      title: "Error",
+      text: "Only html files are allowed",
+      icon: "error",
+      timer: 2000, // auto-close after 2 seconds
+      showConfirmButton: false,
+    });
+      event.target.value = ''; // Clear the input
+      form.value.templatefile = null;
+      return;
+    }
+    form.value.templatefile = file;
+  }
+};
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
+const removeFile = () => {
+  form.value.templatefile = null
+  // Reset file input
+  if (process.client) {
+    const fileInput = document.querySelector('input[type="file"]')
+    if (fileInput) fileInput.value = ''
+  }
+}
 
 const backButton = () => {
   router.push("/main/638802127387670470");
@@ -910,6 +1045,10 @@ const validateForm = () => {
     errors.value.description = "Description is required.";
   }
 
+  if (!form.value.templatefile) {
+    errors.value.templatefile = "TemplateFile is required.";
+  }
+
   form.value.formObjects.forEach((formObject, index) => {
     let hasError = false;
     errors.value[index] = {}; // Initialize error object
@@ -923,22 +1062,33 @@ const validateForm = () => {
       errors.value[index].objectType = "Object type is required.";
       hasError = true;
     }
+
     if (
-      (formObject.objectType === "TEXTFROMSOURCE" || formObject.objectType =='DYNAMICSIGNATORY') &&
+      formObject.objectType != "LABEL" &&
+      (!formObject.variable || !formObject.variable.trim())
+    ) {
+      errors.value[index].variable = "Variable is required.";
+      hasError = true;
+    }
+    if (
+      (formObject.objectType === "TEXTFROMSOURCE" ||
+        formObject.objectType == "DYNAMICSIGNATORY") &&
       (!formObject.datasourcescript || !formObject.datasourcescript.trim())
     ) {
       errors.value[index].datasourcescript = "Datasourcescript is required.";
       hasError = true;
     }
     if (
-      (formObject.objectType === "TEXTFROMSOURCE" || formObject.objectType =='DYNAMICSIGNATORY') &&
+      (formObject.objectType === "TEXTFROMSOURCE" ||
+        formObject.objectType == "DYNAMICSIGNATORY") &&
       (!formObject.data || !formObject.data.trim())
     ) {
       errors.value[index].data = "Data is required.";
       hasError = true;
     }
     if (
-      (formObject.objectType === "TEXTFROMSOURCE" || formObject.objectType =='DYNAMICSIGNATORY')&&
+      (formObject.objectType === "TEXTFROMSOURCE" ||
+        formObject.objectType == "DYNAMICSIGNATORY") &&
       (!formObject.display || !formObject.display.trim())
     ) {
       errors.value[index].display = "Display is required.";
@@ -992,6 +1142,10 @@ const validateForm = () => {
       // Clear general description error
       if (errors.value.description && newForm.description.trim()) {
         delete errors.value.description;
+      }
+
+      if (errors.value.templatefile && newForm.templatefile.trim()) {
+        delete errors.value.templatefile;
       }
 
       // Loop through formObjects
@@ -1420,11 +1574,83 @@ const submitForm = async () => {
 
     return;
   }
-  const payload = {
-  ...form.value,
-  isinorder: form.value.isinorder ? 1 : 0,
+
+  console.log(form.value.formObjects);
+  const formData = new FormData();
+
+  // Append simple fields
+  formData.append("title", form.value.title);
+  formData.append("description", form.value.description);
+  formData.append("isinorder", form.value.isinorder ? "1" : "0");
+
+  // Append file if any
+  if (form.value.templatefile) {
+    formData.append("templatefile", form.value.templatefile);
   }
- 
+
+  // Append formObjects
+  form.value.formObjects.forEach((obj, i) => {
+    formData.append(`formObjects[${i}].label`, obj.label);
+    formData.append(`formObjects[${i}].objectType`, obj.objectType);
+    formData.append(`formObjects[${i}].isRequired`, obj.isRequired);
+    formData.append(`formObjects[${i}].datasourcescript`, obj.datasourcescript);
+    formData.append(`formObjects[${i}].data`, obj.data);
+    formData.append(`formObjects[${i}].display`, obj.display);
+    formData.append(`formObjects[${i}].variable`, obj.variable);
+    formData.append(
+      `formObjects[${i}].textfromsourcelabel`,
+      obj.textfromsourcelabel
+    );
+    formData.append(`formObjects[${i}].columnvalue`, obj.columnvalue);
+
+    obj.formObjectLists.forEach((listItem, j) => {
+      listItem.values.forEach((val, k) => {
+        formData.append(
+          `formObjects[${i}].formObjectLists[${j}].values[${k}]`,
+          val
+        );
+      });
+    });
+  });
+
+  // Append approvers
+  form.value.approvers.forEach((approver, i) => {
+    formData.append(`approvers[${i}].id`, approver.id ?? "");
+    formData.append(`approvers[${i}].approverId`, approver.approverId ?? "");
+    formData.append(
+      `approvers[${i}].approverName`,
+      approver.approverName ?? ""
+    );
+    formData.append(
+      `approvers[${i}].approverEmail`,
+      approver.approverEmail ?? ""
+    );
+    formData.append(
+      `approvers[${i}].approverContact`,
+      approver.approverContact ?? ""
+    );
+    formData.append(
+      `approvers[${i}].approverNumber`,
+      approver.approverNumber.toString()
+    );
+  });
+
+  // Append proxies
+  form.value.proxies.forEach((proxy, i) => {
+    formData.append(`proxies[${i}].id`, proxy.id ?? "");
+    formData.append(`proxies[${i}].approverId`, proxy.approverId ?? "");
+    formData.append(`proxies[${i}].approverName`, proxy.approverName ?? "");
+    formData.append(`proxies[${i}].approverEmail`, proxy.approverEmail ?? "");
+    formData.append(
+      `proxies[${i}].approverContact`,
+      proxy.approverContact ?? ""
+    );
+    formData.append(
+      `proxies[${i}].approverNumber`,
+      proxy.approverNumber.toString()
+    );
+  });
+
   const token = getToken();
   isSubmitting.value = true; // Start loading
 
@@ -1434,7 +1660,7 @@ const submitForm = async () => {
       headers: {
         token: token,
       },
-      body: payload,
+      body: formData,
     });
 
     await $swal.fire({
