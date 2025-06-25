@@ -1,8 +1,9 @@
 import { API_BASE_URL } from "~/config";
 import { getToken } from "./cryptoToken";
+export const isDownloading = ref({})
 
-export const downloadvpnForm = async (id,title) => {
-          console.log(id);
+export const downloadvpnForm = async (id, title) => {
+  isDownloading.value[id] = true;
   const token = getToken();
   try {
     const blob = await $fetch(`${API_BASE_URL}/api/Pdf/print-pdf-form/${id}`, {
@@ -24,5 +25,7 @@ export const downloadvpnForm = async (id,title) => {
     window.URL.revokeObjectURL(url); // Clean up
   } catch (error) {
     console.error("Error downloading VPN form:", error);
+  } finally {
+    isDownloading.value[id] = false;
   }
 };

@@ -1548,7 +1548,6 @@ const saveFormObjects = async () => {
   const formId = getFormId();
   const token = getToken();
   isSubmitting.value = true;
-  console.log(forms.value);
   const formData = new FormData();
 
   // Append simple fields

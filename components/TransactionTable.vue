@@ -484,30 +484,58 @@
                           ></path>
                         </svg>
                       </button>
-                      <button
-                        v-if="transaction.status == 'approved'"
-                        @click="downloadvpnForm(transaction.id,transaction.title)"
-                         :disabled="!transaction.templatepath"
-                        class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-blue-200 flex item-center"
-                        :class="{ 'opacity-50 cursor-not-allowed': !transaction.templatepath }"
+                      <button  v-if="transaction.status == 'approved'"
+                        @click="
+                          downloadvpnForm(transaction.id, transaction.title)
+                        "
+                        :disabled="
+                          !transaction.templatepath ||
+                          !!isDownloading?.[transaction.id]
+                        "
+                        :class="{
+                          'opacity-50 cursor-not-allowed':
+                            !!isDownloading?.[transaction.id] || !transaction.templatepath,
+                        }"
                       >
-                        <svg
-                          class="w-6 h-6 text-blue-800"
-                          aria-hidden="true"
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
+                        <template v-if="isDownloading?.[transaction.id]">
+                          <!-- Spinner -->
+                          <svg
+                            class="animate-spin w-5 h-5 text-blue-800"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              class="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              stroke-width="4"
+                              fill="none"
+                            />
+                            <path
+                              class="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                            />
+                          </svg>
+                        </template>
+                        <template v-else>
+                          <!-- Download icon -->
+                          <svg
+                            class="w-6 h-6 text-blue-800"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
                             stroke="currentColor"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M5 17v-5h1.5a1.5 1.5 0 1 1 0 3H5m12 2v-5h2m-2 3h2M5 10V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1v6M5 19v1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1M10 3v4a1 1 0 0 1-1 1H5m6 4v5h1.375A1.627 1.627 0 0 0 14 15.375v-1.75A1.627 1.627 0 0 0 12.375 12H11Z"
-                          />
-                        </svg>
+                          >
+                            <path
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="2"
+                              d="M5 17v-5h1.5a1.5 1.5 0 1 1 0 3H5m12 2v-5h2m-2 3h2M5 10V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1v6M5 19v1a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1M10 3v4a1 1 0 0 1-1 1H5m6 4v5h1.375A1.627 1.627 0 0 0 14 15.375v-1.75A1.627 1.627 0 0 0 12.375 12H11Z"
+                            />
+                          </svg>
+                        </template>
                       </button>
                     </div>
                   </td>
@@ -865,7 +893,7 @@ import {
 import LoadingModal from "./modal/LoadingModal.vue";
 import { encryptData } from "~/js/cryptoToken";
 import { canEdit } from "~/js/fetchMenu";
-import { downloadvpnForm } from "~/js/downloadpdf";
+import { downloadvpnForm, isDownloading } from "~/js/downloadpdf";
 
 const showModal = ref(false);
 const isApprovedOpen = ref(false);

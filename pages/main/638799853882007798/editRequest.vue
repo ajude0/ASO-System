@@ -176,6 +176,13 @@
             style="text-transform: uppercase"
           ></textarea>
 
+          <div
+            v-else-if="item.objecttype === 'TIME'">
+            <div>
+              <DateTimeInput v-model="item.value" />
+            </div>
+          </div>
+
           <div v-else-if="item.objecttype === 'TEXTFROMSOURCE'">
             <div class="flex justify-between items-center">
               <!-- Flex container -->
@@ -501,6 +508,7 @@ import {
   loading,
 } from "~/js/textfromsource";
 import { fetchCanAccess, nenunames } from "~/js/fetchMenu";
+import DateTimeInput from "~/components/DateTimeInput.vue";
 
 const formErrors = ref({});
 const { $swal } = useNuxtApp();
@@ -667,7 +675,6 @@ const saveForm = async () => {
         }))
       : [],
   }));
-  console.log(payload);
 
   try {
     await $fetch(`${API_BASE_URL}/api/Transaction/update-transaction`, {

@@ -1575,7 +1575,6 @@ const submitForm = async () => {
     return;
   }
 
-  console.log(form.value.formObjects);
   const formData = new FormData();
 
   // Append simple fields

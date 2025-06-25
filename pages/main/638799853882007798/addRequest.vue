@@ -254,6 +254,13 @@
             style="text-transform: uppercase"
           ></textarea>
 
+          <div v-else-if="formObject.objecttype === 'TIME'">
+            <div>
+              <DateTimeInput v-model="formAnswers[formObject.id]" />
+              
+            </div>
+          </div>
+
           <select
             v-else-if="formObject.objecttype === 'LIST'"
             v-model="formAnswers[formObject.id]"
@@ -381,7 +388,6 @@
               class="mb-2 flex items-center gap-2"
             >
               <input
-               
                 readonly
                 type="text"
                 v-model="getDisplayBinding(formObject.id, index).value"
@@ -644,6 +650,8 @@ import {
   loading,
 } from "~/js/textfromsource";
 import { fetchCanAccess, nenunames } from "~/js/fetchMenu";
+import DateTimeInput from "~/components/DateTimeInput.vue";
+
 
 const router = useRouter();
 const paramid = ref();
@@ -785,22 +793,23 @@ const selectEmployee = (id, justification) => {
   index.value = "";
   showModal.value = false;
 };
-const getDisplayBinding = (formId, index) => computed({
-  get: () => {
-    const item = formAnswers.value[formId][index];
-    return typeof item === 'object' ? item.value : item;
-  },
-  set: (newDisplay) => {
-    const item = formAnswers.value[formId][index];
-    if (typeof item === 'object') {
-      item.value = newDisplay;
-      // optional: update item.value based on new display, if needed
-      // item.value = transformDisplayToValue(newDisplay);
-    } else {
-      formAnswers.value[formId][index] = newDisplay;
-    }
-  }
-});
+const getDisplayBinding = (formId, index) =>
+  computed({
+    get: () => {
+      const item = formAnswers.value[formId][index];
+      return typeof item === "object" ? item.value : item;
+    },
+    set: (newDisplay) => {
+      const item = formAnswers.value[formId][index];
+      if (typeof item === "object") {
+        item.value = newDisplay;
+        // optional: update item.value based on new display, if needed
+        // item.value = transformDisplayToValue(newDisplay);
+      } else {
+        formAnswers.value[formId][index] = newDisplay;
+      }
+    },
+  });
 
 function removeAnswer(formId, index) {
   if (formAnswers.value[formId]) {

@@ -8,9 +8,7 @@
         class="time-input"
         readonly
       />
-      <div class="clock-icon">
-        🕐
-      </div>
+      <div class="clock-icon">🕐</div>
     </div>
 
     <div v-if="showDropdown" class="dropdown">
@@ -19,7 +17,7 @@
           ref="searchInput"
           v-model="searchQuery"
           type="text"
-          placeholder="Search time (e.g., 2pm, 10:30am)"
+          placeholder="Search time"
           class="search-input"
           @input="handleSearch"
         />
@@ -35,7 +33,7 @@
           {{ quick.label }}
         </button>
       </div>
-      
+
       <div class="time-grid">
         <div
           v-for="time in filteredTimes"
@@ -45,14 +43,18 @@
         >
           {{ time }}
         </div>
-        
+
         <div v-if="filteredTimes.length === 0" class="no-results">
           No matching times found
         </div>
       </div>
     </div>
 
-    <div v-if="showDropdown" class="backdrop" @click="showDropdown = false"></div>
+    <div
+      v-if="showDropdown"
+      class="backdrop"
+      @click="showDropdown = false"
+    ></div>
   </div>
 </template>
 
@@ -60,113 +62,115 @@
 const props = defineProps({
   modelValue: {
     type: String,
-    default: ''
-  }
-})
+    default: "",
+  },
+});
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(["update:modelValue"]);
 
-const showDropdown = ref(false)
-const searchQuery = ref('')
-const searchInput = ref(null)
+const showDropdown = ref(false);
+const searchQuery = ref("");
+const searchInput = ref(null);
 
 // Quick access times
 const quickTimes = [
-  { label: '9:00 AM' },
-  { label: '12:00 PM' },
-  { label: '1:00 PM' },
-  { label: '5:00 PM' },
-  { label: '6:00 PM' }
-]
+  { label: "7:00 AM" },
+  { label: "8:00 AM" },
+  { label: "12:00 PM" },
+  { label: "3:00 PM" },
+  { label: "5:00 PM" },
+];
 
 // Generate time options (every 30 minutes)
 const timeOptions = computed(() => {
-  const times = []
-  for (let hour = 1; hour <= 12; hour++) {
-    ['00', '30'].forEach(minute => {
-      times.push(`${hour}:${minute} AM`)
-    })
-  }
-  for (let hour = 1; hour <= 12; hour++) {
-    ['00', '30'].forEach(minute => {
-      times.push(`${hour}:${minute} PM`)
-    })
-  }
-  return times
-})
+  const times = [];
+  const periods = ["AM", "PM"];
+
+  periods.forEach((period) => {
+    for (let hour = 1; hour <= 12; hour++) {
+      for (let minute = 0; minute < 60; minute += 15) {
+        const formattedMinute = minute.toString().padStart(2, "0");
+        times.push(`${hour}:${formattedMinute} ${period}`);
+      }
+    }
+  });
+
+  return times;
+});
 
 // Filter times based on search query
 const filteredTimes = computed(() => {
-  if (!searchQuery.value) return timeOptions.value
-  
-  const query = searchQuery.value.toLowerCase().replace(/[^\w]/g, '')
-  return timeOptions.value.filter(time => {
-    const timeFormatted = time.toLowerCase().replace(/[^\w]/g, '')
-    return timeFormatted.includes(query) || 
-           time.toLowerCase().includes(searchQuery.value.toLowerCase())
-  })
-})
+  if (!searchQuery.value) return timeOptions.value;
+
+  const query = searchQuery.value.toLowerCase().replace(/[^\w]/g, "");
+  return timeOptions.value.filter((time) => {
+    const timeFormatted = time.toLowerCase().replace(/[^\w]/g, "");
+    return (
+      timeFormatted.includes(query) ||
+      time.toLowerCase().includes(searchQuery.value.toLowerCase())
+    );
+  });
+});
 
 const displayValue = computed(() => {
-  return props.modelValue || ''
-})
+  return props.modelValue || "";
+});
 
 const toggleDropdown = () => {
-  showDropdown.value = !showDropdown.value
+  showDropdown.value = !showDropdown.value;
   if (showDropdown.value) {
     nextTick(() => {
-      searchInput.value?.focus()
-    })
+      searchInput.value?.focus();
+    });
   } else {
-    searchQuery.value = ''
+    searchQuery.value = "";
   }
-}
+};
 
 const selectTime = (time) => {
-  emit('update:modelValue', time)
-  showDropdown.value = false
-  searchQuery.value = ''
-}
+  emit("update:modelValue", time);
+  showDropdown.value = false;
+  searchQuery.value = "";
+};
 
 const handleSearch = () => {
   // Auto-complete common patterns
-  const query = searchQuery.value.toLowerCase()
-  
+  const query = searchQuery.value.toLowerCase();
+
   // Handle patterns like "2pm", "10am", "230pm"
   if (query.match(/^\d{1,2}(am|pm)$/)) {
-    const hour = query.replace(/[^\d]/g, '')
-    const period = query.includes('am') ? 'AM' : 'PM'
-    const formattedTime = `${hour}:00 ${period}`
-    
+    const hour = query.replace(/[^\d]/g, "");
+    const period = query.includes("am") ? "AM" : "PM";
+    const formattedTime = `${hour}:00 ${period}`;
+
     if (timeOptions.value.includes(formattedTime)) {
-      selectTime(formattedTime)
-      return
+      selectTime(formattedTime);
+      return;
     }
   }
-  
+
   // Handle patterns like "230pm" -> "2:30 PM"
   if (query.match(/^\d{3,4}(am|pm)$/)) {
-    const match = query.match(/^(\d{1,2})(\d{2})(am|pm)$/)
+    const match = query.match(/^(\d{1,2})(\d{2})(am|pm)$/);
     if (match) {
-      const hour = match[1]
-      const minute = match[2]
-      const period = match[3].toUpperCase()
-      const formattedTime = `${hour}:${minute} ${period}`
-      
+      const hour = match[1];
+      const minute = match[2];
+      const period = match[3].toUpperCase();
+      const formattedTime = `${hour}:${minute} ${period}`;
+
       if (timeOptions.value.includes(formattedTime)) {
-        selectTime(formattedTime)
-        return
+        selectTime(formattedTime);
+        return;
       }
     }
   }
-}
+};
 </script>
 
 <style scoped>
 .time-input-container {
   position: relative;
   width: 100%;
-  max-width: 200px;
 }
 
 .input-wrapper {
@@ -178,19 +182,17 @@ const handleSearch = () => {
   width: 100%;
   padding: 12px 45px 12px 16px;
   border: 2px solid #e2e8f0;
-  border-radius: 12px;
+  border-radius: 0.375rem;
   font-size: 16px;
-  font-weight: 500;
   background: white;
   cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: center;
+  transition: box-shadow 0.2s ease;
 }
 
-.time-input:focus,
-.input-wrapper:hover .time-input {
+.time-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 1px #3b82f6; /* mimic focus:ring-2 focus:ring-blue-500 */
   border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
 .clock-icon {
@@ -209,6 +211,7 @@ const handleSearch = () => {
   right: 0;
   background: white;
   border: 2px solid #e2e8f0;
+  
   border-radius: 12px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
   z-index: 50;
@@ -224,15 +227,17 @@ const handleSearch = () => {
 .search-input {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #e2e8f0;
   border-radius: 6px;
   font-size: 14px;
   outline: none;
+  outline: none;
+  box-shadow: 0 0 0 1px #4282e9; /* mimic focus:ring-2 focus:ring-blue-500 */
+  border-color: #3b82f6;
 }
 
 .search-input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+  outline: none;
+  border: 2px solid blue;
 }
 
 .quick-times {
