@@ -1,5 +1,29 @@
 <template>
   <BreadCrumbs :nenunames="nenunames" />
+  <button
+    @click="backButton"
+    type="button"
+    class="flex items-center ms-6 mt-8 text-gray-700 hover:text-blue-600 transition-colors duration-200"
+  >
+    <svg
+      class="w-9 h-9"
+      aria-hidden="true"
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <path
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M5 12h14M5 12l4-4m-4 4 4 4"
+      />
+    </svg>
+    <span class="text-lg font-bold">Back</span>
+  </button>
 
   <div class="max-w-full m-10 p-6 bg-white shadow-lg rounded-lg">
     <div class="grid grid-cols-[auto,1fr] items-center gap-x-4 border-b pb-10">
@@ -672,6 +696,10 @@ const dropdownRef = ref(null);
 const scrollContainer = ref(null);
 const objecttype = ref();
 const index = ref();
+const backButton = () => {
+  router.push("/main/638799853882007798");
+};
+
 const toggleDropdown = () => {
   isOpen.value = !isOpen.value;
   if (isOpen.value) {

@@ -19,7 +19,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   }
 
   if (!token && to.path !== "/") {
-    const isConfirmed = confirm("Unauthorized! Please log in first.");
+    alert('Unauthorized! Please log in first.');
     return navigateTo("/"); 
   }
 });

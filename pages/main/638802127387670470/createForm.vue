@@ -341,6 +341,32 @@
                 </select>
               </div>
 
+
+               <!-- Variable -->
+
+               <div v-if="formObject.objectType != 'LABEL'" class="col-span-1">
+                <label
+                  class="block font-medium"
+                  :class="{ 'text-red-500': errors[index]?.variable }"
+                >
+                  Variable <span class="text-red-500 text-sm"> * </span>
+                </label>
+
+                <input
+                  v-if="formObject.objectType != LABEL"
+                  v-model="formObject.variable"
+                  type="text"
+                  maxlength="50"
+                  class="border p-2 w-full rounded"
+                  :class="{ 'border-red-500': errors[index]?.variable }"
+                />
+                <p
+                  v-if="errors[index]?.variable"
+                  class="text-red-500 text-sm mt-1"
+                >
+                  {{ errors[index]?.variable }}
+                </p>
+              </div>
               <!-- Datasourcescript -->
               <div
                 v-if="
@@ -370,6 +396,8 @@
                   {{ errors[index]?.datasourcescript }}
                 </p>
               </div>
+
+              
 
               <!-- Label From TEXTFROMSOURCE -->
               <div
@@ -443,31 +471,7 @@
                 </p>
               </div>
 
-              <!-- Variable -->
-
-              <div v-if="formObject.objectType != 'LABEL'" class="col-span-1">
-                <label
-                  class="block font-medium"
-                  :class="{ 'text-red-500': errors[index]?.variable }"
-                >
-                  Variable <span class="text-red-500 text-sm"> * </span>
-                </label>
-
-                <input
-                  v-if="formObject.objectType != LABEL"
-                  v-model="formObject.variable"
-                  type="text"
-                  maxlength="50"
-                  class="border p-2 w-full rounded"
-                  :class="{ 'border-red-500': errors[index]?.variable }"
-                />
-                <p
-                  v-if="errors[index]?.variable"
-                  class="text-red-500 text-sm mt-1"
-                >
-                  {{ errors[index]?.variable }}
-                </p>
-              </div>
+             
             </div>
 
             <!-- Remove Form Button -->

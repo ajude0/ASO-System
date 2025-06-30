@@ -99,13 +99,10 @@ export const getAllPageNames = (menuItems) => {
 };
 
 export const fetchSysDescription = async () => {
-  const token = getToken();
   try {
-    const data = await $fetch(`${API_BASE_URL}/api/Menu/system-description`, {
+    const data = await $fetch(`${API_BASE_URL}/api/SystemDescription`, {
       method: "GET",
-      headers: {
-        token: token,
-      },
+      
     });
     if (data) {
       sysdescription.value = data;

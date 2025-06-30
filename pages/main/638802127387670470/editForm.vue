@@ -972,6 +972,7 @@ import { getFormId, getToken } from "~/js/cryptoToken";
 import LoadingModal from "~/components/modal/LoadingModal.vue";
 import { getDropdowns, dropdowns } from "~/js/fetchDrowdown";
 import { setStatus } from "~/js/formStatus";
+import { fetchCanAccess, nenunames } from "~/js/fetchMenu";
 
 const router = useRouter();
 const paramid = ref();
@@ -995,7 +996,7 @@ const draggableOptions = ref({
   scrollSpeed: 20,
   scrollTarget: scrollContainer.value,
 });
-const nenunames = ref(["ASO", "Maintence", "Edit Form"]);
+
 
 const backButton = () => {
   router.push("/main/638802127387670470");
