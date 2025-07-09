@@ -83,7 +83,8 @@
         <div class="flex items-center justify-between">
           <div>
             <p class="text-sm text-gray-700">
-              <span class="font-medium">File:</span> {{ form.templatefile.name }}
+              <span class="font-medium">File:</span>
+              {{ form.templatefile.name }}
             </p>
             <p class="text-sm text-gray-500">
               <span class="font-medium">Size:</span>
@@ -341,10 +342,16 @@
                 </select>
               </div>
 
+              <!-- Variable -->
 
-               <!-- Variable -->
-
-               <div v-if="formObject.objectType != 'LABEL'" class="col-span-1">
+              <div
+                v-if="
+                  formObject.objectType !== 'LABEL' &&
+                  atSymbols &&
+                  atSymbols.length
+                "
+                class="col-span-1 relative"
+              >
                 <label
                   class="block font-medium"
                   :class="{ 'text-red-500': errors[index]?.variable }"
@@ -352,14 +359,48 @@
                   Variable <span class="text-red-500 text-sm"> * </span>
                 </label>
 
-                <input
-                  v-if="formObject.objectType != LABEL"
-                  v-model="formObject.variable"
-                  type="text"
-                  maxlength="50"
-                  class="border p-2 w-full rounded"
+                <!-- Trigger input (mimics select) -->
+                <div
+                  class="border p-2 w-full rounded cursor-pointer bg-white"
                   :class="{ 'border-red-500': errors[index]?.variable }"
-                />
+                  @click="toggleDropdown(index)"
+                >
+                  {{ formObject.variable || "Select Variable" }}
+                </div>
+
+                <!-- Dropdown menu -->
+                <div
+                  v-show="dropdownOpenIndex === index"
+                  class="absolute z-10 bg-white border border-gray-300 w-full mt-1 rounded shadow max-h-60 overflow-y-auto"
+                >
+                  <!-- Search input -->
+                  <input
+                    v-model="searchTerms[index]"
+                    type="text"
+                    placeholder="Search..."
+                    class="w-full p-2 text-sm border-b"
+                  />
+
+                  <!-- Filtered options -->
+                  <div
+                    v-for="(symbol, i) in filteredSymbols(index)"
+                    :key="i"
+                    @click="selectSymbol(index, symbol)"
+                    class="p-2 hover:bg-blue-100 cursor-pointer text-sm"
+                  >
+                    {{ symbol }}
+                  </div>
+
+                  <!-- Empty state -->
+                  <div
+                    v-if="filteredSymbols(index).length === 0"
+                    class="p-2 text-gray-500 text-sm"
+                  >
+                    No results found
+                  </div>
+                </div>
+
+                <!-- Error -->
                 <p
                   v-if="errors[index]?.variable"
                   class="text-red-500 text-sm mt-1"
@@ -396,8 +437,6 @@
                   {{ errors[index]?.datasourcescript }}
                 </p>
               </div>
-
-              
 
               <!-- Label From TEXTFROMSOURCE -->
               <div
@@ -470,8 +509,6 @@
                   {{ errors[index]?.columnvalue }}
                 </p>
               </div>
-
-             
             </div>
 
             <!-- Remove Form Button -->
@@ -529,6 +566,7 @@
         </button>
       </div>
       <div class="overflow-hidden border rounded-md border-gray-300">
+        <div class="overflow-x-auto">
         <table class="table-auto min-w-full rounded-xl">
           <thead>
             <tr class="bg-gray-50">
@@ -624,6 +662,7 @@
             </tr>
           </tbody>
         </table>
+      </div>
         <p
           v-if="errors.approver"
           class="flex justify-center text-red-500 text-md mt-2 mb-2"
@@ -647,6 +686,7 @@
         </button>
       </div>
       <div class="overflow-hidden border rounded-md border-gray-300">
+        <div class="overflow-x-auto">
         <table class="table-auto min-w-full rounded-xl">
           <thead>
             <tr class="bg-gray-50">
@@ -740,6 +780,7 @@
             </tr>
           </tbody>
         </table>
+      </div>
       </div>
     </div>
 
@@ -975,6 +1016,9 @@ const selectedProxyTo = ref(null);
 const immediateHeadAdded = ref(false);
 const isSubmitting = ref(false);
 const paramid = ref();
+const dropdownOpenIndex = ref(null);
+const searchTerms = ref([]);
+const atSymbols = ref([]);
 const form = ref({
   title: "",
   description: "",
@@ -1001,20 +1045,49 @@ const form = ref({
 const handleFileChange = (event) => {
   const file = event.target.files[0];
   if (file) {
-    if (!file.name.endsWith('.html')) {
+    if (!file.name.endsWith(".html")) {
       // alert('Only .html files are allowed.');
       $swal.fire({
-      title: "Error",
-      text: "Only html files are allowed",
-      icon: "error",
-      timer: 2000, // auto-close after 2 seconds
-      showConfirmButton: false,
-    });
-      event.target.value = ''; // Clear the input
+        title: "Error",
+        text: "Only html files are allowed",
+        icon: "error",
+        timer: 2000, // auto-close after 2 seconds
+        showConfirmButton: false,
+      });
+      event.target.value = ""; // Clear the input
       form.value.templatefile = null;
       return;
     }
     form.value.templatefile = file;
+    const reader = new FileReader();
+
+    reader.onload = (e) => {
+      const htmlContent = e.target.result;
+
+      // Parse HTML to extract visible text
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlContent, "text/html");
+      const visibleText = doc.body.textContent || "";
+
+      // Find all @variables
+      const allMatches = visibleText.match(/@\w+/g) || [];
+
+      // Keywords you want to exclude
+      const excluded = [
+        "@user",
+        "@createdDate",
+        "@approvername",
+        "@approverdate",
+      ];
+
+      // Remove duplicates and excluded keywords
+      const filtered = [...new Set(allMatches)].filter(
+        (item) => !excluded.includes(item)
+      );
+      atSymbols.value = filtered;
+    };
+
+    reader.readAsText(file, "UTF-8");
   }
 };
 const formatFileSize = (bytes) => {
@@ -1025,13 +1098,38 @@ const formatFileSize = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 };
 const removeFile = () => {
-  form.value.templatefile = null
+  form.value.templatefile = null;
+  atSymbols.value = "";
+  form.value.formObjects.forEach(obj => {
+    obj.variable = null;
+  });
+
   // Reset file input
   if (process.client) {
-    const fileInput = document.querySelector('input[type="file"]')
-    if (fileInput) fileInput.value = ''
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput) fileInput.value = "";
   }
-}
+};
+
+const toggleDropdown = (index) => {
+  dropdownOpenIndex.value = dropdownOpenIndex.value === index ? null : index;
+  if (!searchTerms.value[index]) searchTerms.value[index] = "";
+};
+
+const selectSymbol = (index, symbol) => {
+  form.value.formObjects[index].variable = symbol;
+  dropdownOpenIndex.value = null;
+  searchTerms.value[index] = "";
+};
+
+const filteredSymbols = (index) => {
+  const term = searchTerms.value[index]?.toLowerCase() || "";
+  return atSymbols.value.filter((symbol) =>
+    symbol.toLowerCase().includes(term)
+  );
+};
+
+// Optional: close when clicking outside
 
 const backButton = () => {
   router.push("/main/638802127387670470");
@@ -1049,10 +1147,6 @@ const validateForm = () => {
     errors.value.description = "Description is required.";
   }
 
-  if (!form.value.templatefile) {
-    errors.value.templatefile = "TemplateFile is required.";
-  }
-
   form.value.formObjects.forEach((formObject, index) => {
     let hasError = false;
     errors.value[index] = {}; // Initialize error object
@@ -1067,13 +1161,13 @@ const validateForm = () => {
       hasError = true;
     }
 
-    if (
-      formObject.objectType != "LABEL" &&
-      (!formObject.variable || !formObject.variable.trim())
-    ) {
-      errors.value[index].variable = "Variable is required.";
-      hasError = true;
-    }
+    // if (
+    //   formObject.objectType != "LABEL" &&
+    //   (!formObject.variable || !formObject.variable.trim())
+    // ) {
+    //   errors.value[index].variable = "Variable is required.";
+    //   hasError = true;
+    // }
     if (
       (formObject.objectType === "TEXTFROMSOURCE" ||
         formObject.objectType == "DYNAMICSIGNATORY") &&
@@ -1579,6 +1673,7 @@ const submitForm = async () => {
     return;
   }
 
+
   const formData = new FormData();
 
   // Append simple fields
@@ -1599,7 +1694,9 @@ const submitForm = async () => {
     formData.append(`formObjects[${i}].datasourcescript`, obj.datasourcescript);
     formData.append(`formObjects[${i}].data`, obj.data);
     formData.append(`formObjects[${i}].display`, obj.display);
+    if(obj.variable){
     formData.append(`formObjects[${i}].variable`, obj.variable);
+    }
     formData.append(
       `formObjects[${i}].textfromsourcelabel`,
       obj.textfromsourcelabel
@@ -1706,12 +1803,15 @@ definePageMeta({
 
 <style scoped>
 .drag-ghost {
-  background-color: #dbeafe !important; /* Tailwind's blue-100 */
+  background-color: #dbeafe !important;
+  /* Tailwind's blue-100 */
   opacity: 0.8;
 }
 
 .drag-chosen {
-  border: 2px dashed #3b82f6; /* Tailwind's blue-500 */
-  background-color: #eff6ff; /* Optional: blue-50 */
+  border: 2px dashed #3b82f6;
+  /* Tailwind's blue-500 */
+  background-color: #eff6ff;
+  /* Optional: blue-50 */
 }
 </style>

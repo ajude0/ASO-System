@@ -327,6 +327,7 @@
                       v-if="canEdit"
                       @click="editForm(form.id)"
                       class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-yellow-600 flex item-center"
+                      title="Edit Form"
                     >
                       <svg
                         class="w-6 h-6 text-yellow-400"
@@ -350,6 +351,7 @@
                       v-if="canDelete"
                       @click="softDeleted(form.id)"
                       class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-red-100 flex item-center"
+                      title="Delete Form"
                     >
                       <svg
                         class=""
@@ -397,12 +399,26 @@
         </div>
       </div>
 
-      <div class="flex justify-left mt-10 space-x-2">
-        Showing {{ totalEntries === 0 ? 0 : query.PageNumber }} out of
-          {{ totalPages }} {{ totalPages === 1 ? "Page" : "Pages" }} ({{
+      <div class="flex justify-left mt-10 space-x-2 items-center">
+        <span>Showing</span>
+        <input
+          v-model.number="pageNumberDisplay"
+          @keyup.enter="handlePageInput"
+          type="number"
+          :min="totalPages === 0 ? 0 : 1"
+          :max="totalPages"
+          class="w-16 px-2 py-1 border border-gray-300 rounded text-center"
+        />
+        <span>
+          out of {{ totalPages }} {{ totalPages <= 1 ? "Page" : "Pages" }} ({{
             totalEntries
           }}
-          {{ totalEntries === 1 ? "Entry" : "Entries" }})
+          {{ totalEntries <= 1 ? "Entry" : "Entries" }})
+        </span>
+
+        <button @click="handlePageInput" class="py-1 px-4 bg-blue-500 rounded-md hover:bg-blue-700 text-white">
+          GO
+        </button>
       </div>
 
       <div class="flex justify-center mt-10 space-x-2 mb-2">
@@ -536,6 +552,22 @@ const softDeleted = async (id) => {
 const goToCreateRequest = async () => {
   router.push("/main/638802127387670470/createForm");
 };
+
+const handlePageInput = () => {
+  if (query.value.PageNumber < 1) {
+    query.value.PageNumber = 1;
+  } else if (query.value.PageNumber > totalPages.value) {
+    query.value.PageNumber = totalPages.value;
+  }
+
+  getListOfForms();
+};
+const pageNumberDisplay = computed({
+  get: () => (totalPages.value === 0 ? 0 : query.value.PageNumber),
+  set: (val) => {
+    query.value.PageNumber = totalPages.value === 0 ? 0 : Number(val);
+  },
+});
 
 definePageMeta({
   middleware: ["auth", "check-menu-access"], // Use an array for multiple middlewares

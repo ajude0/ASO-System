@@ -419,6 +419,7 @@
                       <button
                         @click="viewTransaction(transaction.id)"
                         class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-green-600 flex item-center"
+                        title="View Transaction"
                       >
                         <svg
                           xmlns="http://www.w3.org/2000/svg"
@@ -445,6 +446,7 @@
                         "
                         @click="editTransaction(transaction.id)"
                         class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-yellow-600 flex item-center"
+                        title="Edit Transaction"
                       >
                         <svg
                           class="w-6 h-6 text-yellow-400"
@@ -468,6 +470,7 @@
                         v-if="canDelete"
                         @click="softDelete(transaction.id)"
                         class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-red-100 flex item-center"
+                        title="Delete Transaction"
                       >
                         <svg
                           class=""
@@ -484,17 +487,21 @@
                           ></path>
                         </svg>
                       </button>
-                      <button  v-if="transaction.status == 'approved'"
+                      <button
+                        v-if="transaction.status == 'approved' && transaction.templatepath"
                         @click="
                           downloadvpnForm(transaction.id, transaction.title)
                         "
+                        class="hover:bg-blue-100 rounded-full p-2"
+                        title="Download Transaction"
                         :disabled="
                           !transaction.templatepath ||
                           !!isDownloading?.[transaction.id]
                         "
                         :class="{
                           'opacity-50 cursor-not-allowed':
-                            !!isDownloading?.[transaction.id] || !transaction.templatepath,
+                            !!isDownloading?.[transaction.id] ||
+                            !transaction.templatepath,
                         }"
                       >
                         <template v-if="isDownloading?.[transaction.id]">
@@ -566,15 +573,27 @@
           </div>
         </div>
       </div>
-      <div class="flex justify-left mt-10 space-x-2">
+      <div class="flex justify-left mt-10 space-x-2 items-center">
+        <span>Showing</span>
+        <input
+          v-model.number="pageNumberDisplay"
+          @keyup.enter="handlePageInput"
+          type="number"
+          :min="totalPages === 0 ? 0 : 1"
+          :max="totalPages"
+          class="w-16 px-2 py-1 border border-gray-300 rounded text-center"
+        />
         <span>
-          Showing {{ totalEntries === 0 ? 0 : query.PageNumber }} out of
-          {{ totalPages }} {{ totalPages === 1 ? "Page" : "Pages" }} ({{
+          out of {{ totalPages }} {{ totalPages <= 1 ? "Page" : "Pages" }} ({{
             totalEntries
           }}
-          {{ totalEntries === 1 ? "Entry" : "Entries" }})
+          {{ totalEntries <= 1 ? "Entry" : "Entries" }})
         </span>
+        <button @click="handlePageInput" class="py-1 px-4 bg-blue-500 hover:bg-blue-700 rounded-md text-white">
+          GO
+        </button>
       </div>
+
       <div class="flex justify-center mt-10 space-x-2 mb-2">
         <a
           @click="changePage(query.PageNumber - 1)"
@@ -1020,6 +1039,21 @@ const getGroupVisibilityStatus = (allGroups, currentIndex, form) => {
   return "waiting";
 };
 
+const handlePageInput = () => {
+  if (query.value.PageNumber < 1) {
+    query.value.PageNumber = 1;
+  } else if (query.value.PageNumber > totalPages.value) {
+    query.value.PageNumber = totalPages.value;
+  }
+
+  getMyTransactions();
+};
+const pageNumberDisplay = computed({
+  get: () => totalPages.value === 0 ? 0 : query.value.PageNumber,
+  set: (val) => {
+    query.value.PageNumber = totalPages.value === 0 ? 0 : Number(val);
+  }
+});
 const props = defineProps({
   canDelete: Boolean,
   canEdit: Boolean,
