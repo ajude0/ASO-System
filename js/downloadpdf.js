@@ -2,7 +2,7 @@ import { API_BASE_URL } from "~/config";
 import { getToken } from "./cryptoToken";
 export const isDownloading = ref({})
 
-export const downloadvpnForm = async (id, title) => {
+export const downloadvpnForm = async (id, title,formData) => {
   isDownloading.value[id] = true;
   const token = getToken();
   try {
@@ -11,6 +11,7 @@ export const downloadvpnForm = async (id, title) => {
       headers: {
         token: token,
       },
+      body: formData,
       responseType: "blob", // important: treat the response as a Blob
     });
 

@@ -168,6 +168,16 @@
               {{ passwordError }}
             </p>
           </div>
+          
+          <div class="flex items-center justify-end">
+              
+              <a
+                @click="forgot"
+                class="text-sm text-blue-600 hover:text-blue-500 cursor-pointer"
+                >Forgot password?</a
+              >
+            </div>
+
 
           <!-- Remember Me & Forgot Password -->
           <!-- <div class="flex items-center justify-between">
@@ -352,6 +362,16 @@ watch(sysdescription, (newTitle) => {
     });
   }
 });
+
+function forgot() {
+  // Set the localStorage item first
+  localStorage.setItem(
+    "sourceapplication",
+    "https://apps.fastlogistics.com.ph/lrc/#/"
+  );
+  // Use a short timeout to ensure the localStorage is set before navigating
+  window.location.href = "https://apps.fastlogistics.com.ph/utility/";
+}
 
 definePageMeta({
   middleware: "auth", // 👈 Tells Nuxt to run the "auth" middleware

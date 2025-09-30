@@ -1,5 +1,6 @@
 
 import { API_BASE_URL } from "~/config"
+import { getToken } from "./cryptoToken";
 
 
 export const searchQuery = ref(null);
@@ -14,11 +15,15 @@ const debounce = (fn, delay) => {
     }
   }
 export const searchJustifications = async (id) => {
+  const token = getToken();
     if (!searchQuery.value) return // Don't search if the query is empty
     loading.value = true
   
     try {
       const response = await $fetch(`${API_BASE_URL}/api/ObjectSource/GetJustifications/${id}`, {
+        headers: {
+          token: token,
+        },
         params: { name: searchQuery.value },
       })
       justifications.value = response

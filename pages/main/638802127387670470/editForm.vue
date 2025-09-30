@@ -71,6 +71,18 @@
     </div>
     <div class="mb-4">
       <label class="block font-medium" :class="{ 'text-red-500': errors.title }"
+        >ID </label
+      >
+      <input
+        v-model="forms.id"
+        type="text"
+        disabled
+        class="border p-2 w-full rounded"
+      />
+    
+    </div>
+    <div class="mb-4">
+      <label class="block font-medium" :class="{ 'text-red-500': errors.title }"
         >Title <span class="text-red-500 text-sm"> * </span></label
       >
       <input
@@ -581,6 +593,17 @@
           />
           <label for="approvers-checkbox" class="text-md text-gray-700"
             >In Order</label
+          >
+        </div>
+        <div class="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="approvers-checkbox"
+            class="scale-150 accent-blue-600"
+            v-model="isAutoCloseBoolean"
+          />
+          <label for="approvers-checkbox" class="text-md text-gray-700"
+            >Is Auto Close</label
           >
         </div>
       </div>
@@ -1672,6 +1695,12 @@ const isInOrderBoolean = computed({
     forms.value.isinorder = val ? 1 : 0;
   },
 });
+const isAutoCloseBoolean = computed({
+  get: () => forms.value.isautoclose === 1,
+  set: (val) => {
+    forms.value.isautoclose = val ? 1 : 0;
+  },
+});
 
 const saveFormObjects = async () => {
   if (!validateForm()) {
@@ -1706,6 +1735,8 @@ const saveFormObjects = async () => {
   formData.append("title", forms.value.title);
   formData.append("description", forms.value.description);
   formData.append("isinorder", forms.value.isinorder ? "1" : "0");
+  formData.append("isautoclose", forms.value.isautoclose ? "1" : "0");
+
 
   // Append file if any
   if (forms.value.newtemplatefile) {

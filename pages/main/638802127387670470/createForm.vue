@@ -549,6 +549,17 @@
             >In Order</label
           >
         </div>
+        <div class="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="approvers-checkbox"
+            class="scale-150 accent-blue-600"
+            v-model="form.isautoclose"
+          />
+          <label for="approvers-checkbox" class="text-md text-gray-700"
+            >Is Auto Close</label
+          >
+        </div>
       </div>
       <div class="flex justify-end mb-2 gap-4 mt-4">
         <button
@@ -1023,6 +1034,7 @@ const form = ref({
   title: "",
   description: "",
   isinorder: false,
+  isautoclose:false,
   templatefile: "",
   formObjects: [
     {
@@ -1680,6 +1692,8 @@ const submitForm = async () => {
   formData.append("title", form.value.title);
   formData.append("description", form.value.description);
   formData.append("isinorder", form.value.isinorder ? "1" : "0");
+  formData.append("isautoclose", form.value.isautoclose ? "1" : "0");
+
 
   // Append file if any
   if (form.value.templatefile) {

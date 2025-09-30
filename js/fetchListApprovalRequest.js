@@ -43,7 +43,7 @@ export const getListOfTransactions = async () => {
   }
 };
 
-export const confirmApproval = async (id,remarks) => {
+export const confirmApproval = async (id,formData) => {
   const token = getToken();
   try {
     await $fetch(`${API_BASE_URL}/api/Approver/approved/${id}`, {
@@ -51,7 +51,7 @@ export const confirmApproval = async (id,remarks) => {
       headers: {
         token: token,
       },
-      body: JSON.stringify({ remarks }),
+      body:formData ,
     });
     getListOfTransactions();
   } catch (error) {
@@ -59,7 +59,7 @@ export const confirmApproval = async (id,remarks) => {
   }
 };
 
-export const disapproveApproval = async (id,remarks) => {
+export const disapproveApproval = async (id,remarks,$swal) => {
   const token = getToken();
   try {
     await $fetch(`${API_BASE_URL}/api/Approver/disapproved/${id}`, {
@@ -69,9 +69,23 @@ export const disapproveApproval = async (id,remarks) => {
       },
       body: JSON.stringify({ remarks }),
     });
+    $swal.fire({
+      title: "Disapproved!",
+      text: "The request has been disapproved.",
+      icon: "success",
+      timer: 1000,
+      showConfirmButton: false,
+    });
     getListOfTransactions();
+    
   } catch (error) {
     console.error("Error fetching transactions:", error);
+    $swal.fire({
+      icon: "error",
+      title: "Error",
+      text:  "Failed to disapproved transaction.",
+    });
+    
   }
 };
 

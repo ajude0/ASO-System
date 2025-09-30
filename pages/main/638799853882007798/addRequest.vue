@@ -281,7 +281,6 @@
           <div v-else-if="formObject.objecttype === 'TIME'">
             <div>
               <DateTimeInput v-model="formAnswers[formObject.id]" />
-              
             </div>
           </div>
 
@@ -553,6 +552,7 @@
           v-model="searchQuery"
           @keydown.enter="debouncedSearch(storeId)"
           placeholder="Search"
+          ref="inputRef" 
           class="w-full p-4 h-11 rounded border border-gray-600 focus:outline-none"
         />
         <button
@@ -676,7 +676,6 @@ import {
 import { fetchCanAccess, nenunames } from "~/js/fetchMenu";
 import DateTimeInput from "~/components/DateTimeInput.vue";
 
-
 const router = useRouter();
 const paramid = ref();
 const isOpen = ref(false);
@@ -696,6 +695,7 @@ const dropdownRef = ref(null);
 const scrollContainer = ref(null);
 const objecttype = ref();
 const index = ref();
+const inputRef = ref(null);
 const backButton = () => {
   router.push("/main/638799853882007798");
 };
@@ -756,6 +756,8 @@ const selectForm = (formTitle) => {
   getFormTitle();
   getDetails();
   isOpen.value = false;
+  formAnswers.value = {};
+  formDisplays.value = {};
   // do your @change logic here (like getDetails)
 };
 
@@ -773,10 +775,12 @@ function clearFormId() {
 }
 
 const selectEmployee = (id, justification) => {
+
   // Save hidden and visible data
   if (objecttype.value == "textfromsource") {
-    formAnswers.value[id] = justification.data;
+    formAnswers.value[id] = justification.display;
     formDisplays.value[id] = justification.display;
+ 
 
     // Filter formObjects where formobjectsourceid matches selected ID
     const matchedFormObjects = formDetails.value?.formObjects?.filter(
@@ -812,8 +816,8 @@ const selectEmployee = (id, justification) => {
         // ✅ Push new value with type = "dynammicsignatory" (if not duplicate)
         formAnswers.value[id].push({
           type: "dynammicsignatory",
-          value: justification.data, // 🔒 save this as actual value
-          display: justification.display, // 👁️ used only for displaying in input
+          value: justification.display, // 🔒 save this as actual value
+          display: justification.data, // 👁️ used only for displaying in input
         });
       }
     }
@@ -826,6 +830,7 @@ const getDisplayBinding = (formId, index) =>
     get: () => {
       const item = formAnswers.value[formId][index];
       return typeof item === "object" ? item.value : item;
+
     },
     set: (newDisplay) => {
       const item = formAnswers.value[formId][index];
@@ -885,6 +890,12 @@ const openModal = (id, type, inx) => {
   objecttype.value = type;
   index.value = inx;
 };
+watch(showModal, async (newVal) => {
+  if (newVal) {
+    await nextTick(); // wait until DOM updates
+    inputRef.value?.focus();
+  }
+});
 
 const submitAnswers = async () => {
   isSubmitting.value = true;
@@ -966,6 +977,7 @@ const submitAnswers = async () => {
   };
 
   try {
+   
     await $fetch(`${API_BASE_URL}/api/FormObject/submit-answers`, {
       method: "POST",
       headers: {
@@ -1013,7 +1025,6 @@ onMounted(async () => {
   paramid.value = parts[parts.length - 2];
   await fetchCanAccess(paramid.value);
   nenunames.value.push("Create");
-
   document.addEventListener("click", handleClickOutside);
 });
 

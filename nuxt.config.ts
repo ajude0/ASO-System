@@ -22,5 +22,10 @@ export default defineNuxtConfig({
       apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL,
      
     }
-  }
+  },
+   vite: {
+    esbuild: {
+       drop: ['console', 'debugger'], // removes console.log and debugger in production
+     },
+   },
 })

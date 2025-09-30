@@ -48,7 +48,7 @@
   <div v-else class="max-w-full m-10 p-6 bg-white shadow-lg rounded-lg">
     <div class="bg-gray-400 rounded-t-lg text-center">
       <h1 class="text-2xl font-bold text-white border-b p-8">
-        {{ transactions.title }}
+        {{ transactions.title }} #{{ transactions.id }}
       </h1>
     </div>
     <div class="rounded-t-lg">
@@ -600,8 +600,8 @@ const selectEmployee = (id, justification) => {
       id: 0, // Temp unique ID until saved
       formobjectId: formObject.formObjectId,
       formobjecttype: "DYNAMICSIGNATORY",
-      value: justification.data,
-      display: justification.display, 
+      value: justification.display,
+      display: justification.data, 
     };
 
     // Push into values
@@ -677,6 +677,7 @@ const saveForm = async () => {
   }));
 
   try {
+   
     await $fetch(`${API_BASE_URL}/api/Transaction/update-transaction`, {
       method: "POST",
       headers: {

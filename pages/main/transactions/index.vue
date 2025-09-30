@@ -96,41 +96,36 @@
                       v-else-if="dynamic.currentuser && dynamic.response === 1"
                       class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full"
                     >
-                      SIGNED -   {{
-                          new Date(dynamic.responsedate).toLocaleString(
-                            "en-US",
-                            {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                              hour: "numeric",
-                              minute: "numeric",
-                              hour12: true, // optional, for 12-hour format with AM/PM
-                            }
-                          )
-                        }}
+                      SIGNED -
+                      {{
+                        new Date(dynamic.responsedate).toLocaleString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "numeric",
+                          hour12: true, // optional, for 12-hour format with AM/PM
+                        })
+                      }}
                     </span>
 
                     <!-- Other statuses for non-current users -->
                     <span
-                        v-else-if="dynamic.response === 1"
-                        class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full"
-                      >
-                        SIGNED -
-                        {{
-                          new Date(dynamic.responsedate).toLocaleString(
-                            "en-US",
-                            {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                              hour: "numeric",
-                              minute: "numeric",
-                              hour12: true, // optional, for 12-hour format with AM/PM
-                            }
-                          )
-                        }}
-                      </span>
+                      v-else-if="dynamic.response === 1"
+                      class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full"
+                    >
+                      SIGNED -
+                      {{
+                        new Date(dynamic.responsedate).toLocaleString("en-US", {
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                          hour: "numeric",
+                          minute: "numeric",
+                          hour12: true, // optional, for 12-hour format with AM/PM
+                        })
+                      }}
+                    </span>
                     <span
                       v-else-if="dynamic.response === 0"
                       class="inline-block px-3 py-1 text-sm font-semibold text-yellow-800 bg-yellow-100 rounded-full"
@@ -238,12 +233,51 @@
                   </p>
                 </div>
                 <div
-                  v-if="approver.remarks"
-                  class="flex text-gray-700 text-md mr-4 items-center"
+                  v-if="approver.response == 1"
+                  class="flex px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full"
                 >
-                  <div class="text-md font-bold">Remarks:</div>
-                  <div class="text-md font-bold ml-1">
-                    {{ approver.remarks }}
+                  <div class="text-md font-bold">
+                    Approved -
+                    {{
+                      new Date(approver.responsedate).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "numeric",
+                        hour12: true, // optional, for 12-hour format with AM/PM
+                      })
+                    }}
+                  </div>
+                </div>
+                <div
+                  v-if="approver.response == 2"
+                  class="flex flex-col px-3 py-1 text-sm font-semibold text-red-700 bg-red-100 rounded-full"
+                >
+                  <!-- Disapprove + Date -->
+                  <div class="text-md font-bold">
+                    Disapprove -
+                    {{
+                      new Date(approver.responsedate).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "numeric",
+                        hour12: true, // optional, for 12-hour format with AM/PM
+                      })
+                    }}
+                  </div>
+
+                  <!-- Remarks below -->
+                  <div
+                    v-if="approver.remarks"
+                    class="flex text-gray-700 text-md mt-1 justify-end"
+                  >
+                    <div class="text-md font-bold">Remarks:</div>
+                    <div class="text-md font-bold ml-1">
+                      {{ approver.remarks }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -295,6 +329,7 @@ import {
   disapproveApproval,
 } from "~/js/fetchListApprovalRequest";
 import { getUrlTransactionId } from "~/js/cryptoToken";
+import SignaturePad from "signature_pad";
 
 const urltransactionId = ref();
 const readyToRender = ref(false); // Flag to control rendering
@@ -360,60 +395,195 @@ const getGroupVisibilityStatus = (allGroups, currentIndex) => {
 };
 
 const postApprove = async () => {
-  const confirm = await $swal.fire({
-    title: "Are you sure?",
-    text: "Do you really want to approve this request?",
-    icon: "warning",
-    input: "textarea",
-    inputPlaceholder: "Enter remarks here (optional)...",
+  const { value: signature, isConfirmed } = await $swal.fire({
+    title: "Approve Request",
+    html: `
+      <div style="display:flex; flex-direction:column; align-items:center; gap:1rem; width:100%;">
+        <label style="font-weight:600; font-size:16px;">Please sign below:</label>
+        <canvas id="signature-pad" width="700" height="250" 
+          style="border:2px dashed #9ca3af; border-radius:12px; background:#f9fafb; width:100%; max-width:700px; height:250px;"></canvas>
+        
+        <div style="display:flex; align-items:center; gap:10px; width:100%; max-width:700px; margin-top:12px;">
+          <label style="font-size:14px; font-weight:600;">Stroke:</label>
+          <input id="thickness-slider" type="range" min="1" max="10" value="4" style="flex:1; cursor:pointer;">
+          <span id="thickness-value" style="min-width:25px; text-align:center; font-weight:600;">4</span>
+        </div>
+
+        <button id="clear-signature" class="swal2-cancel swal2-styled" 
+          style="margin-top:12px; background:#ef4444; border-radius:6px; padding:8px 16px; font-size:14px;">
+          Clear Signature
+        </button>
+      </div>
+    `,
+    width: 800,
+    focusConfirm: false,
     showCancelButton: true,
-    confirmButtonText: "Yes, approve it!",
-    cancelButtonText: "No, cancel",
+    confirmButtonText: "Approve",
+    cancelButtonText: "Cancel",
+    didOpen: () => {
+      const canvas = document.getElementById("signature-pad");
+      const thicknessSlider = document.getElementById("thickness-slider");
+      const thicknessValue = document.getElementById("thickness-value");
+
+      // Default stroke = 5, slider starts at 4
+      const signaturePad = new SignaturePad(canvas, {
+        backgroundColor: "rgba(255,255,255,0)",
+        penColor: "black",
+        minWidth: 2,
+        maxWidth: 5, // default stroke thickness
+      });
+
+      // Slider event
+      thicknessSlider.addEventListener("input", (e) => {
+        const value = parseInt(e.target.value);
+        thicknessValue.textContent = value;
+        signaturePad.minWidth = Math.max(1, value - 1);
+        signaturePad.maxWidth = value;
+      });
+
+      // Clear button
+      const clearBtn = document.getElementById("clear-signature");
+      clearBtn?.addEventListener("click", () => signaturePad.clear());
+
+      window.signaturePadInstance = signaturePad;
+    },
+    preConfirm: () => {
+      const signaturePad = window.signaturePadInstance;
+
+      if (!signaturePad || signaturePad.isEmpty()) {
+        $swal.showValidationMessage(
+          "✍️ Please provide a signature before approving."
+        );
+        return false;
+      }
+
+      return signaturePad.toDataURL("image/png");
+    },
   });
 
-  if (confirm.isConfirmed) {
-    const remarks = confirm.value; // Get the remarks entered by the user (if any)\
+  if (isConfirmed && signature) {
+    // Convert base64 to Blob
+    const byteString = atob(signature.split(",")[1]);
+    const mimeString = signature.split(",")[0].split(":")[1].split(";")[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i);
+    }
+    const blob = new Blob([ab], { type: mimeString });
 
-    await confirmApproval(urltransactionId.value, remarks);
+    // Create FormData to send as file
+    const formData = new FormData();
+    formData.append("SignatureFile", blob, "signature.png");
+
+    await confirmApproval(urltransactionId.value, formData);
 
     $swal.fire({
-      title: "Approved!",
-      text: "The request has been approved.",
+      title: "✅ Approved!",
+      text: "The request has been approved successfully.",
       icon: "success",
-      timer: 1000, // auto-close after 1 second
+      width: 400,
+      timer: 1200,
       showConfirmButton: false,
     });
 
+    showModal.value = false;
     return navigateTo("/main/dashboard");
   }
 };
-
 const postSigned = async () => {
-  const confirm = await $swal.fire({
-    title: "Are you sure?",
-    text: "Do you really want to sign this request?",
-    icon: "warning",
-    input: "textarea",
-    inputPlaceholder: "Enter remarks here (optional)...",
+  const { value: signature, isConfirmed } = await $swal.fire({
+    title: "Sign this request",
+    html: `
+      <div style="display:flex; flex-direction:column; align-items:center; gap:1rem; width:100%;">
+        <label style="font-weight:600; font-size:16px;">Please sign below:</label>
+        <canvas id="signature-pad" width="700" height="250" 
+          style="border:2px dashed #9ca3af; border-radius:12px; background:#f9fafb; width:100%; max-width:700px; height:250px;"></canvas>
+        
+        <div style="display:flex; align-items:center; gap:10px; width:100%; max-width:700px; margin-top:12px;">
+          <label style="font-size:14px; font-weight:600;">Stroke:</label>
+          <input id="thickness-slider" type="range" min="1" max="10" value="4" style="flex:1; cursor:pointer;">
+          <span id="thickness-value" style="min-width:25px; text-align:center; font-weight:600;">4</span>
+        </div>
+
+        <button id="clear-signature" class="swal2-cancel swal2-styled" 
+          style="margin-top:12px; background:#ef4444; border-radius:6px; padding:8px 16px; font-size:14px;">
+          Clear Signature
+        </button>
+      </div>
+    `,
+    width: 800,
+    focusConfirm: false,
     showCancelButton: true,
-    confirmButtonText: "Yes, sign it!",
-    cancelButtonText: "No, cancel",
+    confirmButtonText: "✅ Sign",
+    cancelButtonText: "❌ Cancel",
+    didOpen: () => {
+      const canvas = document.getElementById("signature-pad");
+      const thicknessSlider = document.getElementById("thickness-slider");
+      const thicknessValue = document.getElementById("thickness-value");
+
+      const signaturePad = new SignaturePad(canvas, {
+        backgroundColor: "rgba(255,255,255,0)",
+        penColor: "black",
+        minWidth: 2,
+        maxWidth: 5,
+      });
+
+      thicknessSlider.addEventListener("input", (e) => {
+        const value = parseInt(e.target.value);
+        thicknessValue.textContent = value;
+        signaturePad.minWidth = Math.max(1, value - 1);
+        signaturePad.maxWidth = value;
+      });
+
+      document
+        .getElementById("clear-signature")
+        ?.addEventListener("click", () => signaturePad.clear());
+      window.signaturePadInstance = signaturePad;
+    },
+    preConfirm: () => {
+      const signaturePad = window.signaturePadInstance;
+      if (!signaturePad || signaturePad.isEmpty()) {
+        $swal.showValidationMessage(
+          "✍️ Please provide a signature before signing."
+        );
+        return false;
+      }
+
+      return {
+        signature: signaturePad.toDataURL("image/png"),
+      };
+    },
   });
 
-  if (confirm.isConfirmed) {
-    const remarks = confirm.value; // Get the remarks entered by the user (if any)\
+  if (isConfirmed && signature) {
+    // Convert signature to Blob
+    const byteString = atob(signature.signature.split(",")[1]);
+    const mimeString = signature.signature
+      .split(",")[0]
+      .split(":")[1]
+      .split(";")[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++)
+      ia[i] = byteString.charCodeAt(i);
+    const blob = new Blob([ab], { type: mimeString });
 
-    await confirmApproval(urltransactionId.value, remarks);
+    // Prepare FormData to send to server
+    const formData = new FormData();
+    formData.append("SignatureFile", blob, "signature.png");
+
+    await confirmApproval(urltransactionId.value, formData);
 
     $swal.fire({
       title: "Signed!",
-      text: "The request has been signed.",
+      text: "The request has been signed successfully.",
       icon: "success",
-      timer: 1000, // auto-close after 1 second
+      timer: 1000,
       showConfirmButton: false,
     });
 
-    return navigateTo("/main/dashboard");
+    showModal.value = false;
   }
 };
 const postDisapprove = async () => {
@@ -457,27 +627,26 @@ onMounted(async () => {
   urltransactionId.value = getUrlTransactionId();
   await getTransaction(urltransactionId.value);
   if (!transactions.value.iscurrentuser) {
-  if (
-    transactions.value &&
-    !transactions.value.hasSignatory &&
-    !transactions.value.hasCurrentApprover
-  ) {
-    const result = await $swal.fire({
-      title: "Access Denied",
-      text: "You are not allowed to view this transaction.",
-      icon: "error",
-      confirmButtonText: "Close", // Button at the bottom
-      allowOutsideClick: false,
-      allowEscapeKey: false,
-    });
+    if (
+      transactions.value &&
+      !transactions.value.hasSignatory &&
+      !transactions.value.hasCurrentApprover
+    ) {
+      const result = await $swal.fire({
+        title: "Access Denied",
+        text: "You are not allowed to view this transaction.",
+        icon: "error",
+        confirmButtonText: "Close", // Button at the bottom
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+      });
 
-    // Redirect only if the user clicks the "Close" button
-    if (result.isConfirmed) {
-      router.push("/main/dashboard");
+      // Redirect only if the user clicks the "Close" button
+      if (result.isConfirmed) {
+        router.push("/main/dashboard");
+      }
     }
   }
-}
-
 
   readyToRender.value = true; // Set only if access is granted
 });

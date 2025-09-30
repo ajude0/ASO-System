@@ -112,10 +112,10 @@
           @click="open"
         >
           <option value="" selected hidden>Select Status</option>
-          <option value="pending">Pending</option>
-          <option value="approved">Approved</option>
-          <option value="disapproved">Disapproved</option>
-          <option value="form">No Approval</option>
+          <option value="1">Pending</option>
+          <option value="2">Approved</option>
+          <option value="3">Disapproved</option>
+          <option value="4">No Approval</option>
         </select>
         <div
           v-if="query.Status"
@@ -235,7 +235,7 @@
                     class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
                   >
                     <div
-                      v-if="transaction.status == 'approved'"
+                      v-if="transaction.status == '2'"
                       class="py-1.5 px-2.5 bg-green-50 rounded-full flex items-center justify-center w-20 gap-1"
                     >
                       <svg
@@ -252,7 +252,7 @@
                       >
                     </div>
                     <div
-                      v-if="transaction.status == 'pending'"
+                      v-if="transaction.status == '1'"
                       class="py-1.5 px-2.5 bg-amber-50 rounded-full flex items-center justify-center w-20 gap-1"
                     >
                       <svg
@@ -269,7 +269,7 @@
                       >
                     </div>
                     <div
-                      v-if="transaction.status == 'disapproved'"
+                      v-if="transaction.status == '3'"
                       class="py-1.5 px-2.5 bg-red-50 rounded-full flex items-center justify-center w-28 gap-1"
                     >
                       <svg
@@ -286,7 +286,7 @@
                       >
                     </div>
                     <div
-                      v-if="transaction.status == 'form'"
+                      v-if="transaction.status == '4'"
                       class="py-1.5 px-2.5 bg-gray-100 rounded-full flex items-center justify-center w-36 gap-1"
                     >
                       <svg
@@ -371,13 +371,19 @@
                     class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
                   >
                     <span
-                      v-if="transaction.currentStatus == 'Disapproved'"
+                      v-if="transaction.approverProgress == 'Declined'"
                       class="mt-3 text-red-700 rounded-lg text-sm flex items-center space-x-2"
                       >{{ transaction.approverProgress }}</span
                     >
                     <span
-                      v-else-if="transaction.currentStatus == 'Pending'"
-                      class="font-semibold w-5 h-5 rounded-xl bg-gray-600 text-white p-2"
+                      v-else-if="transaction.approverProgress == 'Completed'"
+                      class="mt-3 text-emerald-700 rounded-lg text-sm flex items-center space-x-2"
+                      >{{ transaction.approverProgress }}</span
+                    >
+
+                    <span
+                      v-else-if="transaction.approverProgress == 'Waiting'"
+                      class="mt-3 text-orange-500 rounded-lg text-sm flex items-center space-x-2"
                       >{{ transaction.approverProgress }}</span
                     >
                     <!-- <span
@@ -387,8 +393,8 @@
                     > -->
                     <span
                       v-else
-                      class="mt-3 text-emerald-700 rounded-lg text-sm flex items-center space-x-2"
-                      >Completed</span
+                      class="font-semibold w-5 h-5 rounded-xl bg-gray-600 text-white p-2"
+                      >{{ transaction.approverProgress }}</span
                     >
                   </td>
                   <td
@@ -442,7 +448,9 @@
                       </button>
                       <button
                         v-if="
-                          !transaction.isSomeoneApprovedOrDisapproved && canEdit
+                          canEdit &&
+                          transaction.approverProgress != 'Completed' &&
+                          transaction.status != 3
                         "
                         @click="editTransaction(transaction.id)"
                         class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-yellow-600 flex item-center"
@@ -488,9 +496,43 @@
                         </svg>
                       </button>
                       <button
-                        v-if="transaction.status == 'approved' && transaction.templatepath"
+                        v-if="
+                          transaction.approverProgress == 'Waiting' &&
+                          transaction.status == 1
+                        "
+                        @click="closingTransaction(transaction.id)"
+                        class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-blue-100 flex item-center"
+                        title="Close Transaction"
+                      >
+                        <svg
+                          class="w-6 h-6 text-blue-800"
+                          aria-hidden="true"
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="20"
+                          height="20"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            stroke="currentColor"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10 3v4a1 1 0 0 1-1 1H5m4 6 2 2 4-4m4-8v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7.914a1 1 0 0 1 .293-.707l3.914-3.914A1 1 0 0 1 9.914 3H18a1 1 0 0 1 1 1Z"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        v-if="
+                          (transaction.approverProgress == 'Form' ||
+                            transaction.approverProgress == 'Completed') &&
+                          transaction.templatepath
+                        "
                         @click="
-                          downloadvpnForm(transaction.id, transaction.title)
+                          downloadFormWithSignature(
+                            transaction.id,
+                            transaction.title
+                          )
                         "
                         class="hover:bg-blue-100 rounded-full p-2"
                         title="Download Transaction"
@@ -589,7 +631,10 @@
           }}
           {{ totalEntries <= 1 ? "Entry" : "Entries" }})
         </span>
-        <button @click="handlePageInput" class="py-1 px-4 bg-blue-500 hover:bg-blue-700 rounded-md text-white">
+        <button
+          @click="handlePageInput"
+          class="py-1 px-4 bg-blue-500 hover:bg-blue-700 rounded-md text-white"
+        >
           GO
         </button>
       </div>
@@ -665,7 +710,9 @@
       class="w-full max-w-7xl bg-white shadow-lg rounded-lg p-6 max-h-[90vh] relative"
     >
       <div class="flex items-center pb-3 border-b border-gray-300">
-        <h3 class="text-gray-800 text-xl font-bold flex-1">Transaction</h3>
+        <h3 class="text-gray-800 text-xl font-bold flex-1">
+          Transaction - {{ id }}
+        </h3>
         <svg
           @click="showModal = false"
           xmlns="http://www.w3.org/2000/svg"
@@ -867,12 +914,57 @@
                     </p>
                   </div>
                   <div
-                    v-if="approver.remarks"
-                    class="flex text-gray-700 text-md mr-4 items-center"
+                    v-if="approver.response == 1"
+                    class="flex px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full"
                   >
-                    <div class="text-md font-bold">Remarks:</div>
-                    <div class="text-md font-bold ml-1">
-                      {{ approver.remarks }}
+                    <div class="text-md font-bold">
+                      Approved -
+                      {{
+                        new Date(approver.responsedate).toLocaleString(
+                          "en-US",
+                          {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "numeric",
+                            hour12: true, // optional, for 12-hour format with AM/PM
+                          }
+                        )
+                      }}
+                    </div>
+                  </div>
+                  <div
+                    v-if="approver.response == 2"
+                    class="flex flex-col px-3 py-1 text-sm font-semibold text-red-700 bg-red-100 rounded-full"
+                  >
+                    <!-- Disapprove + Date -->
+                    <div class="text-md font-bold">
+                      Disapprove -
+                      {{
+                        new Date(approver.responsedate).toLocaleString(
+                          "en-US",
+                          {
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "numeric",
+                            hour12: true, // optional, for 12-hour format with AM/PM
+                          }
+                        )
+                      }}
+                    </div>
+
+                    <!-- Remarks below -->
+                    <div
+                      v-if="approver.remarks"
+                      class="flex text-gray-700 text-md mt-1 justify-end"
+                    >
+                      <div class="text-md font-bold">Remarks:</div>
+                      <div class="text-md font-bold ml-1">
+                        {{ approver.remarks }}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -913,12 +1005,15 @@ import LoadingModal from "./modal/LoadingModal.vue";
 import { encryptData } from "~/js/cryptoToken";
 import { canEdit } from "~/js/fetchMenu";
 import { downloadvpnForm, isDownloading } from "~/js/downloadpdf";
+import SignaturePad from "signature_pad";
+import { closedTransaction } from "~/js/fetchTransactions";
 
 const showModal = ref(false);
 const isApprovedOpen = ref(false);
 const { $swal } = useNuxtApp();
 const router = useRouter();
 const showAllApprovers = ref({});
+const id = ref();
 
 function goToCreateRequest() {
   router.push("/main/638799853882007798/addRequest");
@@ -955,6 +1050,7 @@ const clearStatus = () => {
 
 const viewTransaction = async (transactionId) => {
   showModal.value = true;
+  id.value = transactionId;
   getTransaction(transactionId);
 };
 
@@ -968,12 +1064,121 @@ const softDelete = async (id) => {
     cancelButtonText: "No, cancel",
   });
   if (confirm.isConfirmed) {
-    await softDeleteTransaction(id);
+    await softDeleteTransaction(id, $swal);
+    // $swal.fire({
+    //   title: "Deleted!",
+    //   text: "The request has been deleted.",
+    //   icon: "success",
+    //   timer: 1000, // auto-close after 2 seconds
+    //   showConfirmButton: false,
+    // });
+  }
+};
+
+const closingTransaction = async (id) => {
+  const confirm = await $swal.fire({
+    title: "Are you sure?",
+    text: "Do you really want to close this request?",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Yes, close it!",
+    cancelButtonText: "No, cancel",
+  });
+  if (confirm.isConfirmed) {
+    await closedTransaction(id, $swal);
+  }
+};
+// const downloadForm = (id, title) =>{
+
+//   downloadForm(transaction.id, transaction.title)
+// }
+const downloadFormWithSignature = async (id, title) => {
+  const { value: signature, isConfirmed } = await $swal.fire({
+    title: `Sign to download: ${title}`,
+    html: `
+      <div style="display:flex; flex-direction:column; align-items:center; gap:1rem; width:100%;">
+        <label style="font-weight:600; font-size:16px;">Please sign below:</label>
+        <canvas id="signature-pad" width="700" height="250" 
+          style="border:2px dashed #9ca3af; border-radius:12px; background:#f9fafb; width:100%; max-width:700px; height:250px;"></canvas>
+        
+        <div style="display:flex; align-items:center; gap:10px; width:100%; max-width:700px; margin-top:12px;">
+          <label style="font-size:14px; font-weight:600;">Stroke:</label>
+          <input id="thickness-slider" type="range" min="1" max="10" value="4" style="flex:1; cursor:pointer;">
+          <span id="thickness-value" style="min-width:25px; text-align:center; font-weight:600;">4</span>
+        </div>
+
+        <button id="clear-signature" class="swal2-cancel swal2-styled" 
+          style="margin-top:12px; background:#ef4444; border-radius:6px; padding:8px 16px; font-size:14px;">
+          Clear Signature
+        </button>
+      </div>
+    `,
+    width: 800,
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: "Download",
+    cancelButtonText: "Cancel",
+    didOpen: () => {
+      const canvas = document.getElementById("signature-pad");
+      const thicknessSlider = document.getElementById("thickness-slider");
+      const thicknessValue = document.getElementById("thickness-value");
+
+      // Default stroke = 5, slider starts at 4
+      const signaturePad = new SignaturePad(canvas, {
+        backgroundColor: "rgba(255,255,255,0)",
+        penColor: "black",
+        minWidth: 2,
+        maxWidth: 5,
+      });
+
+      // Slider event
+      thicknessSlider.addEventListener("input", (e) => {
+        const value = parseInt(e.target.value);
+        thicknessValue.textContent = value;
+        signaturePad.minWidth = Math.max(1, value - 1);
+        signaturePad.maxWidth = value;
+      });
+
+      // Clear button
+      const clearBtn = document.getElementById("clear-signature");
+      clearBtn?.addEventListener("click", () => signaturePad.clear());
+
+      window.signaturePadInstance = signaturePad;
+    },
+    preConfirm: () => {
+      const signaturePad = window.signaturePadInstance;
+      if (!signaturePad || signaturePad.isEmpty()) {
+        $swal.showValidationMessage(
+          "✍️ Please provide a signature before downloading."
+        );
+        return false;
+      }
+      return signaturePad.toDataURL("image/png");
+    },
+  });
+
+  if (isConfirmed && signature) {
+    // Convert signature to Blob
+    const byteString = atob(signature.split(",")[1]);
+    const mimeString = signature.split(",")[0].split(":")[1].split(";")[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++)
+      ia[i] = byteString.charCodeAt(i);
+    const blob = new Blob([ab], { type: mimeString });
+
+    // Prepare FormData for download (if sending to server)
+    const formData = new FormData();
+    formData.append("SignatureFile", blob, "signature.png");
+
+    await downloadvpnForm(id, title, formData);
+
     $swal.fire({
-      title: "Deleted!",
-      text: "The request has been deleted.",
+      title: "Downloaded!",
+      text: "The signed form has been downloaded successfully.",
       icon: "success",
-      timer: 1000, // auto-close after 2 seconds
+      width: 400,
+      timer: 1200,
       showConfirmButton: false,
     });
   }
@@ -1049,10 +1254,10 @@ const handlePageInput = () => {
   getMyTransactions();
 };
 const pageNumberDisplay = computed({
-  get: () => totalPages.value === 0 ? 0 : query.value.PageNumber,
+  get: () => (totalPages.value === 0 ? 0 : query.value.PageNumber),
   set: (val) => {
     query.value.PageNumber = totalPages.value === 0 ? 0 : Number(val);
-  }
+  },
 });
 const props = defineProps({
   canDelete: Boolean,

@@ -192,10 +192,7 @@
                   >
                     Actions
                   </th>
-                  <th
-                    scope="col"
-                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
-                  ></th>
+                
                 </tr>
               </thead>
 
@@ -935,6 +932,7 @@ import {
   loading,
 } from "~/js/fetchListApprovalRequest";
 import LoadingModal from "./modal/LoadingModal.vue";
+import SignaturePad from "signature_pad";
 
 const { $swal } = useNuxtApp();
 const showModal = ref(false);
@@ -1033,62 +1031,189 @@ const getGroupVisibilityStatus = (allGroups, currentIndex) => {
   }
   return "waiting";
 };
-
 const postApprove = async () => {
-  const confirm = await $swal.fire({
-    title: "Are you sure?",
-    text: "Do you really want to approve this request?",
-    icon: "warning",
-    input: "textarea",
-    inputPlaceholder: "Enter remarks here (optional)...",
-    showCancelButton: true,
-    confirmButtonText: "Yes, approve it!",
-    cancelButtonText: "No, cancel",
-  });
+  const { value: signature, isConfirmed } = await $swal.fire({
+    title: "Approve Request",
+    html: `
+      <div style="display:flex; flex-direction:column; align-items:center; gap:1rem; width:100%;">
+        <label style="font-weight:600; font-size:16px;">Please sign below:</label>
+        <canvas id="signature-pad" width="700" height="250" 
+          style="border:2px dashed #9ca3af; border-radius:12px; background:#f9fafb; width:100%; max-width:700px; height:250px;"></canvas>
+        
+        <div style="display:flex; align-items:center; gap:10px; width:100%; max-width:700px; margin-top:12px;">
+          <label style="font-size:14px; font-weight:600;">Stroke:</label>
+          <input id="thickness-slider" type="range" min="1" max="10" value="4" style="flex:1; cursor:pointer;">
+          <span id="thickness-value" style="min-width:25px; text-align:center; font-weight:600;">4</span>
+        </div>
 
-  if (confirm.isConfirmed) {
-    const remarks = confirm.value; // Get the remarks entered by the user (if any)
-    await confirmApproval(selectedId.value, remarks);
+        <button id="clear-signature" class="swal2-cancel swal2-styled" 
+          style="margin-top:12px; background:#ef4444; border-radius:6px; padding:8px 16px; font-size:14px;">
+          Clear Signature
+        </button>
+      </div>
+    `,
+    width: 800, 
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: "✅ Approve",
+    cancelButtonText: "❌ Cancel",
+    didOpen: () => {
+      const canvas = document.getElementById("signature-pad")
+      const thicknessSlider = document.getElementById("thickness-slider")
+      const thicknessValue = document.getElementById("thickness-value")
+
+      // Default stroke = 5, slider starts at 4
+      const signaturePad = new SignaturePad(canvas, {
+        backgroundColor: "rgba(255,255,255,0)",
+        penColor: "black",
+        minWidth: 2,
+        maxWidth: 5, // default stroke thickness
+      })
+
+      // Slider event
+      thicknessSlider.addEventListener("input", (e) => {
+        const value = parseInt(e.target.value)
+        thicknessValue.textContent = value
+        signaturePad.minWidth = Math.max(1, value - 1)
+        signaturePad.maxWidth = value
+      })
+
+      // Clear button
+      const clearBtn = document.getElementById("clear-signature")
+      clearBtn?.addEventListener("click", () => signaturePad.clear())
+
+      window.signaturePadInstance = signaturePad
+    },
+    preConfirm: () => {
+      const signaturePad = window.signaturePadInstance
+
+      if (!signaturePad || signaturePad.isEmpty()) {
+        $swal.showValidationMessage("✍️ Please provide a signature before approving.")
+        return false
+      }
+
+      return signaturePad.toDataURL("image/png")
+    },
+  })
+
+  if (isConfirmed && signature) {
+    // Convert base64 to Blob
+    const byteString = atob(signature.split(",")[1])
+    const mimeString = signature.split(",")[0].split(":")[1].split(";")[0]
+    const ab = new ArrayBuffer(byteString.length)
+    const ia = new Uint8Array(ab)
+    for (let i = 0; i < byteString.length; i++) {
+      ia[i] = byteString.charCodeAt(i)
+    }
+    const blob = new Blob([ab], { type: mimeString })
+
+    // Create FormData to send as file
+    const formData = new FormData()
+    formData.append("SignatureFile", blob, "signature.png")
+
+    await confirmApproval(selectedId.value, formData)
 
     $swal.fire({
-      title: "Approved!",
-      text: "The request has been approved.",
+      title: "✅ Approved!",
+      text: "The request has been approved successfully.",
       icon: "success",
-      timer: 1000, // auto-close after 1 second
+      width: 400,
+      timer: 1200,
       showConfirmButton: false,
-    });
+    })
 
-    showModal.value = false;
+    showModal.value = false
   }
-};
+}
+
 
 const postSigned = async () => {
-  const confirm = await $swal.fire({
-    title: "Are you sure?",
-    text: "Do you really want to sign this request?",
-    icon: "warning",
-    input: "textarea",
-    inputPlaceholder: "Enter remarks here (optional)...",
-    showCancelButton: true,
-    confirmButtonText: "Yes, sign it!",
-    cancelButtonText: "No, cancel",
-  });
+  const { value: signature, isConfirmed } = await $swal.fire({
+    title: "Sign this request",
+    html: `
+      <div style="display:flex; flex-direction:column; align-items:center; gap:1rem; width:100%;">
+        <label style="font-weight:600; font-size:16px;">Please sign below:</label>
+        <canvas id="signature-pad" width="700" height="250" 
+          style="border:2px dashed #9ca3af; border-radius:12px; background:#f9fafb; width:100%; max-width:700px; height:250px;"></canvas>
+        
+        <div style="display:flex; align-items:center; gap:10px; width:100%; max-width:700px; margin-top:12px;">
+          <label style="font-size:14px; font-weight:600;">Stroke:</label>
+          <input id="thickness-slider" type="range" min="1" max="10" value="4" style="flex:1; cursor:pointer;">
+          <span id="thickness-value" style="min-width:25px; text-align:center; font-weight:600;">4</span>
+        </div>
 
-  if (confirm.isConfirmed) {
-    const remarks = confirm.value; // Get the remarks entered by the user (if any)
-    await confirmApproval(selectedId.value, remarks);
+        <button id="clear-signature" class="swal2-cancel swal2-styled" 
+          style="margin-top:12px; background:#ef4444; border-radius:6px; padding:8px 16px; font-size:14px;">
+          Clear Signature
+        </button>
+      </div>
+    `,
+    width: 800,
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: "✅ Sign",
+    cancelButtonText: "❌ Cancel",
+    didOpen: () => {
+      const canvas = document.getElementById("signature-pad")
+      const thicknessSlider = document.getElementById("thickness-slider")
+      const thicknessValue = document.getElementById("thickness-value")
+
+      const signaturePad = new SignaturePad(canvas, {
+        backgroundColor: "rgba(255,255,255,0)",
+        penColor: "black",
+        minWidth: 2,
+        maxWidth: 5,
+      })
+
+      thicknessSlider.addEventListener("input", (e) => {
+        const value = parseInt(e.target.value)
+        thicknessValue.textContent = value
+        signaturePad.minWidth = Math.max(1, value - 1)
+        signaturePad.maxWidth = value
+      })
+
+      document.getElementById("clear-signature")?.addEventListener("click", () => signaturePad.clear())
+      window.signaturePadInstance = signaturePad
+    },
+    preConfirm: () => {
+      const signaturePad = window.signaturePadInstance
+      if (!signaturePad || signaturePad.isEmpty()) {
+        $swal.showValidationMessage("✍️ Please provide a signature before signing.")
+        return false
+      }
+
+      return {
+        signature: signaturePad.toDataURL("image/png"),
+      }
+    }
+  })
+
+  if (isConfirmed && signature) {
+    // Convert signature to Blob
+    const byteString = atob(signature.signature.split(",")[1])
+    const mimeString = signature.signature.split(",")[0].split(":")[1].split(";")[0]
+    const ab = new ArrayBuffer(byteString.length)
+    const ia = new Uint8Array(ab)
+    for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i)
+    const blob = new Blob([ab], { type: mimeString })
+
+    // Prepare FormData to send to server
+    const formData = new FormData()
+    formData.append("SignatureFile", blob, "signature.png")
+
+    await confirmApproval(selectedId.value, formData)
 
     $swal.fire({
       title: "Signed!",
-      text: "The request has been signed.",
+      text: "The request has been signed successfully.",
       icon: "success",
-      timer: 1000, // auto-close after 1 second
+      timer: 1000,
       showConfirmButton: false,
-    });
+    })
 
-    showModal.value = false;
+    showModal.value = false
   }
-};
+}
 
 const postDisapprove = async () => {
   const { value: remarks } = await $swal.fire({
@@ -1108,14 +1233,8 @@ const postDisapprove = async () => {
   });
 
   if (remarks) {
-    await disapproveApproval(selectedId.value, remarks);
-    $swal.fire({
-      title: "Disapproved!",
-      text: "The request has been disapproved.",
-      icon: "success",
-      timer: 1000,
-      showConfirmButton: false,
-    });
+    await disapproveApproval(selectedId.value, remarks,$swal);
+   
     showModal.value = false;
   }
 };

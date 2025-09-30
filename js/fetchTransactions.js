@@ -30,6 +30,7 @@ export const getTransaction = async (transactionId) => {
       }
     );
     transactions.value = response;
+    console.log("Transaction Data:", response);
   } catch (error) {
     console.error("Error fetching transactions:", error);
   } finally {
@@ -119,7 +120,7 @@ export const generatePagination = () => {
   return pages;
 };
 
-export const softDeleteTransaction = async (id) => {
+export const softDeleteTransaction = async (id,$swal) => {
   loading.value = true;
   const token = getToken();
 
@@ -130,10 +131,57 @@ export const softDeleteTransaction = async (id) => {
         token: token,
       },
     });
+      $swal.fire({
+      title: "Deleted!",
+      text: "The request has been deleted.",
+      icon: "success",
+      timer: 1000, // auto-close after 2 seconds
+      showConfirmButton: false,
+    });
     getMyTransactions();
   } catch (error) {
     console.error("Error deleting transaction:", error);
+    $swal.fire({
+      icon: "error",
+      title: "Error",
+      text: error?.data?.message || "Failed to close the transaction.",
+    });
   } finally{
     loading.value = false;
   }
 };
+
+export const closedTransaction = async (id, $swal) => {
+  loading.value = true;
+  const token = getToken();
+
+  try {
+    await $fetch(`${API_BASE_URL}/api/Transaction/close-transaction/${id}`, {
+      method: "POST",
+      headers: {
+        token: token,
+      },
+    });
+
+    $swal.fire({
+      icon: "success",
+      title: "Transaction Closed",
+      text: "The transaction has been successfully closed.",
+      timer: 2000,
+      showConfirmButton: false,
+    });
+
+    getMyTransactions();
+  } catch (error) {
+    console.error("Error closing transaction:", error);
+
+    $swal.fire({
+      icon: "error",
+      title: "Error",
+      text: error?.data?.message || "Failed to close the transaction.",
+    });
+  } finally {
+    loading.value = false;
+  }
+};
+
