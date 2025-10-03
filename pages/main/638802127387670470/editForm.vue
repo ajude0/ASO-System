@@ -334,6 +334,11 @@
                   maxlength="255"
                   class="border p-2 w-full rounded"
                   :class="{ 'border-red-500': errors[index]?.columnvalue }"
+                  @keydown.space.prevent
+                  @input="
+                    () =>
+                      (element.display = element.display.replace(/\s+/g, ''))
+                  "
                 />
                 <p
                   v-if="errors[index]?.columnvalue"

@@ -1,6 +1,8 @@
 import { API_BASE_URL } from "~/config";
 import { getToken } from "./cryptoToken";
-export const isDownloading = ref({})
+export const isDownloading = ref({});
+export const cantdownload = ref(false);
+
 
 export const downloadvpnForm = async (id, title,formData) => {
   isDownloading.value[id] = true;
@@ -24,8 +26,22 @@ export const downloadvpnForm = async (id, title,formData) => {
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url); // Clean up
+    cantdownload.value = false;
+
   } catch (error) {
-    console.error("Error downloading VPN form:", error);
+    let errorMessage = "Something went wrong. Please try again later.";
+
+    // Check if the error response has a readable message
+    if (error?.data?.cantDownload  == null) {
+      errorMessage = error.data.message;
+
+      showToast({
+        message: errorMessage,
+        type: "error",
+      });
+    } else {
+      cantdownload.value = true;
+    }
   } finally {
     isDownloading.value[id] = false;
   }

@@ -615,7 +615,8 @@
           </div>
         </div>
       </div>
-      <div class="flex justify-left mt-10 space-x-2 items-center">
+      <div class="flex justify-between mt-10 space-x-2 items-center">
+        <div>
         <span>Showing</span>
         <input
           v-model.number="pageNumberDisplay"
@@ -637,6 +638,21 @@
         >
           GO
         </button>
+      </div>
+      <div class="flex mb-5 me-4">
+    <button
+      @click="createOrShowSignature"
+      class="flex px-3 py-3 bg-green-500 text-white rounded-lg hover:bg-green-700 place-items-center gap-1"
+    >
+    <svg class="w-4 h-4 text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+  <path fill-rule="evenodd" d="M15.514 3.293a1 1 0 0 0-1.415 0L12.151 5.24a.93.93 0 0 1 .056.052l6.5 6.5a.97.97 0 0 1 .052.056L20.707 9.9a1 1 0 0 0 0-1.415l-5.193-5.193ZM7.004 8.27l3.892-1.46 6.293 6.293-1.46 3.893a1 1 0 0 1-.603.591l-9.494 3.355a1 1 0 0 1-.98-.18l6.452-6.453a1 1 0 0 0-1.414-1.414l-6.453 6.452a1 1 0 0 1-.18-.98l3.355-9.494a1 1 0 0 1 .591-.603Z" clip-rule="evenodd"/>
+</svg>
+
+      <span class="text-sm font-medium">
+        {{ signaturepath ? "View" : "Create" }} Signature
+      </span>
+    </button>
+  </div>
       </div>
 
       <div class="flex justify-center mt-10 space-x-2 mb-2">
@@ -1004,9 +1020,12 @@ import {
 import LoadingModal from "./modal/LoadingModal.vue";
 import { encryptData } from "~/js/cryptoToken";
 import { canEdit } from "~/js/fetchMenu";
-import { downloadvpnForm, isDownloading } from "~/js/downloadpdf";
+import { downloadvpnForm, isDownloading,cantdownload } from "~/js/downloadpdf";
 import SignaturePad from "signature_pad";
 import { closedTransaction } from "~/js/fetchTransactions";
+import { postusersignature } from "~/js/usersignature";
+import { checkusersignature,signaturepath } from "~/js/checkusersignature";
+import { API_BASE_URL } from "~/config";
 
 const showModal = ref(false);
 const isApprovedOpen = ref(false);
@@ -1088,11 +1107,32 @@ const closingTransaction = async (id) => {
     await closedTransaction(id, $swal);
   }
 };
-// const downloadForm = (id, title) =>{
 
-//   downloadForm(transaction.id, transaction.title)
-// }
 const downloadFormWithSignature = async (id, title) => {
+  if (cantdownload?.value) {
+    // Ask user which one they want
+     // Ask user which one they want
+     const { value: choice, isDismissed } = await $swal.fire({
+      title: "Choose Signature Option",
+      text: "Would you like to use your saved signature or create a new one?",
+      showDenyButton: true,                // 👈 use Deny for "Create New Signature"
+      showCancelButton: true,              // 👈 Cancel = exit
+      confirmButtonText: "Use Saved Signature",
+      cancelButtonText: "Close",
+      reverseButtons: true,
+      allowOutsideClick: true,
+    });
+
+    if (isDismissed) {
+      return; // 🚀 totally close
+    }
+
+    if (choice) {
+     await createSignature();
+    }
+    // Else → fallthrough to signature pad flow
+  }
+
   const { value: signature, isConfirmed } = await $swal.fire({
     title: `Sign to download: ${title}`,
     html: `
@@ -1114,10 +1154,12 @@ const downloadFormWithSignature = async (id, title) => {
       </div>
     `,
     width: 800,
+    height:100,
     focusConfirm: false,
     showCancelButton: true,
     confirmButtonText: "Download",
     cancelButtonText: "Cancel",
+    allowOutsideClick: true, // ✅ let them close
     didOpen: () => {
       const canvas = document.getElementById("signature-pad");
       const thicknessSlider = document.getElementById("thickness-slider");
@@ -1183,6 +1225,138 @@ const downloadFormWithSignature = async (id, title) => {
     });
   }
 };
+const createOrShowSignature = async () => {
+  if (signaturepath.value) {
+    // ✅ Show the current signature
+    await $swal.fire({
+  title: "Current Signature",
+  width: "600px",
+  html: `
+    <div style="display:flex; flex-direction:column; align-items:center; gap:1rem;">
+      <img src="${signaturepath.value}" 
+           alt="User Signature" 
+           style="border:2px solid #d1d5db; border-radius:8px; max-width:100%; height:auto; padding:8px; background:#fff;" />
+      <div style="display:flex; gap:0.5rem; justify-content:center; width:100%;">
+        <button id="upload-new-signature" 
+                class="swal2-confirm swal2-styled" 
+                style="background:#3b82f6; border-radius:6px; padding:8px 16px; font-size:14px;">
+          Upload New Signature
+        </button>
+        <button id="close-signature-modal" 
+                class="swal2-cancel swal2-styled" 
+                style="background:#ef4444; border-radius:6px; padding:8px 16px; font-size:14px;">
+          Close
+        </button>
+      </div>
+    </div>
+  `,
+  showConfirmButton: false,
+  showCancelButton: false, // hide default SweetAlert buttons
+  didOpen: () => {
+    // Upload button action
+    const uploadBtn = document.getElementById("upload-new-signature");
+    uploadBtn?.addEventListener("click", async () => {
+      $swal.close();
+      await createSignature(); // open your signature creation modal
+    });
+
+    // Close button action
+    const closeBtn = document.getElementById("close-signature-modal");
+    closeBtn?.addEventListener("click", () => {
+      $swal.close();
+    });
+  },
+});
+
+  } else {
+    // ❌ No signature yet → go straight to signature creation
+    await createSignature();
+  }
+};
+
+// 🔹 Function just for creating a new signature
+const createSignature = async () => {
+  const { value: signature, isConfirmed } = await $swal.fire({
+    title: `Create your own signature`,
+    html: `
+      <div style="display:flex; flex-direction:column; align-items:center; gap:1rem; width:100%;">
+        <label style="font-weight:600; font-size:16px;">Please sign below:</label>
+        <canvas id="signature-pad" width="700" height="250" 
+          style="border:2px dashed #9ca3af; border-radius:12px; background:#f9fafb; width:100%; max-width:700px; height:250px;"></canvas>
+        
+        <div style="display:flex; align-items:center; gap:10px; width:100%; max-width:700px; margin-top:12px;">
+          <label style="font-size:14px; font-weight:600;">Stroke:</label>
+          <input id="thickness-slider" type="range" min="1" max="10" value="4" style="flex:1; cursor:pointer;">
+          <span id="thickness-value" style="min-width:25px; text-align:center; font-weight:600;">4</span>
+        </div>
+
+        <button id="clear-signature" class="swal2-cancel swal2-styled" 
+          style="margin-top:12px; background:#ef4444; border-radius:6px; padding:8px 16px; font-size:14px;">
+          Clear Signature
+        </button>
+      </div>
+    `,
+    width: 800,
+    focusConfirm: false,
+    showCancelButton: true,
+    confirmButtonText: "Confirm Signature",
+    cancelButtonText: "Cancel",
+    didOpen: () => {
+      const canvas = document.getElementById("signature-pad");
+      const thicknessSlider = document.getElementById("thickness-slider");
+      const thicknessValue = document.getElementById("thickness-value");
+
+      const signaturePad = new SignaturePad(canvas, {
+        backgroundColor: "rgba(255,255,255,0)",
+        penColor: "black",
+        minWidth: 2,
+        maxWidth: 5,
+      });
+
+      // Stroke slider
+      thicknessSlider.addEventListener("input", (e) => {
+        const value = parseInt(e.target.value);
+        thicknessValue.textContent = value;
+        signaturePad.minWidth = Math.max(1, value - 1);
+        signaturePad.maxWidth = value;
+      });
+
+      // Clear signature
+      const clearBtn = document.getElementById("clear-signature");
+      clearBtn?.addEventListener("click", () => signaturePad.clear());
+
+      window.signaturePadInstance = signaturePad;
+    },
+    preConfirm: () => {
+      const signaturePad = window.signaturePadInstance;
+      if (!signaturePad || signaturePad.isEmpty()) {
+        $swal.showValidationMessage("✍️ Please provide a signature before confirming.");
+        return false;
+      }
+      return signaturePad.toDataURL("image/png");
+    },
+  });
+
+  if (isConfirmed && signature) {
+    loading.value = true;
+    const byteString = atob(signature.split(",")[1]);
+    const mimeString = signature.split(",")[0].split(":")[1].split(";")[0];
+    const ab = new ArrayBuffer(byteString.length);
+    const ia = new Uint8Array(ab);
+    for (let i = 0; i < byteString.length; i++)
+      ia[i] = byteString.charCodeAt(i);
+    const blob = new Blob([ab], { type: mimeString });
+    // Prepare FormData for download (if sending to server)
+    const formData = new FormData();
+    formData.append("userSignature", blob, "signature.png");
+
+    await postusersignature(formData, $swal);
+    await checkusersignature($swal);
+    loading.value = false;
+  }
+ 
+};
+
 
 const getApprovalStatus = (approverGroup) => {
   if (!Array.isArray(approverGroup)) return "pending"; // fallback
@@ -1263,8 +1437,9 @@ const props = defineProps({
   canDelete: Boolean,
   canEdit: Boolean,
 });
-onMounted(() => {
-  getMyTransactions();
+onMounted( async () => {
+  await checkusersignature($swal);
+  await getMyTransactions();
 });
 </script>
 

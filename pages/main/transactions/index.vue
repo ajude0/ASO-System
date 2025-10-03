@@ -330,6 +330,7 @@ import {
 } from "~/js/fetchListApprovalRequest";
 import { getUrlTransactionId } from "~/js/cryptoToken";
 import SignaturePad from "signature_pad";
+import { checkusersignature, signaturepath } from "~/js/checkusersignature";
 
 const urltransactionId = ref();
 const readyToRender = ref(false); // Flag to control rendering
@@ -395,6 +396,41 @@ const getGroupVisibilityStatus = (allGroups, currentIndex) => {
 };
 
 const postApprove = async () => {
+
+  if (signaturepath?.value) {
+    // Ask user which one they want
+    const { value: choice, isDismissed } = await $swal.fire({
+      title: "Choose Signature Option",
+      text: "Would you like to use your saved signature or create a new one?",
+      showDenyButton: true,                // 👈 use Deny for "Create New Signature"
+      showCancelButton: true,              // 👈 Cancel = exit
+      confirmButtonText: "Use Saved Signature",
+      denyButtonText: "Create New Signature",
+      cancelButtonText: "Close",
+      reverseButtons: true,
+      allowOutsideClick: true,
+    });
+
+    if (isDismissed) {
+      return; // 🚀 totally close
+    }
+
+    if (choice) {
+      // ✅ Use saved signature
+      await confirmApproval(urltransactionId.value, null);
+      $swal.fire({
+      title: "✅ Approved!",
+      text: "The request has been approved successfully.",
+      icon: "success",
+      width: 400,
+      timer: 1200,
+      showConfirmButton: false,
+    })
+
+    return navigateTo("/main/dashboard");
+    }
+  }
+  
   const { value: signature, isConfirmed } = await $swal.fire({
     title: "Approve Request",
     html: `
@@ -486,12 +522,42 @@ const postApprove = async () => {
       timer: 1200,
       showConfirmButton: false,
     });
-
-    showModal.value = false;
     return navigateTo("/main/dashboard");
   }
 };
 const postSigned = async () => {
+  if (signaturepath?.value) {
+    // Ask user which one they want
+    const { value: choice, isDismissed } = await $swal.fire({
+      title: "Choose Signature Option",
+      text: "Would you like to use your saved signature or create a new one?",
+      showDenyButton: true,                // 👈 use Deny for "Create New Signature"
+      showCancelButton: true,              // 👈 Cancel = exit
+      confirmButtonText: "Use Saved Signature",
+      denyButtonText: "Create New Signature",
+      cancelButtonText: "Close",
+      reverseButtons: true,
+      allowOutsideClick: true,
+    });
+
+    if (isDismissed) {
+      return; // 🚀 totally close
+    }
+
+    if (choice) {
+      // ✅ Use saved signature
+      await confirmApproval(urltransactionId.value, null);
+      $swal.fire({
+      title: "Signed!",
+      text: "The request has been signed successfully.",
+      icon: "success",
+      timer: 1000,
+      showConfirmButton: false,
+    })
+     return navigateTo("/main/dashboard");
+    }
+    // Else → fallthrough to signature pad flow
+  }
   const { value: signature, isConfirmed } = await $swal.fire({
     title: "Sign this request",
     html: `
@@ -582,8 +648,7 @@ const postSigned = async () => {
       timer: 1000,
       showConfirmButton: false,
     });
-
-    showModal.value = false;
+    return navigateTo("/main/dashboard");
   }
 };
 const postDisapprove = async () => {
@@ -625,6 +690,7 @@ definePageMeta({
 
 onMounted(async () => {
   urltransactionId.value = getUrlTransactionId();
+  await checkusersignature($swal);
   await getTransaction(urltransactionId.value);
   if (!transactions.value.iscurrentuser) {
     if (

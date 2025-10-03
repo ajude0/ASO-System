@@ -933,6 +933,7 @@ import {
 } from "~/js/fetchListApprovalRequest";
 import LoadingModal from "./modal/LoadingModal.vue";
 import SignaturePad from "signature_pad";
+import { checkusersignature,signaturepath } from "~/js/checkusersignature";
 
 const { $swal } = useNuxtApp();
 const showModal = ref(false);
@@ -1032,6 +1033,43 @@ const getGroupVisibilityStatus = (allGroups, currentIndex) => {
   return "waiting";
 };
 const postApprove = async () => {
+  if (signaturepath?.value) {
+    // Ask user which one they want
+    const { value: choice, isDismissed } = await $swal.fire({
+      title: "Choose Signature Option",
+      text: "Would you like to use your saved signature or create a new one?",
+      showDenyButton: true,                // 👈 use Deny for "Create New Signature"
+      showCancelButton: true,              // 👈 Cancel = exit
+      confirmButtonText: "Use Saved Signature",
+      denyButtonText: "Create New Signature",
+      cancelButtonText: "Close",
+      reverseButtons: true,
+      allowOutsideClick: true,
+    });
+
+    if (isDismissed) {
+      return; // 🚀 totally close
+    }
+
+    
+
+    if (choice) {
+      // ✅ Use saved signature
+      await confirmApproval(selectedId.value, null);
+      $swal.fire({
+      title: "✅ Approved!",
+      text: "The request has been approved successfully.",
+      icon: "success",
+      width: 400,
+      timer: 1200,
+      showConfirmButton: false,
+    })
+
+    showModal.value = false
+      return;
+    }
+    // Else → fallthrough to signature pad flow
+  }
   const { value: signature, isConfirmed } = await $swal.fire({
     title: "Approve Request",
     html: `
@@ -1128,6 +1166,38 @@ const postApprove = async () => {
 
 
 const postSigned = async () => {
+  if (signaturepath?.value) {
+    // Ask user which one they want
+    const { value: choice, isDismissed } = await $swal.fire({
+      title: "Choose Signature Option",
+      text: "Would you like to use your saved signature or create a new one?",
+      showDenyButton: true,                // 👈 use Deny for "Create New Signature"
+      showCancelButton: true,              // 👈 Cancel = exit
+      confirmButtonText: "Use Saved Signature",
+      denyButtonText: "Create New Signature",
+      cancelButtonText: "Close",
+      reverseButtons: true,
+      allowOutsideClick: true,
+    });
+
+    if (isDismissed) {
+      return; // 🚀 totally close
+    }
+    if (choice) {
+      // ✅ Use saved signature
+      await confirmApproval(selectedId.value, null);
+      showModal.value = false
+      return $swal.fire({
+      title: "Signed!",
+      text: "The request has been signed successfully.",
+      icon: "success",
+      timer: 1000,
+      showConfirmButton: false,
+    })
+    
+    }
+    // Else → fallthrough to signature pad flow
+  }
   const { value: signature, isConfirmed } = await $swal.fire({
     title: "Sign this request",
     html: `
@@ -1259,8 +1329,9 @@ const pageNumberDisplay = computed({
 const props = defineProps({
   canEdit: Boolean,
 });
-onMounted(() => {
-  getListOfTransactions();
+onMounted(async() => {
+  await checkusersignature($swal);
+  await getListOfTransactions();
 });
 </script>
 
