@@ -8,7 +8,7 @@ export const messages = ref();
 export const postusersignature = async (form, $swal) => {
   const token = getToken();
   try {
-    const data = await $fetch(`${API_BASE_URL}/api/UserSignature`, {
+    const data = await $fetch(`${API_BASE_URL}/api/Signature`, {
       method: "POST",
       headers: {
         token: token,
@@ -16,14 +16,6 @@ export const postusersignature = async (form, $swal) => {
       body: form,
     });
 
-    $swal.fire({
-      title: "Success!",
-      text: "Signature uploaded successfully.",
-      icon: "success",
-      width: 400,
-      timer: 1200,
-      showConfirmButton: false,
-    });
   } catch (error) {
     console.error("Error:", error);
     if (error?.data) {

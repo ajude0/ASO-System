@@ -187,7 +187,7 @@
             <div class="flex justify-between items-center">
               <!-- Flex container -->
               <input
-                @focus="openModal(index, item.formObjectId,'textfromsource')"
+                @focus="item.autofillusers == 0 ? openModal(index, item.formObjectId, 'textfromsource') : null"
                 readonly
                 type="text"
                 v-model="item.textFromSourceValue.display"
@@ -201,6 +201,7 @@
                 style="text-transform: uppercase"
               />
               <button
+                v-if="item.autofilluser == 0"
                 @click="openModal(index, item.formObjectId, 'textfromsource')"
                 class="ml-2 px-4 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg"
               >

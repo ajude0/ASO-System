@@ -366,7 +366,7 @@
             <div class="flex justify-between items-center">
               <!-- Flex container -->
               <input
-                @focus="openModal(formObject.id, 'textfromsource')"
+                @focus="formObject.autoFillUser == 0 ? openModal(formObject.id, 'textfromsource') : null"
                 readonly
                 type="text"
                 v-model="formDisplays[formObject.id]"
@@ -380,6 +380,7 @@
                 style="text-transform: uppercase"
               />
               <button
+              v-if="formObject.autoFillUser == 0"
                 @click="openModal(formObject.id, 'textfromsource')"
                 class="ml-2 px-4 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg"
               >
@@ -671,7 +672,8 @@ import {
   searchQuery,
   debouncedSearch,
   justifications,
-  loading,
+  searchJustifications,
+  loading
 } from "~/js/textfromsource";
 import { fetchCanAccess, nenunames } from "~/js/fetchMenu";
 import DateTimeInput from "~/components/DateTimeInput.vue";
@@ -775,7 +777,7 @@ function clearFormId() {
 }
 
 const selectEmployee = (id, justification) => {
-
+  console.log(id,justification);
   // Save hidden and visible data
   if (objecttype.value == "textfromsource") {
     formAnswers.value[id] = justification.display;
@@ -825,6 +827,29 @@ const selectEmployee = (id, justification) => {
   index.value = "";
   showModal.value = false;
 };
+
+const handleTextFromSource = (id) => {
+  const j = justifications.value?.[0];
+
+  formAnswers.value[id] = j.display;
+  formDisplays.value[id] = j.display;
+
+  // Find all linked formObjects
+  const matchedFormObjects = formDetails.value?.formObjects?.filter(
+    (formObject) => formObject?.linkobjets?.formobjectsourceid === id
+  );
+
+  matchedFormObjects?.forEach((formObject) => {
+    const key = formObject?.linkobjets?.columnvalue;
+    const labelId = formObject?.id;
+
+    if (key && labelId && j.all?.hasOwnProperty(key)) {
+      const value = j.all[key];
+      formAnswers.value[labelId] = value;
+    }
+  });
+};
+
 const getDisplayBinding = (formId, index) =>
   computed({
     get: () => {
@@ -857,10 +882,39 @@ const getTitle = async () => {
 };
 
 const getDetails = async () => {
-  isLoading.value = true;
-  await getFormDetails(formId.value);
-  isLoading.value = false;
+  try {
+    isLoading.value = true;
+
+    await getFormDetails(formId.value);
+
+    if (formDetails.value?.formObjects?.length) {
+      console.log("here", JSON.parse(JSON.stringify(formDetails.value.formObjects)));
+
+      for (const formObject of formDetails.value.formObjects) {
+        if (formObject.autoFillUser === 1) {
+          console.log("AutoFill triggered for:", formObject.id);
+
+          // ✅ Wait for the search to finish before continuing
+          await searchJustifications(formObject.id, 1);
+          console.log("Search complete for:", justifications.value[0]);
+
+          // ✅ Handle autofill if the object type is "TEXTFROMSOURCE" (case-insensitive)
+          if (formObject.objecttype?.toLowerCase() === "textfromsource") {
+            
+            handleTextFromSource(formObject.id,);
+          }
+
+          console.log("Autofill done for:", formObject.id);
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error loading details:", error);
+  } finally {
+    isLoading.value = false;
+  }
 };
+
 
 const toggleChecklist = (formObjectId, value) => {
   if (!Array.isArray(formAnswers.value[formObjectId])) {
@@ -1018,8 +1072,10 @@ const submitAnswers = async () => {
 };
 
 onMounted(async () => {
-  getTitle();
-  getDetails();
+  await getTitle();
+  await getDetails();
+  
+
   const hash = window.location.hash;
   const parts = hash.split("/");
   paramid.value = parts[parts.length - 2];

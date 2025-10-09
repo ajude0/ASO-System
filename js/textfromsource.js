@@ -14,9 +14,9 @@ const debounce = (fn, delay) => {
       timeout = setTimeout(() => fn(...args), delay)
     }
   }
-export const searchJustifications = async (id) => {
+export const searchJustifications = async (id, autofill) => {
   const token = getToken();
-    if (!searchQuery.value) return // Don't search if the query is empty
+    if (!searchQuery.value && autofill == 0) return // Don't search if the query is empty
     loading.value = true
   
     try {
@@ -24,9 +24,10 @@ export const searchJustifications = async (id) => {
         headers: {
           token: token,
         },
-        params: { name: searchQuery.value },
+        params: { name: searchQuery.value, isautofill: autofill },
       })
       justifications.value = response
+      console.log(response);
     } catch (error) {
       console.error('Error fetching justifications:', error)
     } finally {
@@ -35,5 +36,5 @@ export const searchJustifications = async (id) => {
   }
 
   export const debouncedSearch = debounce((storeId) => {
-    searchJustifications(storeId);
+    searchJustifications(storeId , 0);
   }, 500);

@@ -561,6 +561,17 @@
               </p>
             </div>
 
+             <!-- Autofilluser -->
+              <div v-if="
+               element.objectType === 'TEXTFROMSOURCE'
+              " class="col-span-2 mt-1">
+                <div class="flex items-center space-x-2">
+                  <input type="checkbox" id="approvers-checkbox" class="scale-150 accent-blue-600"
+                    v-model="autofillUserBooleans[index].value" />
+                  <label for="approvers-checkbox" class="text-md text-gray-700">Auto Fill User</label>
+                </div>
+              </div>
+
             <!-- Remove Form Button -->
             <div
               v-if="forms.formObjects.length > 1"
@@ -1282,6 +1293,7 @@ const addFormObject = () => {
     datasourcescript: "",
     data: "",
     display: "",
+    autofillUser: 0,
     formObjectLists: [],
   });
   scrollAnchor.value?.scrollIntoView({
@@ -1707,6 +1719,17 @@ const isAutoCloseBoolean = computed({
   },
 });
 
+const autofillUserBooleans = computed(() =>
+  forms.value.formObjects.map((obj, index) => ({
+    get value() {
+      return obj.autofillUser === 1;
+    },
+    set value(val) {
+      obj.autofillUser = val ? 1 : 0;
+    },
+  }))
+);
+
 const saveFormObjects = async () => {
   if (!validateForm()) {
     errorAnchor.value?.scrollIntoView({
@@ -1758,6 +1781,7 @@ const saveFormObjects = async () => {
     formData.append(`formObjects[${i}].label`, obj.label);
     formData.append(`formObjects[${i}].objectType`, obj.objectType);
     formData.append(`formObjects[${i}].isRequired`, obj.isRequired);
+    formData.append(`formObjects[${i}].autofilluser`, obj.autofillUser? "1" : "0");
     formData.append(`formObjects[${i}].datasourcescript`, obj.datasourcescript);
     if (obj.objectlinkid) {
       formData.append(`formObjects[${i}].objectlinkId`, obj.objectlinkid);

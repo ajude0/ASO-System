@@ -640,18 +640,7 @@
         </button>
       </div>
       <div class="flex mb-5 me-4">
-    <button
-      @click="createOrShowSignature"
-      class="flex px-3 py-3 bg-green-500 text-white rounded-lg hover:bg-green-700 place-items-center gap-1"
-    >
-    <svg class="w-4 h-4 text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
-  <path fill-rule="evenodd" d="M15.514 3.293a1 1 0 0 0-1.415 0L12.151 5.24a.93.93 0 0 1 .056.052l6.5 6.5a.97.97 0 0 1 .052.056L20.707 9.9a1 1 0 0 0 0-1.415l-5.193-5.193ZM7.004 8.27l3.892-1.46 6.293 6.293-1.46 3.893a1 1 0 0 1-.603.591l-9.494 3.355a1 1 0 0 1-.98-.18l6.452-6.453a1 1 0 0 0-1.414-1.414l-6.453 6.452a1 1 0 0 1-.18-.98l3.355-9.494a1 1 0 0 1 .591-.603Z" clip-rule="evenodd"/>
-</svg>
-
-      <span class="text-sm font-medium">
-        {{ signaturepath ? "View" : "Create" }} Signature
-      </span>
-    </button>
+    
   </div>
       </div>
 
@@ -1020,11 +1009,11 @@ import {
 import LoadingModal from "./modal/LoadingModal.vue";
 import { encryptData } from "~/js/cryptoToken";
 import { canEdit } from "~/js/fetchMenu";
-import { downloadvpnForm, isDownloading,cantdownload } from "~/js/downloadpdf";
+import { downloadvpnForm, isDownloading } from "~/js/downloadpdf";
 import SignaturePad from "signature_pad";
 import { closedTransaction } from "~/js/fetchTransactions";
 import { postusersignature } from "~/js/usersignature";
-import { checkusersignature,signaturepath } from "~/js/checkusersignature";
+import { checkusersignature, hasSignature} from "~/js/checkusersignature";
 import { API_BASE_URL } from "~/config";
 
 const showModal = ref(false);
@@ -1109,173 +1098,29 @@ const closingTransaction = async (id) => {
 };
 
 const downloadFormWithSignature = async (id, title) => {
-  if (cantdownload?.value) {
-    // Ask user which one they want
-     // Ask user which one they want
-     const { value: choice, isDismissed } = await $swal.fire({
-      title: "Choose Signature Option",
-      text: "Would you like to use your saved signature or create a new one?",
-      showDenyButton: true,                // 👈 use Deny for "Create New Signature"
-      showCancelButton: true,              // 👈 Cancel = exit
-      confirmButtonText: "Use Saved Signature",
-      cancelButtonText: "Close",
+  // ✅ Check if user has a saved signature
+  if (hasSignature?.value == false) {
+    const { isConfirmed } = await $swal.fire({
+      title: "No Signature Found",
+      text: "You don’t have a current signature. Do you want to create one?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, create one",
+      cancelButtonText: "No",
       reverseButtons: true,
-      allowOutsideClick: true,
     });
 
-    if (isDismissed) {
-      return; // 🚀 totally close
-    }
-
-    if (choice) {
-     await createSignature();
-    }
-    // Else → fallthrough to signature pad flow
+    if (isConfirmed) {
+      await createSignature(id,title); // 🖋️ Create new signature
+      // await downloadvpnForm(id, title, null);
+    } 
+  } else{
+      await downloadvpnForm(id, title, null);
   }
-
-  const { value: signature, isConfirmed } = await $swal.fire({
-    title: `Sign to download: ${title}`,
-    html: `
-      <div style="display:flex; flex-direction:column; align-items:center; gap:1rem; width:100%;">
-        <label style="font-weight:600; font-size:16px;">Please sign below:</label>
-        <canvas id="signature-pad" width="700" height="250" 
-          style="border:2px dashed #9ca3af; border-radius:12px; background:#f9fafb; width:100%; max-width:700px; height:250px;"></canvas>
-        
-        <div style="display:flex; align-items:center; gap:10px; width:100%; max-width:700px; margin-top:12px;">
-          <label style="font-size:14px; font-weight:600;">Stroke:</label>
-          <input id="thickness-slider" type="range" min="1" max="10" value="4" style="flex:1; cursor:pointer;">
-          <span id="thickness-value" style="min-width:25px; text-align:center; font-weight:600;">4</span>
-        </div>
-
-        <button id="clear-signature" class="swal2-cancel swal2-styled" 
-          style="margin-top:12px; background:#ef4444; border-radius:6px; padding:8px 16px; font-size:14px;">
-          Clear Signature
-        </button>
-      </div>
-    `,
-    width: 800,
-    height:100,
-    focusConfirm: false,
-    showCancelButton: true,
-    confirmButtonText: "Download",
-    cancelButtonText: "Cancel",
-    allowOutsideClick: true, // ✅ let them close
-    didOpen: () => {
-      const canvas = document.getElementById("signature-pad");
-      const thicknessSlider = document.getElementById("thickness-slider");
-      const thicknessValue = document.getElementById("thickness-value");
-
-      // Default stroke = 5, slider starts at 4
-      const signaturePad = new SignaturePad(canvas, {
-        backgroundColor: "rgba(255,255,255,0)",
-        penColor: "black",
-        minWidth: 2,
-        maxWidth: 5,
-      });
-
-      // Slider event
-      thicknessSlider.addEventListener("input", (e) => {
-        const value = parseInt(e.target.value);
-        thicknessValue.textContent = value;
-        signaturePad.minWidth = Math.max(1, value - 1);
-        signaturePad.maxWidth = value;
-      });
-
-      // Clear button
-      const clearBtn = document.getElementById("clear-signature");
-      clearBtn?.addEventListener("click", () => signaturePad.clear());
-
-      window.signaturePadInstance = signaturePad;
-    },
-    preConfirm: () => {
-      const signaturePad = window.signaturePadInstance;
-      if (!signaturePad || signaturePad.isEmpty()) {
-        $swal.showValidationMessage(
-          "✍️ Please provide a signature before downloading."
-        );
-        return false;
-      }
-      return signaturePad.toDataURL("image/png");
-    },
-  });
-
-  if (isConfirmed && signature) {
-    // Convert signature to Blob
-    const byteString = atob(signature.split(",")[1]);
-    const mimeString = signature.split(",")[0].split(":")[1].split(";")[0];
-    const ab = new ArrayBuffer(byteString.length);
-    const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++)
-      ia[i] = byteString.charCodeAt(i);
-    const blob = new Blob([ab], { type: mimeString });
-
-    // Prepare FormData for download (if sending to server)
-    const formData = new FormData();
-    formData.append("SignatureFile", blob, "signature.png");
-
-    await downloadvpnForm(id, title, formData);
-
-    $swal.fire({
-      title: "Downloaded!",
-      text: "The signed form has been downloaded successfully.",
-      icon: "success",
-      width: 400,
-      timer: 1200,
-      showConfirmButton: false,
-    });
-  }
-};
-const createOrShowSignature = async () => {
-  if (signaturepath.value) {
-    // ✅ Show the current signature
-    await $swal.fire({
-  title: "Current Signature",
-  width: "600px",
-  html: `
-    <div style="display:flex; flex-direction:column; align-items:center; gap:1rem;">
-      <img src="${signaturepath.value}" 
-           alt="User Signature" 
-           style="border:2px solid #d1d5db; border-radius:8px; max-width:100%; height:auto; padding:8px; background:#fff;" />
-      <div style="display:flex; gap:0.5rem; justify-content:center; width:100%;">
-        <button id="upload-new-signature" 
-                class="swal2-confirm swal2-styled" 
-                style="background:#3b82f6; border-radius:6px; padding:8px 16px; font-size:14px;">
-          Upload New Signature
-        </button>
-        <button id="close-signature-modal" 
-                class="swal2-cancel swal2-styled" 
-                style="background:#ef4444; border-radius:6px; padding:8px 16px; font-size:14px;">
-          Close
-        </button>
-      </div>
-    </div>
-  `,
-  showConfirmButton: false,
-  showCancelButton: false, // hide default SweetAlert buttons
-  didOpen: () => {
-    // Upload button action
-    const uploadBtn = document.getElementById("upload-new-signature");
-    uploadBtn?.addEventListener("click", async () => {
-      $swal.close();
-      await createSignature(); // open your signature creation modal
-    });
-
-    // Close button action
-    const closeBtn = document.getElementById("close-signature-modal");
-    closeBtn?.addEventListener("click", () => {
-      $swal.close();
-    });
-  },
-});
-
-  } else {
-    // ❌ No signature yet → go straight to signature creation
-    await createSignature();
-  }
-};
+}
 
 // 🔹 Function just for creating a new signature
-const createSignature = async () => {
+const createSignature = async (id, title) => {
   const { value: signature, isConfirmed } = await $swal.fire({
     title: `Create your own signature`,
     html: `
@@ -1294,6 +1139,13 @@ const createSignature = async () => {
           style="margin-top:12px; background:#ef4444; border-radius:6px; padding:8px 16px; font-size:14px;">
           Clear Signature
         </button>
+
+        <div style="text-align:left; width:100%; max-width:700px; margin-top:16px;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+            <input type="checkbox" id="agree-terms">
+            <span>I have read and agree to the <span style="color:#3b82f6; text-decoration:underline; cursor:pointer;">Terms and Conditions</span></span>
+          </label>
+        </div>
       </div>
     `,
     width: 800,
@@ -1305,6 +1157,7 @@ const createSignature = async () => {
       const canvas = document.getElementById("signature-pad");
       const thicknessSlider = document.getElementById("thickness-slider");
       const thicknessValue = document.getElementById("thickness-value");
+      const agreeCheckbox = document.getElementById("agree-terms");
 
       const signaturePad = new SignaturePad(canvas, {
         backgroundColor: "rgba(255,255,255,0)",
@@ -1322,17 +1175,73 @@ const createSignature = async () => {
       });
 
       // Clear signature
-      const clearBtn = document.getElementById("clear-signature");
-      clearBtn?.addEventListener("click", () => signaturePad.clear());
+      document.getElementById("clear-signature")?.addEventListener("click", () => signaturePad.clear());
+
+      // Show Terms popup automatically when checkbox is checked
+      agreeCheckbox.addEventListener("change", (e) => {
+        if (e.target.checked) {
+          const termsHtml = `
+            <div id="terms-popup" 
+              style="
+                position: fixed; 
+                top: 0; left: 0; 
+                width: 100vw; height: 100vh; 
+                background: rgba(0,0,0,0.5);
+                display: flex; align-items: center; justify-content: center;
+                z-index: 99999;
+              ">
+              <div style="
+                background: white; 
+                width: 90%; max-width: 600px; 
+                border-radius: 12px; 
+                padding: 20px; 
+                box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+              ">
+                <h2 style="font-weight:600; font-size:18px; margin-bottom:10px;">Terms and Conditions</h2>
+                <div style="max-height:300px; overflow-y:auto; border:1px solid #e5e7eb; padding:10px; border-radius:8px; font-size:14px; line-height:1.6; margin-bottom:16px;">
+                  <ol style="padding-left:1.2rem;">
+                    <li>By signing this form, you confirm that the information provided is true and accurate.</li>
+                    <li>You acknowledge that this signature has the same legal validity as your handwritten signature.</li>
+                    <li>Any falsification of information may result in disciplinary or legal action.</li>
+                    <li>The organization reserves the right to verify your submission for authenticity.</li>
+                    <li>All data collected will be processed in accordance with applicable data protection laws.</li>
+                  </ol>
+                </div>
+                <div style="text-align:right;">
+                  <button id="close-terms" 
+                    style="background:#3b82f6; color:white; padding:8px 16px; border:none; border-radius:6px; cursor:pointer;">
+                    I Understand
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+
+          document.body.insertAdjacentHTML("beforeend", termsHtml);
+
+          document.getElementById("close-terms").addEventListener("click", () => {
+            document.getElementById("terms-popup")?.remove();
+            agreeCheckbox.checked = true; // keep it checked after reading
+          });
+        }
+      });
 
       window.signaturePadInstance = signaturePad;
     },
     preConfirm: () => {
       const signaturePad = window.signaturePadInstance;
+      const agreeCheckbox = document.getElementById("agree-terms");
+
       if (!signaturePad || signaturePad.isEmpty()) {
         $swal.showValidationMessage("✍️ Please provide a signature before confirming.");
         return false;
       }
+
+      if (!agreeCheckbox.checked) {
+        $swal.showValidationMessage("✅ Please read and agree to the Terms and Conditions before proceeding.");
+        return false;
+      }
+
       return signaturePad.toDataURL("image/png");
     },
   });
@@ -1343,18 +1252,17 @@ const createSignature = async () => {
     const mimeString = signature.split(",")[0].split(":")[1].split(";")[0];
     const ab = new ArrayBuffer(byteString.length);
     const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++)
-      ia[i] = byteString.charCodeAt(i);
+    for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
     const blob = new Blob([ab], { type: mimeString });
-    // Prepare FormData for download (if sending to server)
+
     const formData = new FormData();
-    formData.append("userSignature", blob, "signature.png");
+    formData.append("signaturefile", blob, "signature.png");
 
     await postusersignature(formData, $swal);
     await checkusersignature($swal);
+    await downloadvpnForm(id, title, null, $swal);
     loading.value = false;
   }
- 
 };
 
 

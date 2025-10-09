@@ -4,7 +4,7 @@ export const isDownloading = ref({});
 export const cantdownload = ref(false);
 
 
-export const downloadvpnForm = async (id, title,formData) => {
+export const downloadvpnForm = async (id, title) => {
   isDownloading.value[id] = true;
   const token = getToken();
   try {
@@ -13,7 +13,6 @@ export const downloadvpnForm = async (id, title,formData) => {
       headers: {
         token: token,
       },
-      body: formData,
       responseType: "blob", // important: treat the response as a Blob
     });
 
@@ -26,23 +25,29 @@ export const downloadvpnForm = async (id, title,formData) => {
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url); // Clean up
-    cantdownload.value = false;
+    
+   } catch (error) {
+    console.error("Error:", error);
+    if (error?.data) {
+      let errorMessage = "Something went wrong. Please try again later.";
 
-  } catch (error) {
-    let errorMessage = "Something went wrong. Please try again later.";
-
-    // Check if the error response has a readable message
-    if (error?.data?.cantDownload  == null) {
-      errorMessage = error.data.message;
-
-      showToast({
-        message: errorMessage,
-        type: "error",
-      });
-    } else {
-      cantdownload.value = true;
+      if (error.data.innerError) {
+        errorMessage = error.data.innerError; // show innerError first
+      } else if (error.data.error) {
+        errorMessage = error.data.error; // then error
+      } else if (error.data.message) {
+        errorMessage = error.data.message; // fallback to message
+      }
+      // $swal.fire({
+      //   title: "Error!",
+      //   text: errorMessage,
+      //   icon: "error",
+      //   width: 400,
+      //   timer: 1200,
+      //   showConfirmButton: false,
+      // });
     }
-  } finally {
-    isDownloading.value[id] = false;
+  } finally{
+      isDownloading.value[id] = false;
   }
 };

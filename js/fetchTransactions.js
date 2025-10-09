@@ -54,6 +54,7 @@ export const getMyTransaction = async () => {
       }
     );
     transactions.value = response;
+    console.log(transactions.value);
   } catch (error) {
     console.error("Error fetching transactions:", error);
   } finally {

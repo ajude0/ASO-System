@@ -26,6 +26,7 @@ export const getFormObject = async () => {
     );
 
     forms.value = data;
+    console.log(data);
     console.log("Fetched form data:", data);
     if (data.templatefile) {
       // 2. Fetch HTML from server using file path

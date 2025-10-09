@@ -4,23 +4,24 @@ import { getToken } from "./cryptoToken";
 export const nenunames = ref([]);
 const router = useRouter();
 export const messages = ref();
-export const signaturepath = ref();
+export const hasSignature = ref();
+export const signaturepath =ref();
 
 export const checkusersignature = async ($swal) => {
   const token = getToken();
   try {
-    const data = await $fetch(`${API_BASE_URL}/api/UserSignature`, {
+    const data = await $fetch(`${API_BASE_URL}/api/Signature`, {
       method: "GET",
       headers: {
         token: token,
       },
     });
     if (!data) {
-      signaturepath.value = null;
+      hasSignature.value = null;
     } else {
-      const blob = new Blob([data], { type: "image/png" });
-      signaturepath.value = URL.createObjectURL(blob);
+      hasSignature.value = data.hasSignature;
     }
+    console.log(hasSignature.value);
  
   } catch (error) {
     console.error("Error:", error);

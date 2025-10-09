@@ -49,6 +49,7 @@ export const getFormDetails = async (formId) => {
         }
       );
       formDetails.value = response.data;
+      // console.log(formDetails.value);
     } catch (error) {
       console.error("Error fetching form details:", error);
     } 

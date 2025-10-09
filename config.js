@@ -1,3 +1,4 @@
 
-export const API_BASE_URL = useRuntimeConfig().public.apiBaseUrl
+export const API_BASE_URL = "https://localhost:7182"
+
 
