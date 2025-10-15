@@ -229,7 +229,7 @@
                 <div v-show="dropdownOpenIndex === index"
                   class="absolute z-10 bg-white border border-gray-300 w-full mt-1 rounded shadow max-h-60 overflow-y-auto">
                   <!-- Search input -->
-                  <input v-model="searchTerms[index]" type="text" placeholder="Search..."
+                  <input v-model="searchTerms[index]" type="text" placeholder="Enter to search"
                     class="w-full p-2 text-sm border-b" />
 
                   <!-- Filtered options -->
@@ -518,11 +518,13 @@
     </div>
   </div>
   <div v-if="showApproverModal"
+    @click.self="cancelButton"
+    @keydown.esc="cancelButton"     
     class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]">
     <div class="w-full max-w-4xl bg-white shadow-lg rounded-lg p-6 relative">
       <div class="flex gap-2">
         <input type="text" v-model="query.search" @keydown.enter.prevent="handleEnterKey"
-          @keydown.down.prevent="moveDown" @keydown.up.prevent="moveUp" placeholder="Search Approvers..."
+          @keydown.down.prevent="moveDown" @keydown.up.prevent="moveUp" placeholder="Please enter user's name..."
           class="w-full h-11 p-4 rounded border border-gray-600 focus:outline-none" />
         <button @click="getEmployees" class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700">
           <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -555,12 +557,14 @@
     </div>
   </div>
   <div v-if="showProxyModal"
+    @click.self="cancelButton"
+    @keydown.esc="cancelButton"     
     class="fixed inset-0 p-4 flex justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto">
     <div class="w-full max-w-4xl bg-white shadow-lg rounded-lg p-6 relative">
       <h2 class="text-xl font-semibold mb-4">Select Proxy</h2>
       <div class="flex gap-2">
         <input type="text" v-model="query.search" @keydown.enter.prevent="handleProxyEnterKey"
-          @keydown.down.prevent="moveProxyDown" @keydown.up.prevent="moveProxyUp" placeholder="Search Approver..."
+          @keydown.down.prevent="moveProxyDown" @keydown.up.prevent="moveProxyUp" placeholder="Please enter user's name...."
           class="w-full h-11 p-4 rounded border border-gray-600 focus:outline-none" />
         <button @click="getEmployees" class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700">
           <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -1413,6 +1417,12 @@ const submitForm = async () => {
   }
 };
 
+const handleEsc = (event) => {
+  if (event.key === 'Escape' &&  (showApproverModal.value || showProxyModal.value)) {
+    cancelButton()
+  }
+}
+
 onMounted(async () => {
   await getEmployees();
   const hash = window.location.hash;
@@ -1421,7 +1431,12 @@ onMounted(async () => {
   await fetchCanAccess(paramid.value);
   nenunames.value.push("Create");
   await getDropdowns();
+   window.addEventListener('keydown', handleEsc)
 });
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleEsc)
+})
 
 definePageMeta({
   middleware: "auth",

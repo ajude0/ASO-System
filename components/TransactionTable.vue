@@ -1200,11 +1200,15 @@ const createSignature = async (id, title) => {
                 <h2 style="font-weight:600; font-size:18px; margin-bottom:10px;">Terms and Conditions</h2>
                 <div style="max-height:300px; overflow-y:auto; border:1px solid #e5e7eb; padding:10px; border-radius:8px; font-size:14px; line-height:1.6; margin-bottom:16px;">
                   <ol style="padding-left:1.2rem;">
-                    <li>By signing this form, you confirm that the information provided is true and accurate.</li>
-                    <li>You acknowledge that this signature has the same legal validity as your handwritten signature.</li>
-                    <li>Any falsification of information may result in disciplinary or legal action.</li>
-                    <li>The organization reserves the right to verify your submission for authenticity.</li>
-                    <li>All data collected will be processed in accordance with applicable data protection laws.</li>
+                    <li>By affixing your digital signature, you hereby certify that all information contained in this form is true, correct, and complete to the best of your knowledge.</li>
+                    <li>You acknowledge that your electronic signature constitutes your valid and binding consent, equivalent in all respects to a handwritten signature under applicable electronic transaction laws.</li>
+                    <li>You understand that any falsification, misrepresentation, or unauthorized use of another individual’s signature constitutes a violation subject to disciplinary measures and possible legal action.</li>
+                    <li>The organization reserves the right to verify, audit, and validate any data, approval, or document submitted through this system to ensure its authenticity and compliance with internal policies.</li>
+                    <li>All submissions, digital signatures, and approval activities are electronically recorded, timestamped, and traceable for accountability and audit purposes.</li>
+                    <li>Your personal information and digital signature data will be collected, processed, and retained in accordance with the organization’s data protection policy and applicable privacy laws.</li>
+                    <li>By proceeding, you expressly authorize the organization to recognize and rely upon your electronic signature for all transactions and official approvals conducted within this system.</li>
+                    <li>You are solely responsible for maintaining the confidentiality of your account credentials and for any actions performed under your account. The organization shall not be held liable for any unauthorized use resulting from negligence or disclosure of login details.</li>
+                    <li>The organization reserves the right to amend these Terms and Conditions without prior notice. Continued use of this system constitutes acceptance of any such modifications.</li>
                   </ol>
                 </div>
                 <div style="text-align:right;">
@@ -1238,7 +1242,7 @@ const createSignature = async (id, title) => {
       }
 
       if (!agreeCheckbox.checked) {
-        $swal.showValidationMessage("✅ Please read and agree to the Terms and Conditions before proceeding.");
+        $swal.showValidationMessage("You must agree to the Terms and Conditions to create a signature.");
         return false;
       }
 

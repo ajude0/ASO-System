@@ -498,7 +498,7 @@
                   <input
                     v-model="searchTerms[index]"
                     type="text"
-                    placeholder="Search..."
+                    placeholder="Enter to search"
                     class="w-full p-2 text-sm border-b"
                   />
 
@@ -899,7 +899,7 @@
           @keydown.enter.prevent="handleEnterKey"
           @keydown.down.prevent="moveDown"
           @keydown.up.prevent="moveUp"
-          placeholder="Search Approver..."
+          placeholder="Please enter user's name..."
           class="w-full p-4 rounded border border-gray-600 focus:outline-none"
         />
         <button
@@ -969,7 +969,7 @@
           @keydown.enter.prevent="handleProxyEnterKey"
           @keydown.down.prevent="moveProxyDown"
           @keydown.up.prevent="moveProxyUp"
-          placeholder="Search Approver..."
+          placeholder="Please enter user's name..."
           class="w-full p-4 rounded border border-gray-600 focus:outline-none"
         />
         <button
