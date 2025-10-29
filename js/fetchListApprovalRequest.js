@@ -5,6 +5,8 @@ export const query = ref({
   Search: "",
   Status:"",
   IsApproved: "",
+  SortBy: 'Createddate',  // default sort (backend fallback also handles this)
+  IsDescending: true,
   PageNumber: 1,
   PageSize: 5,
 });
@@ -42,6 +44,23 @@ export const getListOfTransactions = async () => {
     loading.value = false;
   }
 };
+
+
+export const sortBy = (column) => {
+  if (query.value.SortBy === column) {
+    // reverse direction if same column clicked again
+    query.value.IsDescending = !query.value.IsDescending
+  } else {
+    query.value.SortBy = column
+    query.value.IsDescending = false
+  }
+  getListOfTransactions()
+}
+
+export const changePageSize = () => {
+  query.value.PageNumber = 1 // reset to first page
+  getListOfTransactions()
+}
 
 export const confirmApproval = async (id,formData) => {
   const token = getToken();

@@ -143,17 +143,29 @@
               <thead>
                 <tr class="bg-gray-50">
                   <th
-                    scope="col"
-                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize min-w-[150px]"
+                    @click="sortBy('Id')"
+                    class="p-5 text-left text-sm font-semibold text-gray-900 capitalize cursor-pointer select-none"
                   >
-                    ID
+                    <div class="flex items-center gap-1">
+                      <span>ID</span>
+                      <SortIcon
+                        :active="query.SortBy === 'Id'"
+                        :descending="query.IsDescending"
+                      />
+                    </div>
                   </th>
 
                   <th
-                    scope="col"
-                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize min-w-[150px]"
+                    @click="sortBy('Title')"
+                    class="p-5 text-left text-sm font-semibold text-gray-900 capitalize cursor-pointer select-none"
                   >
-                    Form
+                    <div class="flex items-center gap-1">
+                      <span>Form</span>
+                      <SortIcon
+                        :active="query.SortBy === 'Title'"
+                        :descending="query.IsDescending"
+                      />
+                    </div>
                   </th>
                   <th
                     scope="col"
@@ -162,10 +174,16 @@
                     Approver Type
                   </th>
                   <th
-                    scope="col"
-                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                    @click="sortBy('Status')"
+                    class="p-5 text-left text-sm font-semibold text-gray-900 capitalize cursor-pointer select-none"
                   >
-                    Status
+                    <div class="flex items-center gap-1">
+                      <span>Status</span>
+                      <SortIcon
+                        :active="query.SortBy === 'Status'"
+                        :descending="query.IsDescending"
+                      />
+                    </div>
                   </th>
                   <th
                     scope="col"
@@ -175,16 +193,28 @@
                   </th>
 
                   <th
-                    scope="col"
-                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                    @click="sortBy('Requestername')"
+                    class="p-5 text-left text-sm font-semibold text-gray-900 capitalize cursor-pointer select-none"
                   >
-                    Created By
+                    <div class="flex items-center gap-1">
+                      <span>Created By</span>
+                      <SortIcon
+                        :active="query.SortBy === 'Requestername'"
+                        :descending="query.IsDescending"
+                      />
+                    </div>
                   </th>
                   <th
-                    scope="col"
-                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                    @click="sortBy('Createddate')"
+                    class="p-5 text-left text-sm font-semibold text-gray-900 capitalize cursor-pointer select-none"
                   >
-                    Created Date
+                    <div class="flex items-center gap-1">
+                      <span>Created Date</span>
+                      <SortIcon
+                        :active="query.SortBy === 'Createddate'"
+                        :descending="query.IsDescending"
+                      />
+                    </div>
                   </th>
                   <th
                     scope="col"
@@ -192,7 +222,6 @@
                   >
                     Actions
                   </th>
-                
                 </tr>
               </thead>
 
@@ -520,83 +549,117 @@
         </div>
       </div>
 
-      <div class="flex justify-left mt-10 space-x-2 items-center">
-        <span>Showing</span>
-        <input
-          v-model.number="pageNumberDisplay"
-          @keyup.enter="handlePageInput"
-          type="number"
-          :min="totalPages === 0 ? 0 : 1"
-          :max="totalPages"
-          class="w-16 px-2 py-1 border border-gray-300 rounded text-center"
-        />
-
-        <span>
-          out of {{ totalPages }} {{ totalPages <= 1 ? "Page" : "Pages" }} ({{
-            totalEntries
-          }}
-          {{ totalEntries <= 1 ? "Entry" : "Entries" }})
-        </span>
-        <button
-          @click="handlePageInput"
-          class="py-1 px-4 bg-blue-500 rounded-md text-white hover:bg-blue-700"
+      <div
+        class="flex flex-col sm:flex-row sm:justify-between sm:items-center mt-2 space-y-4 sm:space-y-0 sm:space-x-2"
+      >
+        <!-- Left side: Page info + input -->
+        <div
+          class="flex flex-wrap items-center justify-center sm:justify-start space-x-2"
         >
-          GO
-        </button>
-      </div>
-
-      <div class="flex justify-center mt-10 space-x-2 mb-2">
-        <a
-          @click="changePage(query.PageNumber - 1)"
-          :class="{
-            'cursor-not-allowed opacity-50': query.PageNumber === 1,
-          }"
-          class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="1.5em"
-            height="1.5em"
-            viewBox="0 0 24 24"
+          <span>Showing</span>
+          <input
+            v-model.number="pageNumberDisplay"
+            @keyup.enter="handlePageInput"
+            type="number"
+            :min="totalPages === 0 ? 0 : 1"
+            :max="totalPages"
+            class="w-16 px-2 py-1 border border-gray-300 rounded text-center"
+          />
+          <span>
+            out of {{ totalPages }} {{ totalPages <= 1 ? "Page" : "Pages" }} ({{
+              totalEntries
+            }}
+            {{ totalEntries <= 1 ? "Entry" : "Entries" }})
+          </span>
+          <button
+            @click="handlePageInput"
+            class="py-1 px-4 bg-blue-500 hover:bg-blue-700 rounded-md text-white"
           >
-            <path
-              fill="currentColor"
-              d="m14 18l-6-6l6-6l1.4 1.4l-4.6 4.6l4.6 4.6z"
-            />
-          </svg>
-        </a>
+            GO
+          </button>
+        </div>
 
-        <template v-for="page in generatePagination()" :key="page">
+        <!-- Pagination section -->
+        <div
+          class="flex flex-wrap justify-center sm:justify-center space-x-2 order-last sm:order-none"
+        >
           <a
-            @click="changePage(page)"
+            @click="changePage(query.PageNumber - 1)"
             :class="{
-              'ring ring-primary bg-primary/20': query.PageNumber === page,
+              'cursor-not-allowed opacity-50': query.PageNumber === 1,
             }"
-            class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 ml-1 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none"
+            class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none"
           >
-            {{ page }}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="1.5em"
+              height="1.5em"
+              viewBox="0 0 24 24"
+            >
+              <path
+                fill="currentColor"
+                d="m14 18l-6-6l6-6l1.4 1.4l-4.6 4.6l4.6 4.6z"
+              />
+            </svg>
           </a>
-        </template>
 
-        <a
-          @click="changePage(query.PageNumber + 1)"
-          :class="{
-            'cursor-not-allowed opacity-50': query.PageNumber === totalPages,
-          }"
-          class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="1.5em"
-            height="1.5em"
-            viewBox="0 0 24 24"
+          <template v-for="page in generatePagination()" :key="page">
+            <span
+              v-if="typeof page === 'string'"
+              class="px-2 py-1 sm:px-4 sm:py-2 ml-1 mt-2 text-gray-400 border rounded-lg cursor-default"
+            >
+              {{ page }}
+            </span>
+            <a
+              v-else
+              @click="changePage(page)"
+              :class="{
+                'ring ring-primary bg-primary/20': query.PageNumber === page,
+              }"
+              class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 ml-1 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none"
+            >
+              {{ page }}
+            </a>
+          </template>
+
+          <a
+            @click="changePage(query.PageNumber + 1)"
+            :class="{
+              'cursor-not-allowed opacity-50': query.PageNumber === totalPages,
+            }"
+            class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none"
           >
-            <path
-              fill="currentColor"
-              d="M12.6 12L8 7.4L9.4 6l6 6l-6 6L8 16.6z"
-            />
-          </svg>
-        </a>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="1.5em"
+              height="1.5em"
+              viewBox="0 0 24 24"
+            >
+              <path
+                fill="currentColor"
+                d="M12.6 12L8 7.4L9.4 6l6 6l-6 6L8 16.6z"
+              />
+            </svg>
+          </a>
+        </div>
+
+        <!-- Right side: Rows per page -->
+        <div class="flex items-center justify-center sm:justify-end gap-2">
+          <label for="pageSize" class="text-sm text-gray-700"
+            >Rows per page:</label
+          >
+          <select
+            id="pageSize"
+            v-model.number="query.PageSize"
+            @change="changePageSize"
+            class="border border-gray-300 rounded px-2 py-1 text-sm"
+          >
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="100">100</option>
+          </select>
+        </div>
       </div>
     </div>
   </div>
@@ -930,10 +993,12 @@ import {
   totalEntries,
   query,
   loading,
+  changePageSize,
+  sortBy,
 } from "~/js/fetchListApprovalRequest";
 import LoadingModal from "./modal/LoadingModal.vue";
 import SignaturePad from "signature_pad";
-import { checkusersignature,hasSignature } from "~/js/checkusersignature";
+import { checkusersignature, hasSignature } from "~/js/checkusersignature";
 import { postusersignature } from "~/js/usersignature";
 
 const { $swal } = useNuxtApp();
@@ -1073,7 +1138,7 @@ const postApprove = async () => {
 
     if (isConfirmed) {
       await confirmApproval(selectedId.value, null);
-      showModal.value= false;
+      showModal.value = false;
       await $swal.fire({
         icon: "success",
         title: "Form Approved",
@@ -1124,17 +1189,17 @@ const postSigned = async () => {
 
     if (isConfirmed) {
       await confirmApproval(selectedId.value, null);
-      showModal.value= false;
+      showModal.value = false;
       await $swal.fire({
-      title: "Form Signed!",
-      text: "The request has been signed successfully.",
-      icon: "success",
-      timer: 1000,
-      showConfirmButton: false,
-    })
+        title: "Form Signed!",
+        text: "The request has been signed successfully.",
+        icon: "success",
+        timer: 1000,
+        showConfirmButton: false,
+      });
     }
   }
-}
+};
 
 const createSignature = async (text) => {
   const { value: signature, isConfirmed } = await $swal.fire({
@@ -1191,7 +1256,9 @@ const createSignature = async (text) => {
       });
 
       // Clear signature
-      document.getElementById("clear-signature")?.addEventListener("click", () => signaturePad.clear());
+      document
+        .getElementById("clear-signature")
+        ?.addEventListener("click", () => signaturePad.clear());
 
       // Show Terms popup automatically when checkbox is checked
       agreeCheckbox.addEventListener("change", (e) => {
@@ -1235,10 +1302,12 @@ const createSignature = async (text) => {
 
           document.body.insertAdjacentHTML("beforeend", termsHtml);
 
-          document.getElementById("close-terms").addEventListener("click", () => {
-            document.getElementById("terms-popup")?.remove();
-            agreeCheckbox.checked = true; // keep it checked after reading
-          });
+          document
+            .getElementById("close-terms")
+            .addEventListener("click", () => {
+              document.getElementById("terms-popup")?.remove();
+              agreeCheckbox.checked = true; // keep it checked after reading
+            });
         }
       });
 
@@ -1249,12 +1318,16 @@ const createSignature = async (text) => {
       const agreeCheckbox = document.getElementById("agree-terms");
 
       if (!signaturePad || signaturePad.isEmpty()) {
-        $swal.showValidationMessage("✍️ Please provide a signature before confirming.");
+        $swal.showValidationMessage(
+          "✍️ Please provide a signature before confirming."
+        );
         return false;
       }
 
       if (!agreeCheckbox.checked) {
-        $swal.showValidationMessage("✅ Please read and agree to the Terms and Conditions before proceeding.");
+        $swal.showValidationMessage(
+          "✅ Please read and agree to the Terms and Conditions before proceeding."
+        );
         return false;
       }
 
@@ -1268,7 +1341,8 @@ const createSignature = async (text) => {
     const mimeString = signature.split(",")[0].split(":")[1].split(";")[0];
     const ab = new ArrayBuffer(byteString.length);
     const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+    for (let i = 0; i < byteString.length; i++)
+      ia[i] = byteString.charCodeAt(i);
     const blob = new Blob([ab], { type: mimeString });
 
     const formData = new FormData();
@@ -1277,7 +1351,7 @@ const createSignature = async (text) => {
     await postusersignature(formData, $swal);
     await checkusersignature($swal);
     await confirmApproval(selectedId.value, null);
-     $swal.fire({
+    $swal.fire({
       title: `Form ${text}!`,
       text: `The request has been ${text} successfully`,
       icon: "success",
@@ -1308,8 +1382,8 @@ const postDisapprove = async () => {
   });
 
   if (remarks) {
-    await disapproveApproval(selectedId.value, remarks,$swal);
-   
+    await disapproveApproval(selectedId.value, remarks, $swal);
+
     showModal.value = false;
   }
 };
@@ -1334,7 +1408,7 @@ const pageNumberDisplay = computed({
 const props = defineProps({
   canEdit: Boolean,
 });
-onMounted(async() => {
+onMounted(async () => {
   await checkusersignature($swal);
   await getListOfTransactions();
 });

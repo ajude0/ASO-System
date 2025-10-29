@@ -12,6 +12,8 @@ export const totalPages = ref(0);
 export const query = ref({
   Search: "",
   Status:"",
+  SortBy: 'Createddate',  // default sort (backend fallback also handles this)
+  IsDescending: true,
   IsApproved: "",
   PageNumber: 1,
   PageSize: 5,
@@ -84,6 +86,22 @@ export const getFormDetails = async (formId) => {
       loading.value = false;
     }
   };
+  
+  export const sortBy = (column) => {
+    if (query.value.SortBy === column) {
+      // reverse direction if same column clicked again
+      query.value.IsDescending = !query.value.IsDescending
+    } else {
+      query.value.SortBy = column
+      query.value.IsDescending = false
+    }
+    getListOfForms()
+  }
+  
+  export const changePageSize = () => {
+    query.value.PageNumber = 1 // reset to first page
+    getListOfForms()
+  }
 
   export const changePage = (page) => {
     if (page < 1 || page > totalPages.value) return;
