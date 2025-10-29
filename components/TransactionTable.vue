@@ -169,23 +169,43 @@
               <thead>
                 <tr class="bg-gray-50">
                   <th
-                    scope="col"
-                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                    @click="sortBy('Id')"
+                    class="p-5 text-left text-sm font-semibold text-gray-900 capitalize cursor-pointer select-none"
                   >
-                    ID
+                    <div class="flex items-center gap-1">
+                      <span>ID</span>
+                      <SortIcon
+                        :active="query.SortBy === 'Id'"
+                        :descending="query.IsDescending"
+                      />
+                    </div>
                   </th>
+
+                  <!-- Title Column -->
                   <th
-                    scope="col"
-                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                    @click="sortBy('Title')"
+                    class="p-5 text-left text-sm font-semibold text-gray-900 capitalize cursor-pointer select-none"
                   >
-                    Title
+                    <div class="flex items-center gap-1">
+                      <span>Title</span>
+                      <SortIcon
+                        :active="query.SortBy === 'Title'"
+                        :descending="query.IsDescending"
+                      />
+                    </div>
                   </th>
 
                   <th
-                    scope="col"
-                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                    @click="sortBy('Status')"
+                    class="p-5 text-left text-sm font-semibold text-gray-900 capitalize cursor-pointer select-none"
                   >
-                    Status
+                    <div class="flex items-center gap-1">
+                      <span>Status</span>
+                      <SortIcon
+                        :active="query.SortBy === 'Status'"
+                        :descending="query.IsDescending"
+                      />
+                    </div>
                   </th>
                   <th
                     scope="col"
@@ -201,10 +221,16 @@
                     Approver Progress
                   </th>
                   <th
-                    scope="col"
-                    class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
+                    @click="sortBy('Createddate')"
+                    class="p-5 text-left text-sm font-semibold text-gray-900 capitalize cursor-pointer select-none"
                   >
-                    Created Date
+                    <div class="flex items-center gap-1">
+                      <span>Created Date</span>
+                      <SortIcon
+                        :active="query.SortBy === 'Createddate'"
+                        :descending="query.IsDescending"
+                      />
+                    </div>
                   </th>
                   <th
                     scope="col"
@@ -615,95 +641,115 @@
           </div>
         </div>
       </div>
-      <div class="flex justify-between mt-10 space-x-2 items-center">
-        <div>
-        <span>Showing</span>
-        <input
-          v-model.number="pageNumberDisplay"
-          @keyup.enter="handlePageInput"
-          type="number"
-          :min="totalPages === 0 ? 0 : 1"
-          :max="totalPages"
-          class="w-16 px-2 py-1 border border-gray-300 rounded text-center"
-        />
-        <span>
-          out of {{ totalPages }} {{ totalPages <= 1 ? "Page" : "Pages" }} ({{
-            totalEntries
-          }}
-          {{ totalEntries <= 1 ? "Entry" : "Entries" }})
-        </span>
-        <button
-          @click="handlePageInput"
-          class="py-1 px-4 bg-blue-500 hover:bg-blue-700 rounded-md text-white"
-        >
-          GO
-        </button>
-      </div>
-      <div class="flex mb-5 me-4">
-    
+     <div
+  class="flex flex-col sm:flex-row sm:justify-between sm:items-center mt-2 space-y-4 sm:space-y-0 sm:space-x-2"
+>
+  <!-- Left side: Page info + input -->
+  <div class="flex flex-wrap items-center justify-center sm:justify-start space-x-2">
+    <span>Showing</span>
+    <input
+      v-model.number="pageNumberDisplay"
+      @keyup.enter="handlePageInput"
+      type="number"
+      :min="totalPages === 0 ? 0 : 1"
+      :max="totalPages"
+      class="w-16 px-2 py-1 border border-gray-300 rounded text-center"
+    />
+    <span>
+      out of {{ totalPages }} {{ totalPages <= 1 ? "Page" : "Pages" }} ({{
+        totalEntries
+      }}
+      {{ totalEntries <= 1 ? "Entry" : "Entries" }})
+    </span>
+    <button
+      @click="handlePageInput"
+      class="py-1 px-4 bg-blue-500 hover:bg-blue-700 rounded-md text-white"
+    >
+      GO
+    </button>
   </div>
-      </div>
 
-      <div class="flex justify-center mt-10 space-x-2 mb-2">
-        <a
-          @click="changePage(query.PageNumber - 1)"
-          :class="{
-            'cursor-not-allowed opacity-50': query.PageNumber === 1,
-          }"
-          class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="1.5em"
-            height="1.5em"
-            viewBox="0 0 24 24"
-          >
-            <path
-              fill="currentColor"
-              d="m14 18l-6-6l6-6l1.4 1.4l-4.6 4.6l4.6 4.6z"
-            />
-          </svg>
-        </a>
+  <!-- Pagination section -->
+  <div
+    class="flex flex-wrap justify-center sm:justify-center space-x-2 order-last sm:order-none"
+  >
+    <a
+      @click="changePage(query.PageNumber - 1)"
+      :class="{
+        'cursor-not-allowed opacity-50': query.PageNumber === 1,
+      }"
+      class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="1.5em"
+        height="1.5em"
+        viewBox="0 0 24 24"
+      >
+        <path
+          fill="currentColor"
+          d="m14 18l-6-6l6-6l1.4 1.4l-4.6 4.6l4.6 4.6z"
+        />
+      </svg>
+    </a>
 
-        <template v-for="page in generatePagination()" :key="page">
-          <span
-            v-if="typeof page === 'string'"
-            class="px-2 py-1 sm:px-4 sm:py-2 ml-1 mt-2 text-gray-400 border rounded-lg cursor-default"
-          >
-            {{ page }}
-          </span>
-          <a
-            v-else
-            @click="changePage(page)"
-            :class="{
-              'ring ring-primary bg-primary/20': query.PageNumber === page,
-            }"
-            class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 ml-1 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none"
-          >
-            {{ page }}
-          </a>
-        </template>
+    <template v-for="page in generatePagination()" :key="page">
+      <span
+        v-if="typeof page === 'string'"
+        class="px-2 py-1 sm:px-4 sm:py-2 ml-1 mt-2 text-gray-400 border rounded-lg cursor-default"
+      >
+        {{ page }}
+      </span>
+      <a
+        v-else
+        @click="changePage(page)"
+        :class="{
+          'ring ring-primary bg-primary/20': query.PageNumber === page,
+        }"
+        class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 ml-1 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none"
+      >
+        {{ page }}
+      </a>
+    </template>
 
-        <a
-          @click="changePage(query.PageNumber + 1)"
-          :class="{
-            'cursor-not-allowed opacity-50': query.PageNumber === totalPages,
-          }"
-          class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none"
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="1.5em"
-            height="1.5em"
-            viewBox="0 0 24 24"
-          >
-            <path
-              fill="currentColor"
-              d="M12.6 12L8 7.4L9.4 6l6 6l-6 6L8 16.6z"
-            />
-          </svg>
-        </a>
-      </div>
+    <a
+      @click="changePage(query.PageNumber + 1)"
+      :class="{
+        'cursor-not-allowed opacity-50': query.PageNumber === totalPages,
+      }"
+      class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="1.5em"
+        height="1.5em"
+        viewBox="0 0 24 24"
+      >
+        <path
+          fill="currentColor"
+          d="M12.6 12L8 7.4L9.4 6l6 6l-6 6L8 16.6z"
+        />
+      </svg>
+    </a>
+  </div>
+
+  <!-- Right side: Rows per page -->
+  <div class="flex items-center justify-center sm:justify-end gap-2">
+    <label for="pageSize" class="text-sm text-gray-700">Rows per page:</label>
+    <select
+      id="pageSize"
+      v-model.number="query.PageSize"
+      @change="changePageSize"
+      class="border border-gray-300 rounded px-2 py-1 text-sm"
+    >
+      <option value="5">5</option>
+      <option value="10">10</option>
+      <option value="20">20</option>
+      <option value="100">100</option>
+    </select>
+  </div>
+</div>
+
     </div>
   </div>
   <div
@@ -1005,6 +1051,8 @@ import {
   query,
   isTxLoading,
   softDeleteTransaction,
+  sortBy,
+  changePageSize,
 } from "~/js/fetchTransactions";
 import LoadingModal from "./modal/LoadingModal.vue";
 import { encryptData } from "~/js/cryptoToken";
@@ -1013,8 +1061,9 @@ import { downloadvpnForm, isDownloading } from "~/js/downloadpdf";
 import SignaturePad from "signature_pad";
 import { closedTransaction } from "~/js/fetchTransactions";
 import { postusersignature } from "~/js/usersignature";
-import { checkusersignature, hasSignature} from "~/js/checkusersignature";
+import { checkusersignature, hasSignature } from "~/js/checkusersignature";
 import { API_BASE_URL } from "~/config";
+import SortIcon from "./SortIcon.vue";
 
 const showModal = ref(false);
 const isApprovedOpen = ref(false);
@@ -1111,13 +1160,13 @@ const downloadFormWithSignature = async (id, title) => {
     });
 
     if (isConfirmed) {
-      await createSignature(id,title); // 🖋️ Create new signature
+      await createSignature(id, title); // 🖋️ Create new signature
       // await downloadvpnForm(id, title, null);
-    } 
-  } else{
-      await downloadvpnForm(id, title, null);
+    }
+  } else {
+    await downloadvpnForm(id, title, null);
   }
-}
+};
 
 // 🔹 Function just for creating a new signature
 const createSignature = async (id, title) => {
@@ -1175,7 +1224,9 @@ const createSignature = async (id, title) => {
       });
 
       // Clear signature
-      document.getElementById("clear-signature")?.addEventListener("click", () => signaturePad.clear());
+      document
+        .getElementById("clear-signature")
+        ?.addEventListener("click", () => signaturePad.clear());
 
       // Show Terms popup automatically when checkbox is checked
       agreeCheckbox.addEventListener("change", (e) => {
@@ -1199,18 +1250,18 @@ const createSignature = async (id, title) => {
               ">
                 <h2 style="font-weight:600; font-size:18px; margin-bottom:10px;">Terms and Conditions</h2>
                 <div style="max-height:300px; overflow-y:auto; border:1px solid #e5e7eb; padding:10px; border-radius:8px; font-size:14px; line-height:1.6; margin-bottom:16px;">
-                  <ol style="padding-left:1.2rem;">
-                    <li>By affixing your digital signature, you hereby certify that all information contained in this form is true, correct, and complete to the best of your knowledge.</li>
-                    <li>You acknowledge that your electronic signature constitutes your valid and binding consent, equivalent in all respects to a handwritten signature under applicable electronic transaction laws.</li>
-                    <li>You understand that any falsification, misrepresentation, or unauthorized use of another individual’s signature constitutes a violation subject to disciplinary measures and possible legal action.</li>
-                    <li>The organization reserves the right to verify, audit, and validate any data, approval, or document submitted through this system to ensure its authenticity and compliance with internal policies.</li>
-                    <li>All submissions, digital signatures, and approval activities are electronically recorded, timestamped, and traceable for accountability and audit purposes.</li>
-                    <li>Your personal information and digital signature data will be collected, processed, and retained in accordance with the organization’s data protection policy and applicable privacy laws.</li>
-                    <li>By proceeding, you expressly authorize the organization to recognize and rely upon your electronic signature for all transactions and official approvals conducted within this system.</li>
-                    <li>You are solely responsible for maintaining the confidentiality of your account credentials and for any actions performed under your account. The organization shall not be held liable for any unauthorized use resulting from negligence or disclosure of login details.</li>
-                    <li>The organization reserves the right to amend these Terms and Conditions without prior notice. Continued use of this system constitutes acceptance of any such modifications.</li>
-                  </ol>
-                </div>
+  <ul style="padding-left:1.2rem; list-style-type: disc;">
+    <li>By signing digitally, you confirm that all information provided is true, accurate, and complete to the best of your knowledge.</li>
+    <li>Your electronic signature is legally binding and holds the same validity as a handwritten signature under applicable laws.</li>
+    <li>Any falsification, misrepresentation, or misuse of another person’s signature may result in disciplinary and legal action.</li>
+    <li>The organization may verify, audit, and validate submitted data, approvals, and documents for authenticity and compliance.</li>
+    <li>All submissions and approvals are electronically recorded, timestamped, and traceable for accountability.</li>
+    <li>Personal and signature data are processed and retained in accordance with data privacy laws and company policy.</li>
+    <li>By proceeding, you authorize the organization to recognize your electronic signature for all official system transactions.</li>
+    <li>You are responsible for safeguarding your account credentials. The organization is not liable for unauthorized use due to negligence.</li>
+    <li>The organization may update these Terms and Conditions without prior notice. Continued use signifies acceptance of any changes.</li>
+  </ul>
+</div>
                 <div style="text-align:right;">
                   <button id="close-terms" 
                     style="background:#3b82f6; color:white; padding:8px 16px; border:none; border-radius:6px; cursor:pointer;">
@@ -1223,10 +1274,12 @@ const createSignature = async (id, title) => {
 
           document.body.insertAdjacentHTML("beforeend", termsHtml);
 
-          document.getElementById("close-terms").addEventListener("click", () => {
-            document.getElementById("terms-popup")?.remove();
-            agreeCheckbox.checked = true; // keep it checked after reading
-          });
+          document
+            .getElementById("close-terms")
+            .addEventListener("click", () => {
+              document.getElementById("terms-popup")?.remove();
+              agreeCheckbox.checked = true; // keep it checked after reading
+            });
         }
       });
 
@@ -1237,12 +1290,16 @@ const createSignature = async (id, title) => {
       const agreeCheckbox = document.getElementById("agree-terms");
 
       if (!signaturePad || signaturePad.isEmpty()) {
-        $swal.showValidationMessage("✍️ Please provide a signature before confirming.");
+        $swal.showValidationMessage(
+          "✍️ Please provide a signature before confirming."
+        );
         return false;
       }
 
       if (!agreeCheckbox.checked) {
-        $swal.showValidationMessage("You must agree to the Terms and Conditions to create a signature.");
+        $swal.showValidationMessage(
+          "You must agree to the Terms and Conditions to create a signature."
+        );
         return false;
       }
 
@@ -1256,7 +1313,8 @@ const createSignature = async (id, title) => {
     const mimeString = signature.split(",")[0].split(":")[1].split(";")[0];
     const ab = new ArrayBuffer(byteString.length);
     const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++) ia[i] = byteString.charCodeAt(i);
+    for (let i = 0; i < byteString.length; i++)
+      ia[i] = byteString.charCodeAt(i);
     const blob = new Blob([ab], { type: mimeString });
 
     const formData = new FormData();
@@ -1268,7 +1326,6 @@ const createSignature = async (id, title) => {
     loading.value = false;
   }
 };
-
 
 const getApprovalStatus = (approverGroup) => {
   if (!Array.isArray(approverGroup)) return "pending"; // fallback
@@ -1349,7 +1406,7 @@ const props = defineProps({
   canDelete: Boolean,
   canEdit: Boolean,
 });
-onMounted( async () => {
+onMounted(async () => {
   await checkusersignature($swal);
   await getMyTransactions();
 });
