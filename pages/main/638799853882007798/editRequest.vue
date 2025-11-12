@@ -138,13 +138,12 @@
             <div
               v-for="(option, optIndex) in item.options"
               :key="optIndex"
-
               :class="[
-              'flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition',
-              formErrors[index]
-                ? 'border-red-500 focus:ring-red-500'
-                : 'border-gray-300 focus:ring-blue-500',
-            ]"
+                'flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition',
+                formErrors[index]
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-blue-500',
+              ]"
             >
               <input
                 type="checkbox"
@@ -163,21 +162,40 @@
             </div>
           </div>
           <!-- TEXTAREA -->
-          <textarea
-            v-else-if="item.objecttype === 'TEXTAREA'"
-            v-model="item.value"
-            maxlength="250"
-            :class="[
-              'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-              formErrors[index]
-                ? 'border-red-500 focus:ring-red-500'
-                : 'border-gray-300 focus:ring-blue-500',
-            ]"
-            style="text-transform: uppercase"
-          ></textarea>
+          <div v-else-if="item.objecttype === 'TEXTAREA'">
+            <textarea
+              v-model="item.value"
+              @input="onInput(item.id, item.value)"
+              maxlength="250"
+              :style="getInputStyle(item.id)"
+              :class="[
+                'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+                formErrors[index]
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-blue-500',
+              ]"
+            ></textarea>
+            <!-- Radio Buttons for Capitalization -->
+            <!-- Capitalization Radio Buttons -->
+            <div class="flex space-x-4 mt-2 text-sm text-gray-700">
+              <label
+                v-for="opt in ['original', 'uppercase', 'lowercase']"
+                :key="opt"
+                class="flex items-center space-x-1"
+              >
+                <input
+                  type="radio"
+                  :name="`caps-${item.id}`"
+                  :value="opt"
+                  v-model="capsSettings[item.id]"
+                  @change="applyCapsSetting(item.id, item)"
+                />
+                <span>{{ opt }}</span>
+              </label>
+            </div>
+          </div>
 
-          <div
-            v-else-if="item.objecttype === 'TIME'">
+          <div v-else-if="item.objecttype === 'TIME'">
             <div>
               <DateTimeInput v-model="item.value" />
             </div>
@@ -187,10 +205,17 @@
             <div class="flex justify-between items-center">
               <!-- Flex container -->
               <input
-                @focus="item.autofilluser == 0 ? openModal(index, item.formObjectId, 'textfromsource') : null"
+                @focus="
+                  item.autofilluser == 0
+                    ? openModal(index, item.formObjectId, 'textfromsource')
+                    : null
+                "
+                 @input="onInput(item.id, item.value)"
+              :style="getInputStyle(item.id)"
+
                 readonly
                 type="text"
-                v-model="item.textFromSourceValue.display"
+                v-model="item.value"
                 maxlength="55"
                 :class="[
                   'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
@@ -198,7 +223,6 @@
                     ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-blue-500',
                 ]"
-                style="text-transform: uppercase"
               />
               <button
                 v-if="item.autofilluser == 0"
@@ -223,6 +247,22 @@
                 </svg>
               </button>
             </div>
+             <div class="flex space-x-4 mt-2 text-sm text-gray-700">
+              <label
+                v-for="opt in ['original', 'uppercase', 'lowercase']"
+                :key="opt"
+                class="flex items-center space-x-1"
+              >
+                <input
+                  type="radio"
+                  :name="`caps-${item.id}`"
+                  :value="opt"
+                  v-model="capsSettings[item.id]"
+                  @change="applyCapsSetting(item.id, item)"
+                />
+                <span>{{ opt }}</span>
+              </label>
+            </div>
           </div>
 
           <!-- NUMBER -->
@@ -246,13 +286,12 @@
             <div
               v-for="(dynamicValue, valueIndex) in item?.values"
               :key="dynamicValue.id ?? valueIndex"
-         
               :class="[
-              'mb-2 flex items-center gap-2',
-              formErrors[index]
-                ? 'border-red-500 focus:ring-red-500'
-                : 'border-gray-300 focus:ring-blue-500',
-            ]"
+                'mb-2 flex items-center gap-2',
+                formErrors[index]
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-blue-500',
+              ]"
             >
               <div
                 v-if="dynamicValue.formobjecttype === 'DYNAMICSIGNATORY'"
@@ -263,11 +302,10 @@
                   type="text"
                   class="border p-3 rounded-md w-full focus:outline-none focus:ring-2"
                   v-model="dynamicValue.value"
-                  style="text-transform: uppercase"
                 />
                 <button
                   type="button"
-                    @click="removeAnswer(index, valueIndex)"
+                  @click="removeAnswer(index, valueIndex)"
                   class="text-red-600 hover:text-red-800 ml-4"
                   title="Remove"
                 >
@@ -306,10 +344,12 @@
             </div>
           </div>
 
+          <div v-else-if="item.objecttype === 'LINKTOOBJECT'">
           <input
-            v-else-if="item.objecttype === 'LINKTOOBJECT'"
             v-model="item.value"
+            @input="onInput(item.id, item.value)"
             type="text"
+            :style="getInputStyle(item.id)"
             disabled
             :class="[
               'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
@@ -317,8 +357,24 @@
                 ? 'border-red-500 focus:ring-red-500'
                 : 'border-gray-300 focus:ring-blue-500',
             ]"
-            style="text-transform: uppercase"
           />
+            <div class="flex space-x-4 mt-2 text-sm text-gray-700">
+              <label
+                v-for="opt in ['original', 'uppercase', 'lowercase']"
+                :key="opt"
+                class="flex items-center space-x-1"
+              >
+                <input
+                  type="radio"
+                  :name="`caps-${item.id}`"
+                  :value="opt"
+                  v-model="capsSettings[item.id]"
+                  @change="applyCapsSetting(item.id, item)"
+                />
+                <span>{{ opt }}</span>
+              </label>
+            </div>
+          </div>
 
           <input
             v-else
@@ -331,7 +387,6 @@
                 ? 'border-red-500 focus:ring-red-500'
                 : 'border-gray-300 focus:ring-blue-500',
             ]"
-            style="text-transform: uppercase"
           />
 
           <p v-if="formErrors[index]" class="text-red-500 text-sm">
@@ -407,7 +462,7 @@
   <div
     v-if="showModal"
     @click.self="showModal = false"
-    @keydown.esc="showModal = false"     
+    @keydown.esc="showModal = false"
     class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]"
   >
     <div class="w-full max-w-6xl bg-white shadow-lg rounded-lg p-6 relative">
@@ -522,11 +577,50 @@ const showModal = ref(false);
 const storeIndex = ref();
 const storeId = ref();
 const paramid = ref();
+const capsSettings = ref({});
 const objecttype = ref();
 
 const backButton = () => {
   router.push("/main/638799853882007798");
 };
+function onInput(id, text) {
+  if (!text) return;
+  if (text === text.toUpperCase() && /[A-Z]/.test(text)) {
+    capsSettings.value[id] = "uppercase";
+  } else if (text === text.toLowerCase() && /[a-z]/.test(text)) {
+    capsSettings.value[id] = "lowercase";
+  } else {
+    capsSettings.value[id] = "original";
+  }
+}
+
+function applyCapsSetting(id, item) {
+  const setting = capsSettings.value[id];
+  let text = item.value || "";
+
+  if (setting === "uppercase") text = text.toUpperCase();
+  else if (setting === "lowercase") text = text.toLowerCase();
+
+  item.value = text; // directly updates your data
+}
+
+function getInputStyle(id) {
+  const setting = capsSettings.value[id];
+  if (setting === "uppercase") return { textTransform: "uppercase" };
+  if (setting === "lowercase") return { textTransform: "lowercase" };
+  return {};
+}
+
+// Watch programmatic changes (e.g. autofill)
+watch(
+  () => transactions.value.formObjects.map((obj) => obj.value),
+  (newValues) => {
+    transactions.value.formObjects.forEach((obj, index) => {
+      onInput(obj.id, newValues[index]);
+    });
+  },
+  { deep: true }
+);
 
 const toggleChecklist = (item, option) => {
   if (!Array.isArray(item.values)) {
@@ -547,7 +641,7 @@ const toggleChecklist = (item, option) => {
   }
 };
 
-const openModal = (index, id, type) => {  
+const openModal = (index, id, type) => {
   storeIndex.value = index;
   storeId.value = id;
   showModal.value = true;
@@ -585,8 +679,9 @@ const selectEmployee = (id, justification) => {
       }
     });
   } else {
-
-    const formObject = transactions.value.formObjects.find((f) => f.formObjectId === storeId.value);
+    const formObject = transactions.value.formObjects.find(
+      (f) => f.formObjectId === storeId.value
+    );
 
     if (!formObject) {
       console.warn("Form object not found");
@@ -604,20 +699,20 @@ const selectEmployee = (id, justification) => {
       formobjectId: formObject.formObjectId,
       formobjecttype: "DYNAMICSIGNATORY",
       value: justification.display,
-      display: justification.data, 
+      display: justification.data,
     };
 
     const isDuplicate = formObject.values.some(
-  (v) =>
-    v.formobjecttype === "DYNAMICSIGNATORY" &&
-    v.value?.toLowerCase() === newEntry.value.toLowerCase()
-);
+      (v) =>
+        v.formobjecttype === "DYNAMICSIGNATORY" &&
+        v.value?.toLowerCase() === newEntry.value.toLowerCase()
+    );
 
-if (!isDuplicate) {
-  formObject.values.push(newEntry);
-} else {
-  console.warn("Duplicate entry prevented");
-}
+    if (!isDuplicate) {
+      formObject.values.push(newEntry);
+    } else {
+      console.warn("Duplicate entry prevented");
+    }
   }
   showModal.value = false;
 };
@@ -689,7 +784,6 @@ const saveForm = async () => {
   }));
 
   try {
-   
     await $fetch(`${API_BASE_URL}/api/Transaction/update-transaction`, {
       method: "POST",
       headers: {

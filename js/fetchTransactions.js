@@ -31,6 +31,7 @@ export const getTransaction = async (transactionId) => {
         },
       }
     );
+    
     transactions.value = response;
     console.log("Transaction Data:", response);
   } catch (error) {

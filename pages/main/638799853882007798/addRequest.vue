@@ -223,19 +223,56 @@
               {{ formObject.label }}
             </h3>
           </div>
-          <input
-            v-else-if="formObject.objecttype === 'TEXT'"
-            type="text"
-            v-model="formAnswers[formObject.id]"
-            maxlength="55"
-            :class="[
-              'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-              formErrors[formObject.id]
-                ? 'border-red-500 focus:ring-red-500'
-                : 'border-gray-300 focus:ring-blue-500',
-            ]"
-            style="text-transform: uppercase"
-          />
+          <div v-else-if="formObject.objecttype === 'TEXT'">
+            <input
+              type="text"
+              v-model="formAnswers[formObject.id]"
+              @input="onInput(formObject.id)"
+              maxlength="55"
+              :class="[
+                'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+                formErrors[formObject.id]
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-blue-500',
+              ]"
+              :style="getInputStyle(formObject.id)"
+            />
+            <!-- Radio Buttons for Capitalization -->
+            <div class="flex space-x-4 mt-2 text-sm text-gray-700">
+              <label class="flex items-center space-x-1">
+                <input
+                  type="radio"
+                  :name="`caps-${formObject.id}`"
+                  value="original"
+                  v-model="capsSettings[formObject.id]"
+                  @change="applyCapsSetting(formObject.id)"
+                />
+                <span>Original</span>
+              </label>
+
+              <label class="flex items-center space-x-1">
+                <input
+                  type="radio"
+                  :name="`caps-${formObject.id}`"
+                  value="uppercase"
+                  v-model="capsSettings[formObject.id]"
+                  @change="applyCapsSetting(formObject.id)"
+                />
+                <span>Uppercase</span>
+              </label>
+
+              <label class="flex items-center space-x-1">
+                <input
+                  type="radio"
+                  :name="`caps-${formObject.id}`"
+                  value="lowercase"
+                  v-model="capsSettings[formObject.id]"
+                  @change="applyCapsSetting(formObject.id)"
+                />
+                <span>Lowercase</span>
+              </label>
+            </div>
+          </div>
 
           <input
             v-else-if="formObject.objecttype === 'NUMBER'"
@@ -264,20 +301,56 @@
                 : 'border-gray-300 focus:ring-blue-500',
             ]"
           />
+          
+          <div v-else-if="formObject.objecttype === 'TEXTAREA'">
+            <textarea
+              v-model="formAnswers[formObject.id]"
+              @input="onInput(formObject.id)"
+              maxlength="250"
+              :class="[
+                'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+                formErrors[formObject.id]
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-blue-500',
+              ]"
+              :style="getInputStyle(formObject.id)"
+            ></textarea>
+            <!-- Radio Buttons for Capitalization -->
+            <div class="flex space-x-4 mt-2 text-sm text-gray-700">
+              <label class="flex items-center space-x-1">
+                <input
+                  type="radio"
+                  :name="`caps-${formObject.id}`"
+                  value="original"
+                  v-model="capsSettings[formObject.id]"
+                  @change="applyCapsSetting(formObject.id)"
+                />
+                <span>Original</span>
+              </label>
 
-          <textarea
-            v-else-if="formObject.objecttype === 'TEXTAREA'"
-            v-model="formAnswers[formObject.id]"
-            maxlength="250"
-            :class="[
-              'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-              formErrors[formObject.id]
-                ? 'border-red-500 focus:ring-red-500'
-                : 'border-gray-300 focus:ring-blue-500',
-            ]"
-            style="text-transform: uppercase"
-          ></textarea>
+              <label class="flex items-center space-x-1">
+                <input
+                  type="radio"
+                  :name="`caps-${formObject.id}`"
+                  value="uppercase"
+                  v-model="capsSettings[formObject.id]"
+                  @change="applyCapsSetting(formObject.id)"
+                />
+                <span>Uppercase</span>
+              </label>
 
+              <label class="flex items-center space-x-1">
+                <input
+                  type="radio"
+                  :name="`caps-${formObject.id}`"
+                  value="lowercase"
+                  v-model="capsSettings[formObject.id]"
+                  @change="applyCapsSetting(formObject.id)"
+                />
+                <span>Lowercase</span>
+              </label>
+            </div>
+          </div>
           <div v-else-if="formObject.objecttype === 'TIME'">
             <div>
               <DateTimeInput v-model="formAnswers[formObject.id]" />
@@ -366,9 +439,14 @@
             <div class="flex justify-between items-center">
               <!-- Flex container -->
               <input
-                @focus="formObject.autoFillUser == 0 ? openModal(formObject.id, 'textfromsource') : null"
+                @focus="
+                  formObject.autoFillUser == 0
+                    ? openModal(formObject.id, 'textfromsource')
+                    : null
+                "
                 readonly
                 type="text"
+                @input="onInput(formObject.id)"
                 v-model="formDisplays[formObject.id]"
                 maxlength="55"
                 :class="[
@@ -377,10 +455,10 @@
                     ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-blue-500',
                 ]"
-                style="text-transform: uppercase"
+                :style="getInputStyle(formObject.id)"
               />
               <button
-              v-if="formObject.autoFillUser == 0"
+                v-if="formObject.autoFillUser == 0"
                 @click="openModal(formObject.id, 'textfromsource')"
                 class="ml-2 px-4 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg"
               >
@@ -401,7 +479,43 @@
                   />
                 </svg>
               </button>
+
             </div>
+             <!-- Radio Buttons for Capitalization -->
+        <div class="flex space-x-4 mt-2 text-sm text-gray-700">
+          <label class="flex items-center space-x-1">
+            <input
+              type="radio"
+              :name="`caps-${formObject.id}`"
+              value="original"
+              v-model="capsSettings[formObject.id]"
+              @change="applyCapsSetting(formObject.id)"
+            />
+            <span>Original</span>
+          </label>
+
+          <label class="flex items-center space-x-1">
+            <input
+              type="radio"
+              :name="`caps-${formObject.id}`"
+              value="uppercase"
+              v-model="capsSettings[formObject.id]"
+              @change="applyCapsSetting(formObject.id)"
+            />
+            <span>Uppercase</span>
+          </label>
+
+          <label class="flex items-center space-x-1">
+            <input
+              type="radio"
+              :name="`caps-${formObject.id}`"
+              value="lowercase"
+              v-model="capsSettings[formObject.id]"
+              @change="applyCapsSetting(formObject.id)"
+            />
+            <span>Lowercase</span>
+          </label>
+        </div>
           </div>
 
           <div v-else-if="formObject.objecttype === 'DYNAMICSIGNATORY'">
@@ -422,7 +536,6 @@
                     ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-blue-500',
                 ]"
-                style="text-transform: uppercase"
               />
 
               <!-- Remove Button -->
@@ -459,10 +572,11 @@
               </button>
             </div>
           </div>
+          <div v-else-if="formObject.objecttype === 'LINKTOOBJECT'">
           <input
-            v-else-if="formObject.objecttype === 'LINKTOOBJECT'"
             disabled
             type="text"
+            @input="onInput(formObject.id)"
             v-model="formAnswers[formObject.id]"
             :class="[
               'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
@@ -470,9 +584,44 @@
                 ? 'border-red-500 focus:ring-red-500'
                 : 'border-gray-300 focus:ring-blue-500',
             ]"
-            style="text-transform: uppercase"
+             :style="getInputStyle(formObject.id)"
           />
+            <!-- Radio Buttons for Capitalization -->
+        <div class="flex space-x-4 mt-2 text-sm text-gray-700">
+          <label class="flex items-center space-x-1">
+            <input
+              type="radio"
+              :name="`caps-${formObject.id}`"
+              value="original"
+              v-model="capsSettings[formObject.id]"
+              @change="applyCapsSetting(formObject.id)"
+            />
+            <span>Original</span>
+          </label>
 
+          <label class="flex items-center space-x-1">
+            <input
+              type="radio"
+              :name="`caps-${formObject.id}`"
+              value="uppercase"
+              v-model="capsSettings[formObject.id]"
+              @change="applyCapsSetting(formObject.id)"
+            />
+            <span>Uppercase</span>
+          </label>
+
+          <label class="flex items-center space-x-1">
+            <input
+              type="radio"
+              :name="`caps-${formObject.id}`"
+              value="lowercase"
+              v-model="capsSettings[formObject.id]"
+              @change="applyCapsSetting(formObject.id)"
+            />
+            <span>Lowercase</span>
+          </label>
+        </div>
+           </div> 
           <p v-else class="text-red-500 font-medium">
             Unknown type: {{ formObject.objecttype }}
           </p>
@@ -543,8 +692,8 @@
 
   <div
     v-if="showModal"
-      @click.self="showModal = false"
-      @keydown.esc="showModal = false"     
+    @click.self="showModal = false"
+    @keydown.esc="showModal = false"
     class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]"
   >
     <div class="w-full max-w-6xl bg-white shadow-lg rounded-lg p-6 relative">
@@ -555,7 +704,7 @@
           v-model="searchQuery"
           @keydown.enter="debouncedSearch(storeId)"
           placeholder="Enter to search"
-          ref="inputRef" 
+          ref="inputRef"
           class="w-full p-4 h-11 rounded border border-gray-600 focus:outline-none"
         />
         <button
@@ -675,7 +824,7 @@ import {
   debouncedSearch,
   justifications,
   searchJustifications,
-  loading
+  loading,
 } from "~/js/textfromsource";
 import { fetchCanAccess, nenunames } from "~/js/fetchMenu";
 import DateTimeInput from "~/components/DateTimeInput.vue";
@@ -700,9 +849,54 @@ const scrollContainer = ref(null);
 const objecttype = ref();
 const index = ref();
 const inputRef = ref(null);
+const capsSettings = ref({});
 const backButton = () => {
   router.push("/main/638799853882007798");
 };
+
+// Detect capitalization automatically
+function onInput(id) {
+  const text = formAnswers.value[id] || formDisplays.value[id] || ''
+  if (text === text.toUpperCase() && /[A-Z]/.test(text)) {
+    capsSettings.value[id] = 'uppercase'
+  } else if (text === text.toLowerCase() && /[a-z]/.test(text)) {
+    capsSettings.value[id] = 'lowercase'
+  } else {
+    capsSettings.value[id] = 'original'
+  }
+}
+
+// Apply user-selected capitalization
+function applyCapsSetting(id) {
+  const setting = capsSettings.value[id]
+  let text = formAnswers.value[id] || formDisplays.value[id] || ''
+
+  if (setting === 'uppercase') text = text.toUpperCase()
+  else if (setting === 'lowercase') text = text.toLowerCase()
+
+  formAnswers.value[id] = text
+  formDisplays.value[id] = text
+}
+
+// Watch for programmatic value changes (e.g., from modal)
+watch(
+  () => formAnswers.value,
+  (newVal) => {
+    Object.keys(newVal).forEach(id => {
+      onInput(id)
+    })
+  },
+  { deep: true }
+)
+
+// UI styling
+function getInputStyle(id) {
+  const setting = capsSettings.value[id]
+  if (setting === 'uppercase') return { textTransform: 'uppercase' }
+  if (setting === 'lowercase') return { textTransform: 'lowercase' }
+  return {}
+}
+
 
 const toggleDropdown = () => {
   isOpen.value = !isOpen.value;
@@ -779,12 +973,11 @@ function clearFormId() {
 }
 
 const selectEmployee = (id, justification) => {
-  console.log(id,justification);
+  console.log(id, justification);
   // Save hidden and visible data
   if (objecttype.value == "textfromsource") {
     formAnswers.value[id] = justification.display;
     formDisplays.value[id] = justification.display;
- 
 
     // Filter formObjects where formobjectsourceid matches selected ID
     const matchedFormObjects = formDetails.value?.formObjects?.filter(
@@ -857,7 +1050,6 @@ const getDisplayBinding = (formId, index) =>
     get: () => {
       const item = formAnswers.value[formId][index];
       return typeof item === "object" ? item.value : item;
-
     },
     set: (newDisplay) => {
       const item = formAnswers.value[formId][index];
@@ -890,7 +1082,10 @@ const getDetails = async () => {
     await getFormDetails(formId.value);
 
     if (formDetails.value?.formObjects?.length) {
-      console.log("here", JSON.parse(JSON.stringify(formDetails.value.formObjects)));
+      console.log(
+        "here",
+        JSON.parse(JSON.stringify(formDetails.value.formObjects))
+      );
 
       for (const formObject of formDetails.value.formObjects) {
         if (formObject.autoFillUser === 1) {
@@ -902,8 +1097,7 @@ const getDetails = async () => {
 
           // ✅ Handle autofill if the object type is "TEXTFROMSOURCE" (case-insensitive)
           if (formObject.objecttype?.toLowerCase() === "textfromsource") {
-            
-            handleTextFromSource(formObject.id,);
+            handleTextFromSource(formObject.id);
           }
 
           console.log("Autofill done for:", formObject.id);
@@ -916,7 +1110,6 @@ const getDetails = async () => {
     isLoading.value = false;
   }
 };
-
 
 const toggleChecklist = (formObjectId, value) => {
   if (!Array.isArray(formAnswers.value[formObjectId])) {
@@ -1033,7 +1226,6 @@ const submitAnswers = async () => {
   };
 
   try {
-   
     await $fetch(`${API_BASE_URL}/api/FormObject/submit-answers`, {
       method: "POST",
       headers: {
@@ -1076,7 +1268,6 @@ const submitAnswers = async () => {
 onMounted(async () => {
   await getTitle();
   await getDetails();
-  
 
   const hash = window.location.hash;
   const parts = hash.split("/");
@@ -1084,6 +1275,12 @@ onMounted(async () => {
   await fetchCanAccess(paramid.value);
   nenunames.value.push("Create");
   document.addEventListener("click", handleClickOutside);
+
+  formDetails.value.formObjects.forEach((obj) => {
+    if (obj.objecttype !== "LABEL") {
+      capsSettings.value[obj.id] = "original";
+    }
+  });
 });
 
 onBeforeUnmount(() => {
