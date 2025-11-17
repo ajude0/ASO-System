@@ -41,6 +41,8 @@
     "@nuxtjs/axios": "^5.13.6",
     "crypto-js": "^4.2.0",
     "jsqr": "^1.4.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^5.4.394",
     "signature_pad": "^5.1.0",
     "sweetalert2": "^11.17.2",
     "vuedraggable": "^4.1.0"
