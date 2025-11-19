@@ -142,25 +142,44 @@ const savedUserSignature = ref(null);
 const prePlacedSignatures = ref([
     // Example format matching your database structure:
     {
-         
         canvasHeight: 1108,
         canvasWidth: 856,
         datePosition: {
             canvasHeight: 1108,
             canvasWidth: 856,
             dateText: "01-10-2032",
-            height:32,
-            width: 104,
-            x: 635,
-            y: 197,
+            height:31,
+            width: 103,
+            x: 672,
+            y: 394,
+        },
+        height: 172,
+        imageSrc: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', // placeholder
+        page: 16,
+        pdfLibY: 639,
+        width: 261,
+        x: 445,
+        y: 297
+    },
+     {
+        canvasHeight: 1108,
+        canvasWidth: 856,
+        datePosition: {
+            canvasHeight: 1108,
+            canvasWidth: 856,
+            dateText: "11-18-2032",
+            height:31,
+            width: 103,
+            x: 676,
+            y: 607,
         },
         height: 48,
         imageSrc: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', // placeholder
-        page: 1,
-        pdfLibY: 868,
-        width: 128,
-        x: 134,
-        y: 192,
+        page: 16,
+        pdfLibY: 465,
+        width: 93,
+        x: 534,
+        y: 595
     }
 ]);
 

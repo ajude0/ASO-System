@@ -30,15 +30,24 @@ const dateDisplayRef = ref(null);
 
 // User's draggable signature position
 const userSignaturePos = ref({ x: 50, y: 50 });
+const userSignatureSize = ref({ width: 128, height: 64 }); // Persistent size
 const isDragging = ref(false);
 const dragOffset = ref({ x: 0, y: 0 });
 const userSignaturePageIndex = ref(0);
+const currentViewPage = ref(1);
 
 // Date properties
 const dateDisplayPos = ref({ x: 100, y: 100 });
 const isDraggingDate = ref(false);
 const dragOffsetDate = ref({ x: 0, y: 0 });
 const currentDate = ref(new Date().toLocaleDateString());
+
+// Resizing
+const isResizing = ref(false);
+const resizeStart = ref({ x: 0, y: 0, width: 0, height: 0 });
+
+// Go to Page input
+const goToPageNumber = ref(1);
 
 // Load PDF when modal opens
 watch(() => props.isOpen, async (newVal) => {
@@ -65,20 +74,16 @@ const loadPdf = async () => {
     pdfDocument.value = pdf;
     totalPages.value = pdf.numPages;
 
-    // Clear previous canvases
     canvasRefs.value = [];
     prePlacedSigRefs.value = [];
     prePlacedDateRefs.value = [];
 
-    // Wait for DOM update
     await nextTick();
 
-    // Render all pages
     for (let i = 1; i <= pdf.numPages; i++) {
       await renderPage(i);
     }
 
-    // Force update pre-placed signatures positions after rendering
     await nextTick();
     updatePrePlacedPositions();
   } catch (error) {
@@ -101,7 +106,6 @@ const renderPage = async (pageNum) => {
 
     await page.render({ canvasContext: ctx, viewport }).promise;
 
-    // Update pre-placed signature positions after each page renders
     await nextTick();
     updatePrePlacedPositions();
   } catch (error) {
@@ -109,118 +113,49 @@ const renderPage = async (pageNum) => {
   }
 };
 
-// Calculate position for pre-placed signatures and their dates
+// Update pre-placed signatures and dates
 const updatePrePlacedPositions = () => {
   if (!containerRef.value || canvasRefs.value.length === 0) return;
 
-  console.log('=== updatePrePlacedPositions ===');
-  console.log('Container exists:', !!containerRef.value);
-  console.log('Canvas count:', canvasRefs.value.length);
-  console.log('Signatures to place:', props.prePlacedSignatures.length);
-
-  // Update signature positions
   props.prePlacedSignatures.forEach((sig, index) => {
     const pageIndex = sig.page - 1;
     const canvas = canvasRefs.value[pageIndex];
     const sigElement = prePlacedSigRefs.value[index];
-
-    console.log(`\nSignature ${index}:`, {
-      page: sig.page,
-      hasCanvas: !!canvas,
-      hasSigElement: !!sigElement,
-      sigX: sig.x,
-      sigY: sig.y
-    });
-
-    if (!canvas || !sigElement) {
-      console.log('Missing canvas or sig element');
-      return;
-    }
+    if (!canvas || !sigElement) return;
 
     const canvasRect = canvas.getBoundingClientRect();
     const containerRect = containerRef.value.getBoundingClientRect();
 
-    console.log('Canvas rect:', {
-      left: canvasRect.left,
-      top: canvasRect.top,
-      width: canvasRect.width,
-      height: canvasRect.height
-    });
-    console.log('Container rect:', {
-      left: containerRect.left,
-      top: containerRect.top
-    });
-
-    // Calculate signature position: canvas position + offset from canvas
     const left = canvasRect.left - containerRect.left + sig.x;
     const top = canvasRect.top - containerRect.top + sig.y;
-
-    console.log('Calculated signature position:', { left, top });
 
     sigElement.style.left = left + 'px';
     sigElement.style.top = top + 'px';
   });
 
-  // Update date positions
   props.prePlacedSignatures.forEach((sig, sigIndex) => {
     if (!sig.datePosition) return;
 
     const pageIndex = sig.page - 1;
     const canvas = canvasRefs.value[pageIndex];
-    
-    // Find the correct date element for this signature
+
     const dateIndex = props.prePlacedSignatures
       .slice(0, sigIndex)
       .filter(s => s.datePosition).length;
-    
+
     const dateElement = prePlacedDateRefs.value[dateIndex];
-
-    console.log(`\nDate for signature ${sigIndex}:`, {
-      page: sig.page,
-      dateIndex: dateIndex,
-      hasCanvas: !!canvas,
-      hasDateElement: !!dateElement,
-      dateX: sig.datePosition.x,
-      dateY: sig.datePosition.y,
-      dateText: sig.datePosition.dateText
-    });
-
-    if (!canvas || !dateElement) {
-      console.log('Missing canvas or date element');
-      return;
-    }
+    if (!canvas || !dateElement) return;
 
     const canvasRect = canvas.getBoundingClientRect();
     const containerRect = containerRef.value.getBoundingClientRect();
 
-    // Calculate date position: canvas position + offset from canvas
     const dateLeft = canvasRect.left - containerRect.left + sig.datePosition.x;
     const dateTop = canvasRect.top - containerRect.top + sig.datePosition.y;
-
-    console.log('Calculated date position:', { dateLeft, dateTop });
 
     dateElement.style.left = dateLeft + 'px';
     dateElement.style.top = dateTop + 'px';
   });
-
-  console.log('=== End updatePrePlacedPositions ===\n');
 };
-
-// Watch for prop changes and update positions
-watch(() => props.prePlacedSignatures, () => {
-  nextTick(() => {
-    updatePrePlacedPositions();
-  });
-}, { deep: true, immediate: true });
-
-// Update positions when canvases are rendered
-watch(canvasRefs, () => {
-  if (canvasRefs.value.length > 0) {
-    nextTick(() => {
-      updatePrePlacedPositions();
-    });
-  }
-}, { deep: true });
 
 // Drag handlers for user's signature
 const handleMouseDown = (e) => {
@@ -233,91 +168,100 @@ const handleMouseDown = (e) => {
 };
 
 const handleMouseMove = (e) => {
+  // Drag signature
   if (isDragging.value) {
     const container = containerRef.value.getBoundingClientRect();
     const newX = e.clientX - container.left - dragOffset.value.x;
     const newY = e.clientY - container.top - dragOffset.value.y;
-
     userSignaturePos.value = { x: newX, y: newY };
     updateUserSignaturePage();
   }
 
+  // Drag date
   if (isDraggingDate.value) {
     const container = containerRef.value.getBoundingClientRect();
     const newX = e.clientX - container.left - dragOffsetDate.value.x;
     const newY = e.clientY - container.top - dragOffsetDate.value.y;
-
     dateDisplayPos.value = { x: newX, y: newY };
+  }
+
+  // Resize
+  if (isResizing.value) {
+    const dx = e.clientX - resizeStart.value.x;
+    const dy = e.clientY - resizeStart.value.y;
+    userSignatureSize.value.width = Math.max(20, resizeStart.value.width + dx);
+    userSignatureSize.value.height = Math.max(10, resizeStart.value.height + dy);
   }
 };
 
 const handleMouseUp = () => {
   isDragging.value = false;
   isDraggingDate.value = false;
+  isResizing.value = false;
   updateUserSignaturePage();
+};
+
+// Resizing
+const handleResizeMouseDown = (e) => {
+  e.stopPropagation();
+  isResizing.value = true;
+  resizeStart.value = {
+    x: e.clientX,
+    y: e.clientY,
+    width: userSignatureSize.value.width,
+    height: userSignatureSize.value.height
+  };
+};
+
+// Date drag handlers
+const handleDateMouseDown = (e) => {
+  isDraggingDate.value = true;
+  const rect = dateDisplayRef.value.getBoundingClientRect();
+  dragOffsetDate.value = {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
+  };
 };
 
 // Calculate which page user's signature is on
 const updateUserSignaturePage = () => {
   if (!userSignatureImg.value || canvasRefs.value.length === 0) return;
-
+  const canvas = canvasRefs.value[currentViewPage.value - 1];
+  if (!canvas) return;
   const sigRect = userSignatureImg.value.getBoundingClientRect();
+  const canvasRect = canvas.getBoundingClientRect();
   const sigCenterY = sigRect.top + sigRect.height / 2;
-
-  for (let i = 0; i < canvasRefs.value.length; i++) {
-    const canvas = canvasRefs.value[i];
-    if (!canvas) continue;
-
-    const canvasRect = canvas.getBoundingClientRect();
-    if (sigCenterY >= canvasRect.top && sigCenterY <= canvasRect.bottom) {
-      userSignaturePageIndex.value = i;
-      return;
-    }
+  if (sigCenterY >= canvasRect.top && sigCenterY <= canvasRect.bottom) {
+    userSignaturePageIndex.value = currentViewPage.value - 1;
   }
 };
 
 // Save user's signature position
 const saveUserSignaturePosition = () => {
-  if (!userSignatureImg.value || canvasRefs.value.length === 0) {
-    console.error('Signature or canvas not found');
-    return;
-  }
-
+  if (!userSignatureImg.value || canvasRefs.value.length === 0) return;
   const canvas = canvasRefs.value[userSignaturePageIndex.value];
   const canvasRect = canvas.getBoundingClientRect();
   const sigRect = userSignatureImg.value.getBoundingClientRect();
-  const containerRect = containerRef.value.getBoundingClientRect();
 
-  // Calculate signature position relative to the canvas
   const sigX = sigRect.left - canvasRect.left;
   const sigY = sigRect.top - canvasRect.top;
-
-  console.log('=== SAVING POSITION ===');
-  console.log('Canvas rect:', canvasRect);
-  console.log('Signature rect:', sigRect);
-  console.log('Calculated sig position:', { sigX, sigY });
 
   const positionData = {
     page: userSignaturePageIndex.value + 1,
     x: Math.round(sigX),
     y: Math.round(sigY),
-    width: Math.round(sigRect.width),
-    height: Math.round(sigRect.height),
+    width: Math.round(userSignatureSize.value.width),
+    height: Math.round(userSignatureSize.value.height),
     canvasWidth: canvas.width,
     canvasHeight: canvas.height,
-    pdfLibY: Math.round(canvas.height - sigY - sigRect.height),
+    pdfLibY: Math.round(canvas.height - sigY - userSignatureSize.value.height),
     imageSrc: userSignatureSrc.value
   };
 
-  // Calculate date position relative to the SAME canvas
   if (dateDisplayRef.value) {
     const dateRect = dateDisplayRef.value.getBoundingClientRect();
     const dateX = dateRect.left - canvasRect.left;
     const dateY = dateRect.top - canvasRect.top;
-    
-    console.log('Date rect:', dateRect);
-    console.log('Calculated date position:', { dateX, dateY });
-    
     positionData.datePosition = {
       x: Math.round(dateX),
       y: Math.round(dateY),
@@ -329,21 +273,39 @@ const saveUserSignaturePosition = () => {
     };
   }
 
-  console.log('Final position data:', positionData);
-  console.log('=== END SAVING ===\n');
-
   emit('save-position', positionData);
   emit('close');
 };
 
-// Date drag handlers
-const handleDateMouseDown = (e) => {
-  isDraggingDate.value = true;
-  const rect = dateDisplayRef.value.getBoundingClientRect();
-  dragOffsetDate.value = {
-    x: e.clientX - rect.left,
-    y: e.clientY - rect.top
-  };
+// Page navigation
+const goToNextPage = () => {
+  if (currentViewPage.value < totalPages.value) {
+    currentViewPage.value++;
+    nextTick(() => {
+      updateUserSignaturePage();
+      updatePrePlacedPositions();
+    });
+  }
+};
+
+const goToPrevPage = () => {
+  if (currentViewPage.value > 1) {
+    currentViewPage.value--;
+    nextTick(() => {
+      updateUserSignaturePage();
+      updatePrePlacedPositions();
+    });
+  }
+};
+
+const scrollToPage = (pageNum) => {
+  if (pageNum >= 1 && pageNum <= totalPages.value) {
+    currentViewPage.value = pageNum;
+    nextTick(() => {
+      updateUserSignaturePage();
+      updatePrePlacedPositions();
+    });
+  }
 };
 
 // Mount/unmount event listeners
@@ -359,14 +321,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <!-- Modal Overlay -->
   <div
     v-if="isOpen"
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center w-full z-50"
     @click.self="emit('close')"
   >
-    <!-- Modal Content -->
     <div class="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] flex flex-col m-4">
+
       <!-- Header -->
       <div class="flex items-center justify-between p-4 border-b">
         <div>
@@ -375,72 +336,110 @@ onUnmounted(() => {
             {{ prePlacedSignatures.length }} pre-placed signature(s) already on document
           </p>
         </div>
-        <button
-          @click="emit('close')"
-          class="p-2 hover:bg-gray-100 rounded-full transition"
-        >
+        <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      <!-- PDF Container (Scrollable) -->
+      <!-- Page Navigation + Go To Page -->
+      <div class="mt-4 flex items-center justify-center gap-4 flex-wrap">
+        <button
+          @click="goToPrevPage"
+          :disabled="currentViewPage === 1"
+          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+          Previous
+        </button>
+
+        <div class="text-sm font-semibold text-gray-700">
+          Page {{ currentViewPage }} of {{ totalPages }}
+        </div>
+
+        <button
+          @click="goToNextPage"
+          :disabled="currentViewPage === totalPages"
+          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          Next
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        <div class="flex items-center gap-2">
+          <input
+            type="number"
+            min="1"
+            :max="totalPages"
+            v-model.number="goToPageNumber"
+            @keydown.enter="scrollToPage(goToPageNumber)"
+            class="border rounded px-2 py-1 w-16 text-sm"
+            placeholder="Page #"
+          />
+          <button
+            @click="scrollToPage(goToPageNumber)"
+            class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm"
+          >
+            Go
+          </button>
+        </div>
+      </div>
+
+      <!-- PDF Container -->
       <div class="flex-1 overflow-auto p-6">
         <div ref="containerRef" class="relative inline-block">
-          <!-- All PDF Pages -->
-          <div class="space-y-4">
-            <div
+          <div class="relative border-2 border-gray-300 rounded shadow-sm">
+            <div class="absolute -top-3 left-4 bg-white px-2 py-1 text-xs font-semibold text-gray-600 border rounded z-10">
+              Page {{ currentViewPage }}
+            </div>
+
+            <canvas
               v-for="i in totalPages"
               :key="i"
-              class="relative border-2 border-gray-300 rounded shadow-sm"
-            >
-              <!-- Page Number Label -->
-              <div class="absolute -top-3 left-4 bg-white px-2 py-1 text-xs font-semibold text-gray-600 border rounded z-10">
-                Page {{ i }}
-              </div>
-              <canvas
-                :ref="el => { if (el) canvasRefs[i - 1] = el }"
-                class="block"
-              ></canvas>
-            </div>
+              v-show="i === currentViewPage"
+              :ref="el => { if (el) canvasRefs[i - 1] = el }"
+              class="block"
+            ></canvas>
           </div>
 
-          <!-- Pre-placed Signatures (Read-only, non-draggable) -->
+          <!-- Pre-placed Signatures -->
           <img
             v-for="(sig, index) in prePlacedSignatures"
             :key="'preplaced-' + index"
             :ref="el => { if (el) prePlacedSigRefs[index] = el }"
+            v-show="sig.page === currentViewPage"
             :src="sig.imageSrc"
             class="absolute select-none pointer-events-none border-2 border-gray-400 rounded"
-            :style="{
-              width: sig.width + 'px',
-              height: sig.height + 'px'
-            }"
-            :title="'Pre-placed signature on page ' + sig.page"
-            draggable="false"
+            :style="{ width: sig.width + 'px', height: sig.height + 'px' }"
           />
 
-          <!-- Pre-placed Date Displays -->
+          <!-- Pre-placed Dates -->
           <div
             v-for="(sig, index) in prePlacedSignatures.filter(s => s.datePosition)"
             :key="'date-' + index"
             :ref="el => { if (el) prePlacedDateRefs[index] = el }"
-            class="absolute select-none pointer-events-none text-xs font-semibold text-gray-600 bg-white border-2 border-gray-400 rounded px-2 py-1 shadow-lg"
+            v-show="sig.page === currentViewPage"
+            class="absolute select-none pointer-events-none text-md font-semibold text-gray-600 rounded px-2 py-1"
           >
             {{ sig.datePosition.dateText }}
           </div>
 
-          <!-- User's Draggable Signature (Blue border) -->
+          <!-- User Signature -->
           <img
             v-if="userSignatureSrc"
             ref="userSignatureImg"
             :src="userSignatureSrc"
-            class="absolute cursor-move w-32 select-none shadow-lg border-2 border-blue-500 rounded"
-            :style="{
+            class="absolute cursor-move select-none shadow-lg border-2 border-blue-500 rounded"
+            :style="{ 
               left: userSignaturePos.x + 'px',
               top: userSignaturePos.y + 'px',
-              userSelect: 'none',
+              width: userSignatureSize.width + 'px',
+              height: userSignatureSize.height + 'px',
               zIndex: 100
             }"
             @mousedown="handleMouseDown"
@@ -448,43 +447,26 @@ onUnmounted(() => {
             title="Drag to position your signature"
           />
 
-          <!-- Draggable Date Display -->
+          <!-- Resize Handle -->
+          <div
+            v-if="userSignatureSrc"
+            class="absolute w-4 h-4 bg-blue-500 bottom-0 right-0 cursor-se-resize z-50"
+            :style="{ 
+              left: userSignaturePos.x + userSignatureSize.width - 8 + 'px',
+              top: userSignaturePos.y + userSignatureSize.height - 8 + 'px'
+            }"
+            @mousedown="handleResizeMouseDown"
+          ></div>
+
+          <!-- Draggable Date -->
           <div
             ref="dateDisplayRef"
             class="absolute cursor-move select-none shadow-lg border-2 border-green-500 rounded px-3 py-1 bg-white z-50"
-            :style="{
-              left: dateDisplayPos.x + 'px',
-              top: dateDisplayPos.y + 'px',
-              userSelect: 'none',
-              fontSize: '14px',
-              fontWeight: 'bold'
-            }"
+            :style="{ left: dateDisplayPos.x + 'px', top: dateDisplayPos.y + 'px', userSelect: 'none', fontSize: '14px', fontWeight: 'bold' }"
             @mousedown="handleDateMouseDown"
             draggable="false"
           >
             {{ currentDate }}
-          </div>
-        </div>
-
-        <!-- Instructions -->
-        <div class="mt-6 p-4 bg-blue-50 rounded-lg">
-          <div class="text-sm text-blue-800">
-            <p class="font-semibold mb-2">Instructions:</p>
-            <ul class="list-disc list-inside space-y-1">
-              <li v-if="prePlacedSignatures.length > 0">
-                <span class="text-gray-600 font-semibold">Gray bordered signatures</span> are pre-placed and cannot be moved.
-              </li>
-              <li>
-                <span class="text-blue-600 font-semibold">Your signature (blue border)</span> can be dragged to any position.
-              </li>
-              <li>
-                <span class="text-green-600 font-semibold">Date display (green border)</span> can be dragged to any position.
-              </li>
-              <li>Click "Save Position" when you're done positioning your signature.</li>
-            </ul>
-            <p v-if="userSignaturePageIndex !== null" class="mt-3 font-semibold">
-              Your signature will be placed on: Page {{ userSignaturePageIndex + 1 }}
-            </p>
           </div>
         </div>
       </div>
@@ -510,18 +492,7 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.select-none {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-.pointer-events-none {
-  pointer-events: none;
-}
-
-.space-y-4 > * + * {
-  margin-top: 1rem;
-}
+.select-none { user-select: none; }
+.pointer-events-none { pointer-events: none; }
+.space-y-4 > * + * { margin-top: 1rem; }
 </style>
