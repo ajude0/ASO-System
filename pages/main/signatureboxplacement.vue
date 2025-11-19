@@ -6,7 +6,8 @@ const isSigningModalOpen = ref(false);
 const isPlacementModalOpen = ref(false);
 const pdfFile = ref(null);
 const signatureFile = ref(null);
-const currentUserName = ref('John Doe');
+const currentUserName = ref('AUSTINE JUDE D. MENDOZA');
+const currentEmplId = ref("241212458")
 
 // Available users for assignment
 const availableUsers = ref([
@@ -73,7 +74,7 @@ const openSigningModal = () => {
   }
   
   const userSignatures = prePlacedSignatures.value.filter(
-    s => s.assignedTo === currentUserName.value && s.isEmpty
+    s => s.assignedEmplId === currentEmplId.value && s.isEmpty
   );
   
   if (userSignatures.length === 0) {
@@ -324,34 +325,6 @@ const saveFinalPdf = () => {
             </div>
           </div>
 
-          <!-- By User Stats -->
-          <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-semibold mb-4">Progress by User</h2>
-            <div class="space-y-3">
-              <div 
-                v-for="user in availableUsers"
-                :key="user"
-                class="p-3 rounded transition-all"
-                :class="user === currentUserName ? 'bg-blue-50 border-2 border-blue-200' : 'bg-gray-50 border border-gray-200'"
-              >
-                <div class="flex justify-between items-center mb-1">
-                  <span class="font-medium text-sm">{{ user }}</span>
-                  <span class="text-sm">
-                    <span :class="getUserStats(user).signed === getUserStats(user).total && getUserStats(user).total > 0 ? 'text-green-600 font-bold' : 'text-gray-600'">
-                      {{ getUserStats(user).signed }}/{{ getUserStats(user).total }}
-                    </span>
-                  </span>
-                </div>
-                <div v-if="getUserStats(user).total > 0" class="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    class="bg-green-500 h-2 rounded-full transition-all"
-                    :style="{ width: `${(getUserStats(user).signed / getUserStats(user).total * 100)}%` }"
-                  ></div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           <!-- Signature Boxes List -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4">All Signature Boxes</h2>
@@ -395,8 +368,7 @@ const saveFinalPdf = () => {
     <SignatureBoxPlacement
       :is-open="isPlacementModalOpen"
       :pdf-file="pdfFile"
-      :available-users="availableUsers"
-      :existing-signatures="prePlacedSignatures"
+      :existingSignatures="prePlacedSignatures"
       @close="closePlacementModal"
       @save-signatures="handleSaveSignatures"
     />
@@ -406,7 +378,8 @@ const saveFinalPdf = () => {
       :is-open="isSigningModalOpen"
       :pdf-file="pdfFile"
       :signature-file="signatureFile"
-      :current-user-name="currentUserName"
+      :current-user-name= "currentUserName"
+      :current-empl-id="currentEmplId"
       :pre-placed-signatures="prePlacedSignatures"
       @close="closeSigningModal"
       @apply-signature="handleApplySignature"

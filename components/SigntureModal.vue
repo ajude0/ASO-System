@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import { ref, watch, onMounted, onUnmounted, nextTick, reactive } from 'vue';
 
 // Props
 const props = defineProps({
@@ -7,6 +7,7 @@ const props = defineProps({
   pdfFile: File,
   signatureFile: File,
   currentUserName: String,
+  currentEmplId: String,
   prePlacedSignatures: {
     type: Array,
     default: () => []
@@ -32,8 +33,21 @@ const goToPageNumber = ref(1);
 const editingSignatureIndex = ref(null);
 const isDraggingSignature = ref(false);
 const isResizingSignature = ref(false);
+const isDraggingDate = ref(false);
+const currentDraggingDateIndex = ref(null);
 const dragOffsetSig = ref({ x: 0, y: 0 });
+const dragOffsetDate = ref({ x: 0, y: 0 });
 const resizeStartSig = ref({ x: 0, y: 0, width: 0, height: 0 });
+
+// Create a reactive copy of the prePlacedSignatures
+const localSignatures = reactive([...props.prePlacedSignatures]);
+
+// Watch for prop changes and update the local copy
+watch(() => props.prePlacedSignatures, (newSigs) => {
+  for (let i = 0; i < newSigs.length; i++) {
+    localSignatures[i] = { ...newSigs[i] };
+  }
+}, { deep: true });
 
 // Load PDF when modal opens
 watch(() => props.isOpen, async (newVal) => {
@@ -144,12 +158,12 @@ const updatePrePlacedPositions = () => {
 
 // Check if current user can sign this box
 const canUserSign = (sig) => {
-  return sig.isEmpty && sig.assignedTo === props.currentUserName;
+  return sig.isEmpty && sig.assignedEmplId === props.currentEmplId;
 };
 
 // Check if user can edit this signature
 const canUserEdit = (sig) => {
-  return !sig.isEmpty && sig.signedBy === props.currentUserName;
+  return !sig.isEmpty && sig.assignedEmplId === props.currentEmplId;
 };
 
 // Track if user actually dragged (to distinguish from click)
@@ -174,7 +188,7 @@ const handlePrePlacedClick = (sig, index) => {
     if (!sig.isEmpty) {
       return; // Already signed by someone else
     }
-    if (sig.assignedTo !== props.currentUserName) {
+    if (sig.assignedEmplId !== props.currentEmplId) {
       alert(`This signature box is assigned to "${sig.assignedTo}". You cannot sign here.`);
       return;
     }
@@ -227,19 +241,32 @@ const startDraggingSignature = (e, index) => {
   };
 };
 
+// Start dragging date
+const startDraggingDate = (e, sigIndex) => {
+  const sig = props.prePlacedSignatures[sigIndex];
+  if (!canUserEdit(sig) || !sig.datePosition) return;
+
+  e.stopPropagation();
+  e.preventDefault();
+  isDraggingDate.value = true;
+  currentDraggingDateIndex.value = sigIndex;
+  draggedDistance.value = 0;
+
+  const canvas = canvasRefs.value[sig.page - 1];
+  const canvasRect = canvas.getBoundingClientRect();
+
+  dragStartPos.value = {
+    x: e.clientX,
+    y: e.clientY
+  };
+
+  dragOffsetDate.value = {
+    x: e.clientX - canvasRect.left - sig.datePosition.x,
+    y: e.clientY - canvasRect.top - sig.datePosition.y
+  };
+};
+
 // Drag signature
-
-// Create a reactive copy of the prePlacedSignatures
-const localSignatures = reactive([...props.prePlacedSignatures]);
-
-// Watch for prop changes and update the local copy
-watch(() => props.prePlacedSignatures, (newSigs) => {
-  for (let i = 0; i < newSigs.length; i++) {
-    localSignatures[i] = { ...newSigs[i] };
-  }
-}, { deep: true });
-
-// Update dragSignature to update localSignatures instead of only emitting
 const dragSignature = (e) => {
   if (!isDraggingSignature.value || editingSignatureIndex.value === null) return;
 
@@ -247,7 +274,7 @@ const dragSignature = (e) => {
   const dy = e.clientY - dragStartPos.value.y;
   draggedDistance.value = Math.sqrt(dx * dx + dy * dy);
 
-  const sig = localSignatures[editingSignatureIndex.value]; // use reactive local copy
+  const sig = localSignatures[editingSignatureIndex.value];
   const canvas = canvasRefs.value[sig.page - 1];
   const canvasRect = canvas.getBoundingClientRect();
 
@@ -265,6 +292,30 @@ const dragSignature = (e) => {
 
   // Emit updated signature
   emit('apply-signature', { index: editingSignatureIndex.value, signatureData: { ...sig } });
+};
+
+// Drag date
+const dragDate = (e) => {
+  if (!isDraggingDate.value || currentDraggingDateIndex.value === null) return;
+
+  const dx = e.clientX - dragStartPos.value.x;
+  const dy = e.clientY - dragStartPos.value.y;
+  draggedDistance.value = Math.sqrt(dx * dx + dy * dy);
+
+  const sig = localSignatures[currentDraggingDateIndex.value];
+  if (!sig.datePosition) return;
+
+  const canvas = canvasRefs.value[sig.page - 1];
+  const canvasRect = canvas.getBoundingClientRect();
+
+  const newX = e.clientX - canvasRect.left - dragOffsetDate.value.x;
+  const newY = e.clientY - canvasRect.top - dragOffsetDate.value.y;
+
+  sig.datePosition.x = Math.max(0, Math.min(newX, canvas.width - 100));
+  sig.datePosition.y = Math.max(0, Math.min(newY, canvas.height - 30));
+
+  // Emit updated signature
+  emit('apply-signature', { index: currentDraggingDateIndex.value, signatureData: { ...sig } });
 };
 
 // Start resizing signature
@@ -325,6 +376,8 @@ const resizeSignature = (e) => {
 const handleMouseMove = (e) => {
   if (isDraggingSignature.value) {
     dragSignature(e);
+  } else if (isDraggingDate.value) {
+    dragDate(e);
   } else if (isResizingSignature.value) {
     resizeSignature(e);
   }
@@ -333,7 +386,9 @@ const handleMouseMove = (e) => {
 // Handle mouse up
 const handleMouseUp = () => {
   isDraggingSignature.value = false;
+  isDraggingDate.value = false;
   isResizingSignature.value = false;
+  currentDraggingDateIndex.value = null;
   
   // Reset drag distance after a short delay to allow click handler to check it
   setTimeout(() => {
@@ -343,7 +398,7 @@ const handleMouseUp = () => {
 
 // Count signatures for current user
 const getMyPendingSignatures = () => {
-  return props.prePlacedSignatures.filter(s => s.isEmpty && s.assignedTo === props.currentUserName).length;
+  return props.prePlacedSignatures.filter(s => s.isEmpty && s.assignedEmplId === props.currentEmplId).length;
 };
 
 const getMyCompletedSignatures = () => {
@@ -494,7 +549,7 @@ onUnmounted(() => {
             class="absolute rounded transition-all group"
             :class="{
               'border-2 border-dashed border-green-500 bg-green-50 cursor-pointer hover:bg-green-100 hover:border-green-600': canUserSign(sig),
-              'border-2 border-dashed border-gray-300 bg-gray-50 cursor-not-allowed': sig.isEmpty && sig.assignedTo !== currentUserName,
+              'border-2 border-dashed border-gray-300 bg-gray-50 cursor-not-allowed': sig.isEmpty && sig.assignedEmplId !== currentEmplId,
               'border-2 border-blue-500 bg-blue-50': canUserEdit(sig) && editingSignatureIndex === index,
               'border-2 border-blue-400 bg-blue-50 hover:border-blue-600': canUserEdit(sig) && editingSignatureIndex !== index,
               'border-2 border-gray-400 bg-gray-100': !sig.isEmpty && sig.signedBy !== currentUserName,
@@ -547,14 +602,20 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Dates for signed signatures -->
+          <!-- Dates for signed signatures - NOW DRAGGABLE -->
           <div
             v-for="(sig, index) in localSignatures.filter(s => s.datePosition)"
             :key="'date-' + index"
             :ref="el => { if (el) prePlacedDateRefs[index] = el }"
             v-show="sig.page === currentViewPage"
-            class="absolute select-none pointer-events-none text-sm font-semibold text-gray-700 rounded px-2 py-1"
+            class="absolute select-none text-sm font-semibold text-gray-700 rounded px-2 py-1 border border-gray-300 bg-gray-50 transition-all"
+            :class="{
+              'cursor-move hover:bg-gray-200 hover:border-gray-500': canUserEdit(sig),
+              'cursor-default': !canUserEdit(sig)
+            }"
             :style="{ left: sig.datePosition.x + 'px', top: sig.datePosition.y + 'px' }"
+            @mousedown="canUserEdit(sig) ? startDraggingDate($event, index) : null"
+            :title="canUserEdit(sig) ? 'Drag to move date' : ''"
           >
             {{ sig.datePosition.dateText }}
           </div>
@@ -567,6 +628,7 @@ onUnmounted(() => {
           <p class="font-semibold">💡 Tips:</p>
           <p>• Click green boxes to sign</p>
           <p>• Click your signatures to edit, drag to move, resize from corner</p>
+          <p>• Drag date fields independently to reposition them</p>
         </div>
         <button
           @click="emit('close')"
@@ -578,7 +640,6 @@ onUnmounted(() => {
     </div>
   </div>
 </template>
-
 
 <style scoped>
 .select-none { user-select: none; }
