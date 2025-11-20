@@ -15,7 +15,7 @@ const props = defineProps({
 });
 
 // Emits
-const emit = defineEmits(['close', 'apply-signature']);
+const emit = defineEmits(['close', 'apply-signature', 'save-all-signatures']);
 
 // Refs
 const containerRef = ref(null);
@@ -39,19 +39,26 @@ const dragOffsetSig = ref({ x: 0, y: 0 });
 const dragOffsetDate = ref({ x: 0, y: 0 });
 const resizeStartSig = ref({ x: 0, y: 0, width: 0, height: 0 });
 
-// Create a reactive copy of the prePlacedSignatures
-const localSignatures = reactive([...props.prePlacedSignatures]);
+// Create a reactive copy of the prePlacedSignatures (local working copy)
+const localSignatures = reactive([]);
 
-// Watch for prop changes and update the local copy
-watch(() => props.prePlacedSignatures, (newSigs) => {
-  for (let i = 0; i < newSigs.length; i++) {
-    localSignatures[i] = { ...newSigs[i] };
+// Initialize local signatures when modal opens
+watch(() => props.isOpen, (isOpen) => {
+  if (isOpen) {
+    // Create a fresh deep copy when modal opens
+    localSignatures.length = 0;
+    props.prePlacedSignatures.forEach(sig => {
+      localSignatures.push({ 
+        ...sig,
+        datePosition: sig.datePosition ? { ...sig.datePosition } : null
+      });
+    });
   }
-}, { deep: true });
+}, { immediate: true });
 
-// Load PDF when modal opens
-watch(() => props.isOpen, async (newVal) => {
-  if (newVal && props.pdfFile) {
+// Load PDF when modal opens (separate watch)
+watch(() => [props.isOpen, props.pdfFile], async ([isOpen, pdfFile]) => {
+  if (isOpen && pdfFile) {
     await loadPdf();
   }
 });
@@ -116,7 +123,7 @@ const renderPage = async (pageNum) => {
 const updatePrePlacedPositions = () => {
   if (!containerRef.value || canvasRefs.value.length === 0) return;
 
-  props.prePlacedSignatures.forEach((sig, index) => {
+  localSignatures.forEach((sig, index) => {
     const pageIndex = sig.page - 1;
     const canvas = canvasRefs.value[pageIndex];
     const sigElement = prePlacedSigRefs.value[index];
@@ -132,13 +139,13 @@ const updatePrePlacedPositions = () => {
     sigElement.style.top = top + 'px';
   });
 
-  props.prePlacedSignatures.forEach((sig, sigIndex) => {
+  localSignatures.forEach((sig, sigIndex) => {
     if (!sig.datePosition) return;
 
     const pageIndex = sig.page - 1;
     const canvas = canvasRefs.value[pageIndex];
 
-    const dateIndex = props.prePlacedSignatures
+    const dateIndex = localSignatures
       .slice(0, sigIndex)
       .filter(s => s.datePosition).length;
 
@@ -169,6 +176,7 @@ const canUserEdit = (sig) => {
 // Track if user actually dragged (to distinguish from click)
 const draggedDistance = ref(0);
 const dragStartPos = ref({ x: 0, y: 0 });
+const dateDragOffsets = ref({});
 
 // Handle clicking on signature boxes
 const handlePrePlacedClick = (sig, index) => {
@@ -199,26 +207,23 @@ const handlePrePlacedClick = (sig, index) => {
     return;
   }
   
-  // Apply signature
-  const signatureData = {
+  // Apply signature locally (no emit yet)
+  localSignatures[index] = {
     ...sig,
     imageSrc: userSignatureSrc.value,
     isEmpty: false,
     signedBy: props.currentUserName,
     signedDate: currentDate.value,
-    datePosition: {
-      x: sig.x,
-      y: sig.y + sig.height + 5,
+    datePosition: sig.datePosition ? {
+      ...sig.datePosition,
       dateText: currentDate.value
-    }
+    } : null
   };
-  
-  emit('apply-signature', { index, signatureData });
 };
 
 // Start dragging signature
 const startDraggingSignature = (e, index) => {
-  const sig = props.prePlacedSignatures[index];
+  const sig = localSignatures[index];
   if (!canUserEdit(sig)) return;
 
   e.stopPropagation();
@@ -239,11 +244,19 @@ const startDraggingSignature = (e, index) => {
     x: e.clientX - canvasRect.left - sig.x,
     y: e.clientY - canvasRect.top - sig.y
   };
+
+  // Store initial offset for date if it exists
+  if (sig.datePosition) {
+    dateDragOffsets.value[index] = {
+      x: sig.datePosition.x - sig.x,
+      y: sig.datePosition.y - sig.y
+    };
+  }
 };
 
 // Start dragging date
 const startDraggingDate = (e, sigIndex) => {
-  const sig = props.prePlacedSignatures[sigIndex];
+  const sig = localSignatures[sigIndex];
   if (!canUserEdit(sig) || !sig.datePosition) return;
 
   e.stopPropagation();
@@ -284,14 +297,15 @@ const dragSignature = (e) => {
   sig.x = Math.max(0, Math.min(newX, canvas.width - sig.width));
   sig.y = Math.max(0, Math.min(newY, canvas.height - sig.height));
 
-  // Update date position
-  if (sig.datePosition) {
-    sig.datePosition.x = sig.x;
-    sig.datePosition.y = sig.y + sig.height + 5;
+  // Move date along with signature
+  if (sig.datePosition && dateDragOffsets.value[editingSignatureIndex.value]) {
+    const offset = dateDragOffsets.value[editingSignatureIndex.value];
+    sig.datePosition.x = sig.x + offset.x;
+    sig.datePosition.y = sig.y + offset.y;
   }
 
-  // Emit updated signature
-  emit('apply-signature', { index: editingSignatureIndex.value, signatureData: { ...sig } });
+  // Update visual position
+  nextTick(() => updatePrePlacedPositions());
 };
 
 // Drag date
@@ -314,13 +328,13 @@ const dragDate = (e) => {
   sig.datePosition.x = Math.max(0, Math.min(newX, canvas.width - 100));
   sig.datePosition.y = Math.max(0, Math.min(newY, canvas.height - 30));
 
-  // Emit updated signature
-  emit('apply-signature', { index: currentDraggingDateIndex.value, signatureData: { ...sig } });
+  // Update visual position
+  nextTick(() => updatePrePlacedPositions());
 };
 
 // Start resizing signature
 const startResizingSignature = (e, index) => {
-  const sig = props.prePlacedSignatures[index];
+  const sig = localSignatures[index];
   if (!canUserEdit(sig)) return;
 
   e.stopPropagation();
@@ -342,7 +356,7 @@ const startResizingSignature = (e, index) => {
 const resizeSignature = (e) => {
   if (!isResizingSignature.value || editingSignatureIndex.value === null) return;
 
-  const sig = props.prePlacedSignatures[editingSignatureIndex.value];
+  const sig = localSignatures[editingSignatureIndex.value];
   const canvas = canvasRefs.value[sig.page - 1];
   const canvasRect = canvas.getBoundingClientRect();
 
@@ -354,22 +368,11 @@ const resizeSignature = (e) => {
   const newWidth = Math.max(50, resizeStartSig.value.width + dx);
   const newHeight = Math.max(30, resizeStartSig.value.height + dy);
 
-  const updatedSig = {
-    ...sig,
-    width: newWidth,
-    height: newHeight
-  };
+  sig.width = newWidth;
+  sig.height = newHeight;
 
-  // Update date position
-  if (updatedSig.datePosition) {
-    updatedSig.datePosition = {
-      ...updatedSig.datePosition,
-      x: updatedSig.x,
-      y: updatedSig.y + newHeight + 5
-    };
-  }
-
-  emit('apply-signature', { index: editingSignatureIndex.value, signatureData: updatedSig });
+  // Update visual position
+  nextTick(() => updatePrePlacedPositions());
 };
 
 // Handle mouse move
@@ -389,6 +392,7 @@ const handleMouseUp = () => {
   isDraggingDate.value = false;
   isResizingSignature.value = false;
   currentDraggingDateIndex.value = null;
+  dateDragOffsets.value = {};
   
   // Reset drag distance after a short delay to allow click handler to check it
   setTimeout(() => {
@@ -398,11 +402,11 @@ const handleMouseUp = () => {
 
 // Count signatures for current user
 const getMyPendingSignatures = () => {
-  return props.prePlacedSignatures.filter(s => s.isEmpty && s.assignedEmplId === props.currentEmplId).length;
+  return localSignatures.filter(s => s.isEmpty && s.assignedEmplId === props.currentEmplId).length;
 };
 
 const getMyCompletedSignatures = () => {
-  return props.prePlacedSignatures.filter(s => !s.isEmpty && s.signedBy === props.currentUserName).length;
+  return localSignatures.filter(s => !s.isEmpty && s.signedBy === props.currentUserName).length;
 };
 
 // Page navigation
@@ -431,6 +435,13 @@ const scrollToPage = (pageNum) => {
       updatePrePlacedPositions();
     });
   }
+};
+
+// Save all changes when clicking Done
+const handleDone = () => {
+  // Emit all signature changes
+  emit('save-all-signatures', [...localSignatures]);
+  emit('close');
 };
 
 // Mount/unmount event listeners
@@ -602,7 +613,7 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Dates for signed signatures - NOW DRAGGABLE -->
+          <!-- Dates for signed signatures - NOW FOLLOW SIGNATURE ON DRAG -->
           <div
             v-for="(sig, index) in localSignatures.filter(s => s.datePosition)"
             :key="'date-' + index"
@@ -615,7 +626,7 @@ onUnmounted(() => {
             }"
             :style="{ left: sig.datePosition.x + 'px', top: sig.datePosition.y + 'px' }"
             @mousedown="canUserEdit(sig) ? startDraggingDate($event, index) : null"
-            :title="canUserEdit(sig) ? 'Drag to move date' : ''"
+            :title="canUserEdit(sig) ? 'Drag to move date independently or drag signature to move both' : ''"
           >
             {{ sig.datePosition.dateText }}
           </div>
@@ -627,11 +638,13 @@ onUnmounted(() => {
         <div class="text-sm text-gray-600">
           <p class="font-semibold">💡 Tips:</p>
           <p>• Click green boxes to sign</p>
-          <p>• Click your signatures to edit, drag to move, resize from corner</p>
-          <p>• Drag date fields independently to reposition them</p>
+          <p>• Click your signatures to edit, drag to move (date follows)</p>
+          <p>• Drag date independently or with signature</p>
+          <p>• Resize signature from bottom-right corner</p>
+          <p class="text-orange-600 mt-2">⚠️ Changes will only be saved when you click "Done"</p>
         </div>
         <button
-          @click="emit('close')"
+          @click="handleDone"
           class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
         >
           Done

@@ -1,5 +1,7 @@
 <script setup>
 import { ref } from 'vue';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { toRaw } from 'vue';
 
 // State
 const isSigningModalOpen = ref(false);
@@ -67,32 +69,29 @@ const openSigningModal = () => {
     alert('Please upload your signature image first!');
     return;
   }
-  
+
   if (prePlacedSignatures.value.length === 0) {
     alert('Please place signature boxes first using "Place Signature Boxes" button!');
     return;
   }
-  
+
   const userSignatures = prePlacedSignatures.value.filter(
     s => s.assignedEmplId === currentEmplId.value && s.isEmpty
   );
-  
+
   if (userSignatures.length === 0) {
     alert(`No pending signatures for ${currentUserName.value}`);
     return;
   }
-  
+
   isSigningModalOpen.value = true;
 };
 
 // Handle signature application
-const handleApplySignature = ({ index, signatureData }) => {
-  prePlacedSignatures.value[index] = {
-    ...prePlacedSignatures.value[index],
-    ...signatureData,
-    isEmpty: false
-  };
-  console.log('Signature applied:', signatureData);
+const handleSaveAllSignatures = (updatedSignatures) => {
+  // Save all signatures at once
+  prePlacedSignatures.value = updatedSignatures;
+  // Or send to backend API
 };
 
 // Close modals
@@ -140,65 +139,150 @@ const getUserStats = (userName) => {
   return { total: userSigs.length, signed, pending };
 };
 
-// Export/save final PDF (placeholder)
-const saveFinalPdf = () => {
-  const stats = getStats();
-  if (stats.signed === 0) {
-    alert('No signatures to save!');
-    return;
-  }
-  if (stats.pending > 0) {
-    if (!confirm(`There are still ${stats.pending} pending signature(s). Save anyway?`)) {
+
+const saveFinalPdf = async () => {
+  try {
+    const stats = getStats();
+    if (stats.signed === 0) {
+      alert('No signatures to save!');
       return;
     }
+    if (stats.pending > 0 && !confirm(`There are still ${stats.pending} pending signature(s). Save anyway?`)) {
+      return;
+    }
+    if (!pdfFile.value) {
+      alert('No PDF uploaded.');
+      return;
+    }
+
+    // Load PDF
+    const pdfBytes = await pdfFile.value.arrayBuffer();
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+    const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+    for (const sigRaw of prePlacedSignatures.value) {
+      const sig = toRaw(sigRaw);
+      if (!sig || sig.isEmpty || !sig.imageSrc) continue;
+
+      const pageIndex = Math.max(0, (sig.page || 1) - 1);
+      if (pageIndex >= pdfDoc.getPageCount()) continue;
+      const page = pdfDoc.getPage(pageIndex);
+
+      const pageWidth = page.getWidth();
+      const pageHeight = page.getHeight();
+
+      // Scale coordinates from canvas to PDF
+      const canvasWidth = sig.canvasWidth || pageWidth;
+      const canvasHeight = sig.canvasHeight || pageHeight;
+
+      const scaleX = pageWidth / canvasWidth;
+      const scaleY = pageHeight / canvasHeight;
+
+      const xOnPdf = sig.x * scaleX;
+      const yOnPdf = pageHeight - sig.y * scaleY - sig.height * scaleY;
+      const widthOnPdf = sig.width * scaleX;
+      const heightOnPdf = sig.height * scaleY;
+
+      // Embed signature image
+      const imgResp = await fetch(sig.imageSrc);
+      const imgBytes = await imgResp.arrayBuffer();
+      let embeddedImage;
+      try {
+        embeddedImage = await pdfDoc.embedPng(imgBytes);
+      } catch {
+        embeddedImage = await pdfDoc.embedJpg(imgBytes);
+      }
+
+      page.drawImage(embeddedImage, {
+        x: xOnPdf,
+        y: yOnPdf,
+        width: widthOnPdf,
+        height: heightOnPdf
+      });
+
+      // Draw date if exists (no background)
+      if (sig.hasDate && sig.datePosition) {
+        const dp = toRaw(sig.datePosition);
+
+        const dateX = dp.x * scaleX;
+        const dateY = pageHeight - dp.y * scaleY - dp.height * scaleY;
+        const fontSize = (dp.fontSize || 14) * scaleY;
+        const dateText = dp.dateText || sig.signedDate || '';
+
+        // Draw only the text
+        page.drawText(dateText, {
+          x: dateX + 2, // optional padding
+          y: dateY + (dp.height * scaleY - fontSize) / 2,
+          size: fontSize,
+          font: helveticaFont,
+          color: rgb(0, 0, 0)
+        });
+      }
+    }
+
+    // Save PDF and trigger download
+    const finalPdfBytes = await pdfDoc.save();
+    const blob = new Blob([finalPdfBytes], { type: 'application/pdf' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'SignedDocument.pdf';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    alert('Signed PDF downloaded: SignedDocument.pdf');
+  } catch (err) {
+    console.error('Error saving final PDF:', err);
+    alert('Failed to save PDF. Check console for details.');
   }
-  console.log('Saving PDF with signatures:', prePlacedSignatures.value);
-  alert('PDF saved! (Implementation with pdf-lib needed)');
 };
+
+
+
+
+
 </script>
 
 <template>
   <div class="min-h-screen bg-gray-50 p-8">
-    <div class="max-w-7xl mx-auto">
+    <div class=" mx-auto">
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-gray-900 mb-2">PDF Multi-User Signature System</h1>
         <p class="text-gray-600">Place signature boxes, assign to users, and collect signatures</p>
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
+
         <!-- Left Column: Main Controls -->
         <div class="lg:col-span-2 space-y-6">
-          
+
           <!-- Step 1: Upload PDF -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <div class="flex items-center gap-2 mb-4">
-              <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">1</div>
+              <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">1
+              </div>
               <h2 class="text-xl font-semibold">Upload PDF Document</h2>
             </div>
-            <input
-              type="file"
-              accept="application/pdf"
-              @change="handlePdfUpload"
-              class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-            />
+            <input type="file" accept="application/pdf" @change="handlePdfUpload"
+              class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
             <p v-if="pdfFile" class="text-sm text-green-600 mt-2">✓ {{ pdfFile.name }}</p>
           </div>
 
           <!-- Step 2: Place Signature Boxes -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <div class="flex items-center gap-2 mb-4">
-              <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">2</div>
+              <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">2
+              </div>
               <h2 class="text-xl font-semibold">Place Signature Boxes</h2>
             </div>
             <p class="text-sm text-gray-600 mb-4">Draw boxes on the PDF where each person should sign</p>
-            <button
-              @click="openPlacementModal"
-              :disabled="!pdfFile"
-              class="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-2"
-            >
+            <button @click="openPlacementModal" :disabled="!pdfFile"
+              class="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-2">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               Place Signature Boxes
             </button>
@@ -210,27 +294,9 @@ const saveFinalPdf = () => {
           <!-- Step 3: Current User & Sign -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <div class="flex items-center gap-2 mb-4">
-              <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">3</div>
-              <h2 class="text-xl font-semibold">Sign as User</h2>
-            </div>
-            
-            <!-- User Selection -->
-            <div class="mb-4">
-              <p class="text-sm text-gray-600 mb-2">Select current user:</p>
-              <div class="flex flex-wrap gap-2">
-                <button
-                  v-for="user in availableUsers"
-                  :key="user"
-                  @click="switchUser(user)"
-                  :class="currentUserName === user ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'"
-                  class="px-4 py-2 rounded-lg text-sm font-medium transition"
-                >
-                  {{ user }}
-                  <span v-if="getUserStats(user).pending > 0" class="ml-1 text-xs">
-                    ({{ getUserStats(user).pending }})
-                  </span>
-                </button>
+              <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">3
               </div>
+              <h2 class="text-xl font-semibold">Sign as User</h2>
             </div>
 
             <!-- Signature Upload -->
@@ -238,23 +304,17 @@ const saveFinalPdf = () => {
               <label class="block text-sm font-medium text-gray-700 mb-2">
                 Upload {{ currentUserName }}'s Signature
               </label>
-              <input
-                type="file"
-                accept="image/*"
-                @change="handleSignatureUpload"
-                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-              />
+              <input type="file" accept="image/*" @change="handleSignatureUpload"
+                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" />
               <p v-if="signatureFile" class="text-sm text-green-600 mt-1">✓ {{ signatureFile.name }}</p>
             </div>
 
             <!-- Sign Button -->
-            <button
-              @click="openSigningModal"
-              :disabled="!pdfFile || !signatureFile || prePlacedSignatures.length === 0"
-              class="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-bold text-lg flex items-center justify-center gap-2"
-            >
+            <button @click="openSigningModal" :disabled="!pdfFile || !signatureFile || prePlacedSignatures.length === 0"
+              class="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-bold text-lg flex items-center justify-center gap-2">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
               Sign Document
             </button>
@@ -267,25 +327,16 @@ const saveFinalPdf = () => {
           <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4">Actions</h2>
             <div class="flex flex-wrap gap-3">
-              <button
-                @click="resetSignatures"
-                :disabled="prePlacedSignatures.length === 0"
-                class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold"
-              >
+              <button @click="resetSignatures" :disabled="prePlacedSignatures.length === 0"
+                class="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold">
                 Reset Signatures
               </button>
-              <button
-                @click="clearAllSignatures"
-                :disabled="prePlacedSignatures.length === 0"
-                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold"
-              >
+              <button @click="clearAllSignatures" :disabled="prePlacedSignatures.length === 0"
+                class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold">
                 Clear All Boxes
               </button>
-              <button
-                @click="saveFinalPdf"
-                :disabled="getStats().signed === 0"
-                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold"
-              >
+              <button @click="saveFinalPdf" :disabled="getStats().signed === 0"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold">
                 💾 Save PDF
               </button>
             </div>
@@ -294,7 +345,7 @@ const saveFinalPdf = () => {
 
         <!-- Right Column: Stats & Signature List -->
         <div class="space-y-6">
-          
+
           <!-- Overall Progress -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4">Document Progress</h2>
@@ -313,10 +364,9 @@ const saveFinalPdf = () => {
               </div>
               <div class="mt-4 pt-4 border-t">
                 <div class="w-full bg-gray-200 rounded-full h-4">
-                  <div 
-                    class="bg-green-600 h-4 rounded-full transition-all duration-300"
-                    :style="{ width: `${getStats().total > 0 ? (getStats().signed / getStats().total * 100) : 0}%` }"
-                  ></div>
+                  <div class="bg-green-600 h-4 rounded-full transition-all duration-300"
+                    :style="{ width: `${getStats().total > 0 ? (getStats().signed / getStats().total * 100) : 0}%` }">
+                  </div>
                 </div>
                 <p class="text-xs text-gray-500 text-center mt-1">
                   {{ getStats().total > 0 ? Math.round(getStats().signed / getStats().total * 100) : 0 }}% Complete
@@ -328,22 +378,17 @@ const saveFinalPdf = () => {
           <!-- Signature Boxes List -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4">All Signature Boxes</h2>
-            
+
             <div v-if="prePlacedSignatures.length === 0" class="text-gray-400 text-center py-8 text-sm">
               No signature boxes placed yet
             </div>
 
             <div v-else class="space-y-2 max-h-96 overflow-y-auto">
-              <div
-                v-for="(sig, index) in prePlacedSignatures"
-                :key="sig.id"
-                class="p-3 border rounded text-sm"
-                :class="{
-                  'border-green-300 bg-green-50': !sig.isEmpty,
-                  'border-blue-300 bg-blue-50': sig.isEmpty && sig.assignedTo === currentUserName,
-                  'border-gray-300 bg-gray-50': sig.isEmpty && sig.assignedTo !== currentUserName
-                }"
-              >
+              <div v-for="(sig, index) in prePlacedSignatures" :key="sig.id" class="p-3 border rounded text-sm" :class="{
+                'border-green-300 bg-green-50': !sig.isEmpty,
+                'border-blue-300 bg-blue-50': sig.isEmpty && sig.assignedTo === currentUserName,
+                'border-gray-300 bg-gray-50': sig.isEmpty && sig.assignedTo !== currentUserName
+              }">
                 <div class="flex justify-between items-start">
                   <div>
                     <p class="font-semibold">{{ sig.assignedTo }}</p>
@@ -365,25 +410,13 @@ const saveFinalPdf = () => {
     </div>
 
     <!-- Signature Box Placement Modal -->
-    <SignatureBoxPlacement
-      :is-open="isPlacementModalOpen"
-      :pdf-file="pdfFile"
-      :existingSignatures="prePlacedSignatures"
-      @close="closePlacementModal"
-      @save-signatures="handleSaveSignatures"
-    />
+    <SignatureBoxPlacement :is-open="isPlacementModalOpen" :pdf-file="pdfFile" :existingSignatures="prePlacedSignatures"
+      @close="closePlacementModal" @save-signatures="handleSaveSignatures" />
 
     <!-- Signing Modal -->
-    <SigntureModal
-      :is-open="isSigningModalOpen"
-      :pdf-file="pdfFile"
-      :signature-file="signatureFile"
-      :current-user-name= "currentUserName"
-      :current-empl-id="currentEmplId"
-      :pre-placed-signatures="prePlacedSignatures"
-      @close="closeSigningModal"
-      @apply-signature="handleApplySignature"
-    />
+    <SigntureModal :is-open="isSigningModalOpen" :pdf-file="pdfFile" :signature-file="signatureFile"
+      :current-user-name="currentUserName" :current-empl-id="currentEmplId" :pre-placed-signatures="prePlacedSignatures"
+      @close="closeSigningModal" @save-all-signatures="handleSaveAllSignatures" />
   </div>
 </template>
 

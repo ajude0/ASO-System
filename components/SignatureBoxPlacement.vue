@@ -1,10 +1,10 @@
 <script setup>
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
 import {
-  getEmployees,
-  availableApprovers,
-  query,
-  loading,
+    getEmployees,
+    availableApprovers,
+    query,
+    loading,
 } from "~/js/fetchEmployees";
 
 // Props
@@ -57,9 +57,25 @@ const newBoxForm = ref({
     assignedEmplId: "",
 });
 
-const  handleAssignUser = async () => {
-  showModal.value = true;
-   await getEmployees();
+const handleAssignUser = async () => {
+    showModal.value = true;
+    await getEmployees();
+};
+
+const handleEnterKey = async () => {
+    await getEmployees();
+};
+
+const cancelButton = async () => {
+    showModal.value = false;
+    query.value.search = "";
+    availableApprovers.value = null;
+    newBoxForm.value = {
+        assignedTo: '',
+        hasDate: true,
+        dateOffset: 5,
+        assignedEmplId: "",
+    };
 };
 
 const selectUser = (user) => {
@@ -67,6 +83,8 @@ const selectUser = (user) => {
     newBoxForm.value.assignedEmplId = user.emplId;
     console.log(newBoxForm.value.assignedEmplId);
     showModal.value = false;
+    query.value.search = "";
+    availableApprovers.value = null;
 }
 
 const scrollToPage = (pageNum) => {
@@ -209,12 +227,19 @@ const finishDrawingBox = () => {
 
 const startDragging = (e, id, type = 'box') => {
     e.stopPropagation();
-    isDragging.value = true;
-    selectedBoxId.value = id;
-    dragTargetType.value = type;
 
     const box = signatureBoxes.value.find(b => b.id === id);
     if (!box) return;
+
+    selectedBoxId.value = id; // Allow selection on click
+
+    // If signed (not empty), prevent dragging from starting
+    if (box.isEmpty === false) {
+        return;
+    }
+
+    isDragging.value = true;
+    dragTargetType.value = type;
 
     const canvasRect = canvasRefs.value[box.page - 1].getBoundingClientRect();
 
@@ -269,12 +294,16 @@ const dragBox = (e) => {
 
 const startResizing = (e, id, handle) => {
     e.stopPropagation();
+
+    const box = signatureBoxes.value.find(b => b.id === id);
+    // Prevent resizing if box is not empty (i.e., it has been signed)
+    if (!box || box.isEmpty === false) {
+        return;
+    }
+
     isResizing.value = true;
     selectedBoxId.value = id;
     resizeHandle.value = handle;
-
-    const box = signatureBoxes.value.find(b => b.id === id);
-    if (!box) return;
 
     const canvasRect = canvasRefs.value[box.page - 1].getBoundingClientRect();
 
@@ -446,19 +475,28 @@ const saveSignatures = () => {
             pdfLibY: pdfLibY,
 
             // Preserve existing signature fields OR use defaults
-            imageSrc: existingSignature?.imageSrc || null,
-            isEmpty: existingSignature?.isEmpty ?? true,  // ?? preserves undefined/null, uses true as default
-            signedBy: existingSignature?.signedBy || null,
+            imageSrc: existingSignature?.imageSrc || box.imageSrc || null,
+            isEmpty: existingSignature?.isEmpty ?? box.isEmpty ?? true,
+            signedBy: existingSignature?.signedBy || box.signedBy || null,
 
             hasDate: box.hasDate,
             datePosition: dateObj
         };
     }).filter(Boolean);
 
+
     emit('save-signatures', formattedData);
     emit('close');
-};
 
+    query.value.search = "";
+    availableApprovers.value = null;
+    newBoxForm.value = {
+        assignedTo: '',
+        hasDate: true,
+        dateOffset: 5,
+        assignedEmplId: "",
+    };
+};
 onMounted(() => document.addEventListener('mouseup', handleMouseUp));
 onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
 </script>
@@ -506,7 +544,7 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                 <div class="flex gap-2">
                                     <!-- INPUT -->
                                     <input v-model="newBoxForm.assignedTo" type="text" placeholder="Enter user name..."
-                                        class="flex-1 border rounded px-3 py-2 text-sm" />
+                                        class="flex-1 border rounded px-3 py-2 text-sm" disabled />
 
                                     <!-- BUTTON -->
                                     <button @click="handleAssignUser"
@@ -614,36 +652,61 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                             <template v-for="box in getCurrentPageBoxes()" :key="box.id">
 
                                 <!-- 1. Signature Box -->
-                                <div class="absolute border-2 rounded transition-all cursor-move group draggable-item"
-                                    :class="selectedBoxId === box.id ? 'border-blue-500 bg-blue-100 bg-opacity-40' : 'border-purple-400 bg-purple-50 bg-opacity-30 hover:border-purple-600'"
-                                    :style="getBoxStyle(box)" @mousedown.stop="startDragging($event, box.id, 'box')">
+                                <div class="absolute border-2 rounded transition-all draggable-item" :class="{
+                                    // Classes for a signed (not empty) box. It's not movable.
+                                    'border-green-600 cursor-default': !box.isEmpty,
+
+                                    // Classes for an empty, draggable box.
+                                    'group cursor-move': box.isEmpty,
+                                    'border-blue-500 bg-blue-100 bg-opacity-40': box.isEmpty && selectedBoxId === box.id,
+                                    'border-purple-400 bg-purple-50 bg-opacity-30 hover:border-purple-600': box.isEmpty && selectedBoxId !== box.id
+                                }" :style="getBoxStyle(box)"
+                                    @mousedown.stop="startDragging($event, box.id, 'box')">
+
                                     <div
                                         class="absolute -top-6 left-0 bg-purple-600 text-white text-xs px-2 py-1 rounded font-semibold whitespace-nowrap">
                                         {{ box.assignedTo }}
                                     </div>
 
-                                    <!-- Resize Handles -->
-                                    <div class="absolute w-3 h-3 bg-blue-500 rounded-full -top-1 -left-1 cursor-nw-resize opacity-0 group-hover:opacity-100"
-                                        @mousedown.stop="startResizing($event, box.id, 'nw')"></div>
-                                    <div class="absolute w-3 h-3 bg-blue-500 rounded-full -top-1 -right-1 cursor-ne-resize opacity-0 group-hover:opacity-100"
-                                        @mousedown.stop="startResizing($event, box.id, 'ne')"></div>
-                                    <div class="absolute w-3 h-3 bg-blue-500 rounded-full -bottom-1 -left-1 cursor-sw-resize opacity-0 group-hover:opacity-100"
-                                        @mousedown.stop="startResizing($event, box.id, 'sw')"></div>
-                                    <div class="absolute w-3 h-3 bg-blue-500 rounded-full -bottom-1 -right-1 cursor-se-resize opacity-0 group-hover:opacity-100"
-                                        @mousedown.stop="startResizing($event, box.id, 'se')"></div>
+                                    <!-- IF EMPTY: Show placeholder and resize handles -->
+                                    <template v-if="box.isEmpty">
+                                        <!-- Resize Handles -->
+                                        <div class="absolute w-3 h-3 bg-blue-500 rounded-full -top-1 -left-1 cursor-nw-resize opacity-0 group-hover:opacity-100"
+                                            @mousedown.stop="startResizing($event, box.id, 'nw')"></div>
+                                        <div class="absolute w-3 h-3 bg-blue-500 rounded-full -top-1 -right-1 cursor-ne-resize opacity-0 group-hover:opacity-100"
+                                            @mousedown.stop="startResizing($event, box.id, 'ne')"></div>
+                                        <div class="absolute w-3 h-3 bg-blue-500 rounded-full -bottom-1 -left-1 cursor-sw-resize opacity-0 group-hover:opacity-100"
+                                            @mousedown.stop="startResizing($event, box.id, 'sw')"></div>
+                                        <div class="absolute w-3 h-3 bg-blue-500 rounded-full -bottom-1 -right-1 cursor-se-resize opacity-0 group-hover:opacity-100"
+                                            @mousedown.stop="startResizing($event, box.id, 'se')"></div>
 
-                                    <div class="flex items-center justify-center h-full">
-                                        <span class="text-xs font-bold text-purple-700 opacity-50">{{ box.isEmpty
-                                            }}</span>
-                                    </div>
+                                        <div class="flex items-center justify-center h-full">
+                                            <span class="text-xs font-bold text-purple-700 opacity-50">Signature
+                                                Area</span>
+                                        </div>
+                                    </template>
+
+                                    <!-- IF SIGNED (NOT EMPTY): Show the signature image -->
+                                    <template v-else>
+                                        <img v-if="box.imageSrc" :src="box.imageSrc" alt="Signature"
+                                            class="w-full h-full object-contain" />
+                                        <div v-else class="flex items-center justify-center h-full bg-gray-100">
+                                            <span class="text-xs text-gray-600">Signature Area</span>
+                                        </div>
+                                    </template>
                                 </div>
 
                                 <!-- 2. Date Box -->
                                 <div v-if="box.hasDate"
-                                    class="absolute border border-dashed border-green-500 bg-green-50 bg-opacity-80 px-2 py-1 text-xs text-green-700 font-semibold rounded cursor-move draggable-item flex items-center justify-center hover:bg-green-100 hover:border-green-700 hover:z-50"
-                                    :class="selectedBoxId === box.id ? 'ring-2 ring-green-300' : ''"
-                                    :style="getDateStyle(box)" @mousedown.stop="startDragging($event, box.id, 'date')">
-                                    Date: MM/DD/YYYY
+                                    class="absolute border border-dashed px-2 py-1 text-xs font-semibold rounded draggable-item flex items-center justify-center hover:z-50"
+                                    :class="{
+                                        'border-green-500 bg-green-50 bg-opacity-80 text-green-700 cursor-move hover:bg-green-100 hover:border-green-700': box.isEmpty,
+                                        'border-gray-400 bg-gray-100 text-gray-500 cursor-default': !box.isEmpty,
+                                        'ring-2 ring-blue-300': selectedBoxId === box.id
+                                    }" :style="getDateStyle(box)"
+                                    @mousedown.stop="startDragging($event, box.id, 'date')">
+                                    {{ box.isEmpty || box.isEmpty == null ? "MM/DD/YYYY" : box.datePosition.dateText }}
+
                                 </div>
 
                             </template>
@@ -668,45 +731,45 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
         </div>
     </div>
 
-  <div v-if="showModal"
-    @click.self="cancelButton"
-    @keydown.esc="cancelButton"     
-    class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]">
-    <div class="w-full max-w-4xl bg-white shadow-lg rounded-lg p-6 relative">
-      <div class="flex gap-2">
-        <input type="text" v-model="query.search" @keydown.enter.prevent="handleEnterKey"
-          @keydown.down.prevent="moveDown" @keydown.up.prevent="moveUp" placeholder="Please enter user's name..."
-          class="w-full h-11 p-4 rounded border border-gray-600 focus:outline-none" />
-        <button @click="getEmployees" class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700">
-          <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-            width="24" height="24" fill="none" viewBox="0 0 24 24">
-            <path stroke="currentColor" stroke-linecap="round" stroke-width="2"
-              d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
-          </svg>
-        </button>
-      </div>
-      <div class="max-h-60 overflow-y-auto border border-gray-300 rounded mt-2" ref="scrollContainer">
-        <div tabindex="0">
-          <div v-for="(user, index) in availableApprovers" :key="index" @click="selectUser(user)"
-            class="px-4 py-2 hover:bg-gray-200 cursor-pointer"
-            :class="{ 'bg-gray-200 font-bold': index === approverIndex }">
-            {{ user.employeename2 }}
-          </div>
-          <div v-if="loading" class="p-2 text-gray-400 text-center">
-            Loading users...
-          </div>
-          <div v-else-if="availableApprovers.length === 0" class="p-2 text-gray-400 text-center">
-            No users found.
-          </div>
+    <div v-if="showModal" @click.self="cancelButton" @keydown.esc="cancelButton"
+        class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]">
+        <div class="w-full max-w-4xl bg-white shadow-lg rounded-lg p-6 relative">
+            <div class="flex gap-2">
+                <input type="text" v-model="query.search" @keydown.enter.prevent="handleEnterKey"
+                    @keydown.down.prevent="moveDown" @keydown.up.prevent="moveUp"
+                    placeholder="Please enter user's name..."
+                    class="w-full h-11 p-4 rounded border border-gray-600 focus:outline-none" />
+                <button @click="getEmployees"
+                    class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700">
+                    <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true"
+                        xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-width="2"
+                            d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+                    </svg>
+                </button>
+            </div>
+            <div class="max-h-60 overflow-y-auto border border-gray-300 rounded mt-2" ref="scrollContainer">
+                <div tabindex="0">
+                    <div v-for="(user, index) in availableApprovers" :key="index" @click="selectUser(user)"
+                        class="px-4 py-2 hover:bg-gray-200 cursor-pointer"
+                        :class="{ 'bg-gray-200 font-bold': index === approverIndex }">
+                        {{ user.employeename2 }}
+                    </div>
+                    <div v-if="loading" class="p-2 text-gray-400 text-center">
+                        Loading users...
+                    </div>
+                    <div v-else-if="availableApprovers.length === 0" class="p-2 text-gray-400 text-center">
+                        No users found.
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 flex justify-end gap-2">
+                <button @click="cancelButton" class="px-4 py-2 bg-red-500 text-white rounded-lg">
+                    Cancel
+                </button>
+            </div>
         </div>
-      </div>
-      <div class="mt-4 flex justify-end gap-2">
-        <button @click="cancelButton" class="px-4 py-2 bg-red-500 text-white rounded-lg">
-          Cancel
-        </button>
-      </div>
     </div>
-  </div>
 </template>
 
 <style scoped>
