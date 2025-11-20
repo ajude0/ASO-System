@@ -28,6 +28,12 @@ const prePlacedDateRefs = ref([]);
 const currentViewPage = ref(1);
 const currentDate = ref(new Date().toLocaleDateString());
 const goToPageNumber = ref(1);
+const SMALL_SIG_WIDTH = 140;
+const SMALL_SIG_HEIGHT = 75;
+
+const isSmallSignatureBox = (sig) => {
+  return sig.width <= SMALL_SIG_WIDTH || sig.height <= SMALL_SIG_HEIGHT;
+};
 
 // Editing state for placed signatures
 const editingSignatureIndex = ref(null);
@@ -48,7 +54,7 @@ watch(() => props.isOpen, (isOpen) => {
     // Create a fresh deep copy when modal opens
     localSignatures.length = 0;
     props.prePlacedSignatures.forEach(sig => {
-      localSignatures.push({ 
+      localSignatures.push({
         ...sig,
         datePosition: sig.datePosition ? { ...sig.datePosition } : null
       });
@@ -176,7 +182,6 @@ const canUserEdit = (sig) => {
 // Track if user actually dragged (to distinguish from click)
 const draggedDistance = ref(0);
 const dragStartPos = ref({ x: 0, y: 0 });
-const dateDragOffsets = ref({});
 
 // Handle clicking on signature boxes
 const handlePrePlacedClick = (sig, index) => {
@@ -206,7 +211,7 @@ const handlePrePlacedClick = (sig, index) => {
     alert('Please upload your signature first!');
     return;
   }
-  
+
   // Apply signature locally (no emit yet)
   localSignatures[index] = {
     ...sig,
@@ -244,14 +249,6 @@ const startDraggingSignature = (e, index) => {
     x: e.clientX - canvasRect.left - sig.x,
     y: e.clientY - canvasRect.top - sig.y
   };
-
-  // Store initial offset for date if it exists
-  if (sig.datePosition) {
-    dateDragOffsets.value[index] = {
-      x: sig.datePosition.x - sig.x,
-      y: sig.datePosition.y - sig.y
-    };
-  }
 };
 
 // Start dragging date
@@ -296,13 +293,6 @@ const dragSignature = (e) => {
 
   sig.x = Math.max(0, Math.min(newX, canvas.width - sig.width));
   sig.y = Math.max(0, Math.min(newY, canvas.height - sig.height));
-
-  // Move date along with signature
-  if (sig.datePosition && dateDragOffsets.value[editingSignatureIndex.value]) {
-    const offset = dateDragOffsets.value[editingSignatureIndex.value];
-    sig.datePosition.x = sig.x + offset.x;
-    sig.datePosition.y = sig.y + offset.y;
-  }
 
   // Update visual position
   nextTick(() => updatePrePlacedPositions());
@@ -392,8 +382,7 @@ const handleMouseUp = () => {
   isDraggingDate.value = false;
   isResizingSignature.value = false;
   currentDraggingDateIndex.value = null;
-  dateDragOffsets.value = {};
-  
+
   // Reset drag distance after a short delay to allow click handler to check it
   setTimeout(() => {
     draggedDistance.value = 0;
@@ -459,18 +448,16 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
-    v-if="isOpen"
-    class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center w-full z-50"
-    @click.self="emit('close')"
-  >
+  <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center w-full z-50"
+    @click.self="emit('close')">
     <div class="bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] flex flex-col m-4">
 
       <!-- Header -->
       <div class="flex items-center justify-between p-4 border-b">
         <div>
           <h2 class="text-xl font-semibold">Sign PDF Document</h2>
-          <p class="text-sm text-gray-600 mt-1">Signing as: <span class="font-semibold text-blue-600">{{ currentUserName }}</span></p>
+          <p class="text-sm text-gray-600 mt-1">Signing as: <span class="font-semibold text-blue-600">{{ currentUserName
+              }}</span></p>
           <div class="flex gap-4 mt-2 text-xs">
             <p class="text-green-600">
               ✓ Completed: {{ getMyCompletedSignatures() }}
@@ -489,11 +476,8 @@ onUnmounted(() => {
 
       <!-- Page Navigation -->
       <div class="mt-4 flex items-center justify-center gap-4 flex-wrap">
-        <button
-          @click="goToPrevPage"
-          :disabled="currentViewPage === 1"
-          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
-        >
+        <button @click="goToPrevPage" :disabled="currentViewPage === 1"
+          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
           </svg>
@@ -504,11 +488,8 @@ onUnmounted(() => {
           Page {{ currentViewPage }} of {{ totalPages }}
         </div>
 
-        <button
-          @click="goToNextPage"
-          :disabled="currentViewPage === totalPages"
-          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
-        >
+        <button @click="goToNextPage" :disabled="currentViewPage === totalPages"
+          class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2">
           Next
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
@@ -516,19 +497,10 @@ onUnmounted(() => {
         </button>
 
         <div class="flex items-center gap-2">
-          <input
-            type="number"
-            min="1"
-            :max="totalPages"
-            v-model.number="goToPageNumber"
-            @keydown.enter="scrollToPage(goToPageNumber)"
-            class="border rounded px-2 py-1 w-16 text-sm"
-            placeholder="Page #"
-          />
-          <button
-            @click="scrollToPage(goToPageNumber)"
-            class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm"
-          >
+          <input type="number" min="1" :max="totalPages" v-model.number="goToPageNumber"
+            @keydown.enter="scrollToPage(goToPageNumber)" class="border rounded px-2 py-1 w-16 text-sm"
+            placeholder="Page #" />
+          <button @click="scrollToPage(goToPageNumber)" class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm">
             Go
           </button>
         </div>
@@ -538,52 +510,64 @@ onUnmounted(() => {
       <div class="flex-1 overflow-auto p-6">
         <div ref="containerRef" class="relative inline-block">
           <div class="relative border-2 border-gray-300 rounded shadow-sm">
-            <div class="absolute -top-3 left-4 bg-white px-2 py-1 text-xs font-semibold text-gray-600 border rounded z-10">
+            <div
+              class="absolute -top-3 left-4 bg-white px-2 py-1 text-xs font-semibold text-gray-600 border rounded z-10">
               Page {{ currentViewPage }}
             </div>
 
-            <canvas
-              v-for="i in totalPages"
-              :key="i"
-              v-show="i === currentViewPage"
-              :ref="el => { if (el) canvasRefs[i - 1] = el }"
-              class="block"
-            ></canvas>
+            <canvas v-for="i in totalPages" :key="i" v-show="i === currentViewPage"
+              :ref="el => { if (el) canvasRefs[i - 1] = el }" class="block"></canvas>
           </div>
 
           <!-- Pre-placed Signature Boxes -->
-          <div
-            v-for="(sig, index) in localSignatures"
-            :key="'preplaced-' + index"
-            :ref="el => { if (el) prePlacedSigRefs[index] = el }"
-            v-show="sig.page === currentViewPage"
-            class="absolute rounded transition-all group"
-            :class="{
+          <div v-for="(sig, index) in localSignatures" :key="'preplaced-' + index"
+            :ref="el => { if (el) prePlacedSigRefs[index] = el }" v-show="sig.page === currentViewPage"
+            class="absolute rounded transition-all group" :class="{
               'border-2 border-dashed border-green-500 bg-green-50 cursor-pointer hover:bg-green-100 hover:border-green-600': canUserSign(sig),
               'border-2 border-dashed border-gray-300 bg-gray-50 cursor-not-allowed': sig.isEmpty && sig.assignedEmplId !== currentEmplId,
               'border-2 border-blue-500 bg-blue-50': canUserEdit(sig) && editingSignatureIndex === index,
               'border-2 border-blue-400 bg-blue-50 hover:border-blue-600': canUserEdit(sig) && editingSignatureIndex !== index,
               'border-2 border-gray-400 bg-gray-100': !sig.isEmpty && sig.signedBy !== currentUserName,
               'cursor-move': canUserEdit(sig)
-            }"
-            :style="{ width: sig.width + 'px', height: sig.height + 'px', left: sig.x + 'px', top: sig.y + 'px' }"
+            }" :style="{ width: sig.width + 'px', height: sig.height + 'px', left: sig.x + 'px', top: sig.y + 'px' }"
             @mouseup="handlePrePlacedClick(sig, index)"
             @mousedown="canUserEdit(sig) ? startDraggingSignature($event, index) : null"
-            :title="sig.isEmpty ? `Assigned to: ${sig.assignedTo}` : `Signed by: ${sig.signedBy}`"
-          >
+            :title="sig.isEmpty ? `Assigned to: ${sig.assignedTo}` : `Signed by: ${sig.signedBy}`">
             <!-- Empty signature box (for current user) -->
-            <div v-if="canUserSign(sig)" class="flex flex-col items-center justify-center h-full p-2 pointer-events-none">
-              <svg class="w-8 h-8 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-              </svg>
-              <p class="text-xs text-green-700 font-semibold mt-1 text-center">Click to sign</p>
-              <p class="text-xs text-green-600 mt-1 text-center">{{ sig.assignedTo }}</p>
+            <div v-if="canUserSign(sig)"
+              class="flex flex-col items-center justify-center h-full p-2 pointer-events-none relative">
+              <!-- Text above box when too small -->
+              <div v-if="isSmallSignatureBox(sig)"
+                class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded whitespace-nowrap z-10 border border-green-300 shadow-md">
+                <span class="flex items-center">
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                  </svg>
+                  Click to sign
+                </span>
+                <div
+                  class="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-green-100">
+                </div>
+              </div>
+
+              <!-- Text inside box when large enough -->
+              <div v-else class="flex flex-col items-center justify-center h-full">
+                <svg class="w-8 h-8 text-green-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                </svg>
+                <p class="text-xs text-green-700 font-semibold text-center">Click to sign</p>
+                <p class="text-xs text-green-600 mt-1 text-center">{{ sig.assignedTo }}</p>
+              </div>
             </div>
 
             <!-- Empty signature box (for other users) -->
-            <div v-else-if="sig.isEmpty" class="flex flex-col items-center justify-center h-full p-2 pointer-events-none">
+            <div v-else-if="sig.isEmpty"
+              class="flex flex-col items-center justify-center h-full p-2 pointer-events-none">
               <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
               <p class="text-xs text-gray-500 mt-1 text-center font-semibold">{{ sig.assignedTo }}</p>
               <p class="text-xs text-gray-400 text-center">(Pending)</p>
@@ -591,43 +575,45 @@ onUnmounted(() => {
 
             <!-- Filled signature -->
             <div v-else class="relative w-full h-full">
-              <img
-                :src="sig.imageSrc"
-                class="w-full h-full object-contain select-none pointer-events-none"
-              />
-              <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs px-2 py-1 text-center pointer-events-none">
+              <img :src="sig.imageSrc" class="w-full h-full object-contain select-none pointer-events-none" />
+
+              <!-- Signed by text above box when too small -->
+              <div v-if="isSmallSignatureBox(sig)"
+                class="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded whitespace-nowrap z-10 border border-blue-300 shadow-md">
                 {{ sig.signedBy }}
+                <div
+                  class="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-blue-100">
+                </div>
               </div>
 
+              <!-- Signed by text inside box when large enough -->
+              <div v-else
+                class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs px-2 py-1 text-center pointer-events-none">
+                {{ sig.signedBy }}
+              </div>
               <!-- Edit hint for user's own signature -->
-              <div v-if="canUserEdit(sig)" class="absolute top-0 left-0 right-0 bg-blue-500 text-white text-xs px-2 py-1 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+              <div v-if="canUserEdit(sig)"
+                class="absolute top-0 left-0 right-0 bg-blue-500 text-white text-xs px-2 py-1 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                 Click to edit • Drag to move
               </div>
 
               <!-- Resize handle for user's own signature -->
-              <div
-                v-if="canUserEdit(sig)"
+              <div v-if="canUserEdit(sig)"
                 class="absolute w-4 h-4 bg-blue-500 rounded-full -bottom-1 -right-1 cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                @mousedown.stop="startResizingSignature($event, index)"
-              ></div>
+                @mousedown.stop="startResizingSignature($event, index)"></div>
             </div>
           </div>
 
-          <!-- Dates for signed signatures - NOW FOLLOW SIGNATURE ON DRAG -->
-          <div
-            v-for="(sig, index) in localSignatures.filter(s => s.datePosition)"
-            :key="'date-' + index"
-            :ref="el => { if (el) prePlacedDateRefs[index] = el }"
-            v-show="sig.page === currentViewPage"
+          <!-- Dates for signed signatures - NOW DRAGGABLE -->
+          <div v-for="(sig, index) in localSignatures.filter(s => s.datePosition)" :key="'date-' + index"
+            :ref="el => { if (el) prePlacedDateRefs[index] = el }" v-show="sig.page === currentViewPage"
             class="absolute select-none text-sm font-semibold text-gray-700 rounded px-2 py-1 border border-gray-300 bg-gray-50 transition-all"
             :class="{
               'cursor-move hover:bg-gray-200 hover:border-gray-500': canUserEdit(sig),
               'cursor-default': !canUserEdit(sig)
-            }"
-            :style="{ left: sig.datePosition.x + 'px', top: sig.datePosition.y + 'px' }"
+            }" :style="{ left: sig.datePosition.x + 'px', top: sig.datePosition.y + 'px' }"
             @mousedown="canUserEdit(sig) ? startDraggingDate($event, index) : null"
-            :title="canUserEdit(sig) ? 'Drag to move date independently or drag signature to move both' : ''"
-          >
+            :title="canUserEdit(sig) ? 'Drag to move date' : ''">
             {{ sig.datePosition.dateText }}
           </div>
         </div>
@@ -638,15 +624,11 @@ onUnmounted(() => {
         <div class="text-sm text-gray-600">
           <p class="font-semibold">💡 Tips:</p>
           <p>• Click green boxes to sign</p>
-          <p>• Click your signatures to edit, drag to move (date follows)</p>
-          <p>• Drag date independently or with signature</p>
-          <p>• Resize signature from bottom-right corner</p>
+          <p>• Click your signatures to edit, drag to move, resize from corner</p>
+          <p>• Drag date fields independently to reposition them</p>
           <p class="text-orange-600 mt-2">⚠️ Changes will only be saved when you click "Done"</p>
         </div>
-        <button
-          @click="handleDone"
-          class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-        >
+        <button @click="handleDone" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
           Done
         </button>
       </div>
@@ -655,6 +637,11 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.select-none { user-select: none; }
-.pointer-events-none { pointer-events: none; }
+.select-none {
+  user-select: none;
+}
+
+.pointer-events-none {
+  pointer-events: none;
+}
 </style>

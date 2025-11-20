@@ -2,14 +2,15 @@
 import { ref } from 'vue';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { toRaw } from 'vue';
+import { getProfile, user } from "~/js/fetchUserProfile";
 
 // State
 const isSigningModalOpen = ref(false);
 const isPlacementModalOpen = ref(false);
 const pdfFile = ref(null);
 const signatureFile = ref(null);
-const currentUserName = ref('AUSTINE JUDE D. MENDOZA');
-const currentEmplId = ref("241212458")
+const currentUserName = ref();
+const currentEmplId = ref();
 
 // Available users for assignment
 const availableUsers = ref([
@@ -238,9 +239,11 @@ const saveFinalPdf = async () => {
     alert('Failed to save PDF. Check console for details.');
   }
 };
-
-
-
+onMounted(async () => {
+  await getProfile();
+  currentEmplId.value = user.value.empid;
+  currentUserName.value = user.value.requestorname
+});
 
 
 </script>
