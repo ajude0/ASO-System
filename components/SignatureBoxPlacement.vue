@@ -24,6 +24,7 @@ const props = defineProps({
 // Emits
 const emit = defineEmits(['close', 'save-signatures']);
 const showModal = ref(false);
+
 // Refs
 const containerRef = ref(null);
 const pdfDocument = ref(null);
@@ -34,12 +35,10 @@ const currentViewPage = ref(1);
 // Signature boxes being placed
 const signatureBoxes = ref([]);
 
-// Current box being drawn/resized
-const isDrawing = ref(false);
+// Drag/Resize state
 const isDragging = ref(false);
 const isResizing = ref(false);
-const currentBox = ref(null);
-const dragStart = ref({ x: 0, y: 0 });
+const dragStart = ref({ x: 0, y: 0, boxX: 0, boxY: 0, boxWidth: 0, boxHeight: 0 });
 const dragOffset = ref({ x: 0, y: 0 });
 const resizeHandle = ref(null);
 const dragTargetType = ref(null); // 'box' | 'date'
@@ -48,14 +47,106 @@ const dragTargetType = ref(null); // 'box' | 'date'
 const selectedBoxId = ref(null);
 const goToPageNumber = ref(1);
 
-// New box form
+// Signers list and active selection
+const signers = ref([]); // [{ name, emplId, color }]
+const activeSignerKey = ref(null); // key to track active signer (emplId or name)
+
+// Color management
+const colorPalette = [
+    '#3b82f6', // blue
+    '#10b981', // green
+    '#f59e0b', // amber
+    '#ef4444', // red
+    '#8b5cf6', // purple
+    '#06b6d4', // cyan
+    '#22c55e', // emerald
+    '#e11d48', // rose
+    '#a3e635', // lime
+    '#14b8a6', // teal
+];
+
+const hexToRgba = (hex, alpha = 0.2) => {
+    const cleaned = hex.replace('#', '');
+    const bigint = parseInt(cleaned, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+const getNextColor = () => {
+    const used = new Set(signers.value.map(s => s.color));
+    for (const c of colorPalette) {
+        if (!used.has(c)) return c;
+    }
+    // If exhausted, cycle
+    return colorPalette[signers.value.length % colorPalette.length];
+};
+
+const findSigner = (emplId, name) =>
+    signers.value.find(s => (emplId && s.emplId === emplId) || (name && s.name === name));
+
+const upsertSigner = ({ name, emplId }) => {
+    if (!name && !emplId) return null;
+    let s = findSigner(emplId, name);
+    if (!s) {
+        s = { name, emplId: emplId || null, color: getNextColor() };
+        signers.value.push(s);
+    }
+    return s;
+};
+
+const setActiveSigner = (signer) => {
+    newBoxForm.value.assignedTo = signer.name;
+    newBoxForm.value.assignedEmplId = signer.emplId || '';
+    newBoxForm.value.assignedColor = signer.color;
+    activeSignerKey.value = signer.emplId || signer.name;
+    showAddForm.value = true;
+};
+
+// New box form (now includes fixed sizes and lock)
 const showAddForm = ref(false);
 const newBoxForm = ref({
     assignedTo: '',
     hasDate: true,
     dateOffset: 5,
     assignedEmplId: "",
+    assignedColor: undefined,
+    // Fixed signature size (click-to-place)
+    signatureWidth: 200,
+    signatureHeight: 60,
+    // Optional: lock size (no resizing)
+    lockSize: false,
+    // Optional: date size
+    dateWidth: 100,
+    dateHeight: 30,
 });
+
+// Optional: keyboard navigation in modal list
+const approverIndex = ref(-1);
+const scrollContainer = ref(null);
+const moveDown = () => {
+    if (!Array.isArray(availableApprovers.value)) return;
+    approverIndex.value = Math.min(approverIndex.value + 1, availableApprovers.value.length - 1);
+    nextTick(() => {
+        if (scrollContainer.value) {
+            const items = scrollContainer.value.querySelectorAll('[data-approver]');
+            const el = items[approverIndex.value];
+            if (el) el.scrollIntoView({ block: 'nearest' });
+        }
+    });
+};
+const moveUp = () => {
+    if (!Array.isArray(availableApprovers.value)) return;
+    approverIndex.value = Math.max(approverIndex.value - 1, 0);
+    nextTick(() => {
+        if (scrollContainer.value) {
+            const items = scrollContainer.value.querySelectorAll('[data-approver]');
+            const el = items[approverIndex.value];
+            if (el) el.scrollIntoView({ block: 'nearest' });
+        }
+    });
+};
 
 const handleAssignUser = async () => {
     showModal.value = true;
@@ -70,22 +161,30 @@ const cancelButton = async () => {
     showModal.value = false;
     query.value.search = "";
     availableApprovers.value = null;
+    approverIndex.value = -1;
     newBoxForm.value = {
         assignedTo: '',
         hasDate: true,
         dateOffset: 5,
         assignedEmplId: "",
+        assignedColor: undefined,
+        signatureWidth: 200,
+        signatureHeight: 60,
+        lockSize: false,
+        dateWidth: 100,
+        dateHeight: 30,
     };
 };
 
 const selectUser = (user) => {
-    newBoxForm.value.assignedTo = user.employeename2;
-    newBoxForm.value.assignedEmplId = user.emplId;
-    console.log(newBoxForm.value.assignedEmplId);
+    // User object expected from directory: { employeename2, emplId }
+    const signer = upsertSigner({ name: user.employeename2, emplId: user.emplId });
+    if (signer) setActiveSigner(signer);
+
     showModal.value = false;
     query.value.search = "";
     availableApprovers.value = null;
-}
+};
 
 const scrollToPage = (pageNum) => {
     if (pageNum >= 1 && pageNum <= totalPages.value) {
@@ -95,19 +194,24 @@ const scrollToPage = (pageNum) => {
 
 // Helper to generate truly unique IDs
 const generateId = () => `sig_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
+
 watch(currentViewPage, async () => {
-    await nextTick(); // wait for DOM to update
-    // Force Vue to recalc positions of boxes
+    await nextTick();
     signatureBoxes.value = signatureBoxes.value.map(box => ({ ...box }));
 });
+
 // Load PDF and Data
 watch(() => props.isOpen, async (newVal) => {
     if (newVal && props.pdfFile) {
         await loadPdf();
 
+        // Build signers list from existing signatures first
         if (props.existingSignatures && props.existingSignatures.length > 0) {
-            const seenIds = new Set();
+            for (const sig of props.existingSignatures) {
+                upsertSigner({ name: sig.assignedTo, emplId: sig.assignedEmplId });
+            }
 
+            const seenIds = new Set();
             signatureBoxes.value = props.existingSignatures.map(sig => {
                 let safeId = sig.id;
                 if (!safeId || seenIds.has(safeId)) {
@@ -115,18 +219,30 @@ watch(() => props.isOpen, async (newVal) => {
                 }
                 seenIds.add(safeId);
 
+                const s = findSigner(sig.assignedEmplId, sig.assignedTo);
+
                 return {
                     ...sig,
                     hasDate: sig.hasDate === true || (sig.datePosition !== null && sig.datePosition !== undefined),
-                    id: safeId
+                    id: safeId,
+                    color: sig.color || s?.color || getNextColor(),
+                    lockSize: sig.lockSize ?? true, // default to locked if not provided
                 };
             });
         } else {
             signatureBoxes.value = [];
         }
 
+        // Default active signer from availableUsers if provided
         if (props.availableUsers.length > 0) {
-            newBoxForm.value.assignedTo = props.availableUsers[0];
+            const first = props.availableUsers[0];
+            let signer;
+            if (typeof first === 'string') {
+                signer = upsertSigner({ name: first, emplId: null });
+            } else if (first && typeof first === 'object') {
+                signer = upsertSigner({ name: first.employeename2, emplId: first.emplId });
+            }
+            if (signer) setActiveSigner(signer);
         }
     }
 });
@@ -162,8 +278,9 @@ const renderPage = async (pageNum) => {
     }
 };
 
-// Drawing Logic
-const startDrawingBox = (e) => {
+// CLICK-TO-PLACE: place a fixed-size signature box
+const placeSignatureOnClick = (e) => {
+    // Ignore if clicking on an existing draggable element
     if (e.target.closest('.draggable-item')) return;
 
     if (!showAddForm.value || !newBoxForm.value.assignedTo) {
@@ -174,64 +291,67 @@ const startDrawingBox = (e) => {
 
     const canvas = canvasRefs.value[currentViewPage.value - 1];
     const canvasRect = canvas.getBoundingClientRect();
-    const x = e.clientX - canvasRect.left;
-    const y = e.clientY - canvasRect.top;
+    const rawX = e.clientX - canvasRect.left;
+    const rawY = e.clientY - canvasRect.top;
 
-    isDrawing.value = true;
-    dragStart.value = { x, y };
+    const sigW = Math.max(20, Number(newBoxForm.value.signatureWidth || 0));
+    const sigH = Math.max(20, Number(newBoxForm.value.signatureHeight || 0));
 
-    currentBox.value = {
+    // Clamp position so box stays within canvas
+    const x = Math.max(0, Math.min(rawX, canvas.width - sigW));
+    const y = Math.max(0, Math.min(rawY, canvas.height - sigH));
+
+    const signerColor =
+        newBoxForm.value.assignedColor ||
+        (findSigner(newBoxForm.value.assignedEmplId, newBoxForm.value.assignedTo)?.color) ||
+        getNextColor();
+
+    // Create the box
+    const box = {
         id: generateId(),
         assignedTo: newBoxForm.value.assignedTo,
-        page: currentViewPage.value,
-        x: x,
-        y: y,
-        width: 0,
-        height: 0,
-        hasDate: newBoxForm.value.hasDate,
         assignedEmplId: newBoxForm.value.assignedEmplId,
-        datePosition: null
+        page: currentViewPage.value,
+        x,
+        y,
+        width: sigW,
+        height: sigH,
+        hasDate: newBoxForm.value.hasDate,
+        isEmpty: true,
+        datePosition: null,
+        color: signerColor,
+        lockSize: !!newBoxForm.value.lockSize,
     };
-};
 
-const drawBox = (e) => {
-    if (!isDrawing.value || !currentBox.value) return;
-    const canvasRect = canvasRefs.value[currentViewPage.value - 1].getBoundingClientRect();
-    const currentX = e.clientX - canvasRect.left;
-    const currentY = e.clientY - canvasRect.top;
+    // Date placement and clamping
+    if (box.hasDate) {
+        const dateW = Math.max(30, Number(newBoxForm.value.dateWidth || 0));
+        const dateH = Math.max(16, Number(newBoxForm.value.dateHeight || 0));
+        const offset = Math.max(0, Number(newBoxForm.value.dateOffset || 0));
 
-    currentBox.value.width = Math.abs(currentX - dragStart.value.x);
-    currentBox.value.height = Math.abs(currentY - dragStart.value.y);
-    currentBox.value.x = Math.min(dragStart.value.x, currentX);
-    currentBox.value.y = Math.min(dragStart.value.y, currentY);
-};
+        const dateX = Math.max(0, Math.min(box.x, canvas.width - dateW));
+        const dateY = Math.max(0, Math.min(box.y + box.height + offset, canvas.height - dateH));
 
-const finishDrawingBox = () => {
-    if (isDrawing.value && currentBox.value) {
-        if (currentBox.value.width > 10 && currentBox.value.height > 10) {
-            if (currentBox.value.hasDate) {
-                currentBox.value.datePosition = {
-                    x: currentBox.value.x,
-                    y: currentBox.value.y + currentBox.value.height + newBoxForm.value.dateOffset,
-                    width: 100,
-                    height: 30
-                };
-            }
-            signatureBoxes.value.push(currentBox.value);
-            selectedBoxId.value = currentBox.value.id;
-        }
-        currentBox.value = null;
+        box.datePosition = {
+            x: dateX,
+            y: dateY,
+            width: dateW,
+            height: dateH,
+        };
     }
-    isDrawing.value = false;
+
+    signatureBoxes.value.push(box);
+    selectedBoxId.value = box.id;
 };
 
+// Dragging and resizing
 const startDragging = (e, id, type = 'box') => {
     e.stopPropagation();
 
     const box = signatureBoxes.value.find(b => b.id === id);
     if (!box) return;
 
-    selectedBoxId.value = id; // Allow selection on click
+    selectedBoxId.value = id;
 
     // If signed (not empty), prevent dragging from starting
     if (box.isEmpty === false) {
@@ -248,7 +368,7 @@ const startDragging = (e, id, type = 'box') => {
             x: e.clientX - canvasRect.left - box.x,
             y: e.clientY - canvasRect.top - box.y
         };
-    } else if (type === 'date') {
+    } else if (type === 'date' && box.datePosition) {
         dragOffset.value = {
             x: e.clientX - canvasRect.left - box.datePosition.x,
             y: e.clientY - canvasRect.top - box.datePosition.y
@@ -260,7 +380,6 @@ const dragBox = (e) => {
     if (!isDragging.value || !selectedBoxId.value) return;
 
     const box = signatureBoxes.value.find(b => b.id === selectedBoxId.value);
-    // Safety Guard: Ensure box exists and we are on the correct page
     if (!box || box.page !== currentViewPage.value) return;
 
     const canvas = canvasRefs.value[box.page - 1];
@@ -271,6 +390,7 @@ const dragBox = (e) => {
     if (dragTargetType.value === 'box') {
         const oldX = box.x;
         const oldY = box.y;
+
         const newX = mouseX - dragOffset.value.x;
         const newY = mouseY - dragOffset.value.y;
 
@@ -280,8 +400,8 @@ const dragBox = (e) => {
         if (box.hasDate && box.datePosition) {
             const deltaX = box.x - oldX;
             const deltaY = box.y - oldY;
-            box.datePosition.x += deltaX;
-            box.datePosition.y += deltaY;
+            box.datePosition.x = Math.max(0, Math.min(box.datePosition.x + deltaX, canvas.width - (box.datePosition.width || 100)));
+            box.datePosition.y = Math.max(0, Math.min(box.datePosition.y + deltaY, canvas.height - (box.datePosition.height || 30)));
         }
     } else if (dragTargetType.value === 'date' && box.datePosition) {
         const newDateX = mouseX - dragOffset.value.x;
@@ -296,8 +416,8 @@ const startResizing = (e, id, handle) => {
     e.stopPropagation();
 
     const box = signatureBoxes.value.find(b => b.id === id);
-    // Prevent resizing if box is not empty (i.e., it has been signed)
-    if (!box || box.isEmpty === false) {
+    // Prevent resizing if box is not empty or lockSize is on
+    if (!box || box.isEmpty === false || box.lockSize) {
         return;
     }
 
@@ -323,36 +443,46 @@ const resizeBox = (e) => {
     const box = signatureBoxes.value.find(b => b.id === selectedBoxId.value);
     if (!box || box.page !== currentViewPage.value) return;
 
-    const canvasRect = canvasRefs.value[box.page - 1].getBoundingClientRect();
+    const canvas = canvasRefs.value[box.page - 1];
+    const canvasRect = canvas.getBoundingClientRect();
     const dx = (e.clientX - canvasRect.left) - dragStart.value.x;
     const dy = (e.clientY - canvasRect.top) - dragStart.value.y;
 
     switch (resizeHandle.value) {
         case 'se':
-            box.width = Math.max(50, dragStart.value.boxWidth + dx);
-            box.height = Math.max(30, dragStart.value.boxHeight + dy);
+            box.width = Math.min(Math.max(50, dragStart.value.boxWidth + dx), canvas.width - box.x);
+            box.height = Math.min(Math.max(30, dragStart.value.boxHeight + dy), canvas.height - box.y);
             break;
         case 'sw':
             box.width = Math.max(50, dragStart.value.boxWidth - dx);
-            box.height = Math.max(30, dragStart.value.boxHeight + dy);
+            box.height = Math.min(Math.max(30, dragStart.value.boxHeight + dy), canvas.height - box.y);
+            box.width = Math.min(box.width, dragStart.value.boxX + dragStart.value.boxWidth); // ensure not beyond left edge
             box.x = dragStart.value.boxX + (dragStart.value.boxWidth - box.width);
             break;
         case 'ne':
-            box.width = Math.max(50, dragStart.value.boxWidth + dx);
+            box.width = Math.min(Math.max(50, dragStart.value.boxWidth + dx), canvas.width - box.x);
             box.height = Math.max(30, dragStart.value.boxHeight - dy);
+            box.height = Math.min(box.height, dragStart.value.boxY + dragStart.value.boxHeight);
             box.y = dragStart.value.boxY + (dragStart.value.boxHeight - box.height);
             break;
         case 'nw':
             box.width = Math.max(50, dragStart.value.boxWidth - dx);
             box.height = Math.max(30, dragStart.value.boxHeight - dy);
+            box.width = Math.min(box.width, dragStart.value.boxX + dragStart.value.boxWidth);
+            box.height = Math.min(box.height, dragStart.value.boxY + dragStart.value.boxHeight);
             box.x = dragStart.value.boxX + (dragStart.value.boxWidth - box.width);
             box.y = dragStart.value.boxY + (dragStart.value.boxHeight - box.height);
             break;
     }
+
+    // Keep date in-bounds if any
+    if (box.hasDate && box.datePosition) {
+        box.datePosition.x = Math.max(0, Math.min(box.datePosition.x, canvas.width - (box.datePosition.width || 100)));
+        box.datePosition.y = Math.max(0, Math.min(box.datePosition.y, canvas.height - (box.datePosition.height || 30)));
+    }
 };
 
 const handleMouseUp = () => {
-    finishDrawingBox();
     isDragging.value = false;
     isResizing.value = false;
     resizeHandle.value = null;
@@ -360,8 +490,7 @@ const handleMouseUp = () => {
 };
 
 const handleMouseMove = (e) => {
-    if (isDrawing.value) drawBox(e);
-    else if (isDragging.value) dragBox(e);
+    if (isDragging.value) dragBox(e);
     else if (isResizing.value) resizeBox(e);
 };
 
@@ -375,6 +504,7 @@ const deleteBox = (index) => {
 
 const getCurrentPageBoxes = () => signatureBoxes.value.filter(box => box.page === currentViewPage.value);
 
+// Position-only styles
 const getBoxStyle = (box) => {
     const canvas = canvasRefs.value[box.page - 1];
     if (!canvas || !containerRef.value) return {};
@@ -404,29 +534,61 @@ const getDateStyle = (box) => {
     };
 };
 
+// Color-aware visual styles
+const getBoxVisualStyle = (box) => {
+    const base = getBoxStyle(box);
+    const color = box.color || '#3b82f6';
+    const selected = selectedBoxId.value === box.id;
+    const bgAlpha = box.isEmpty ? (selected ? 0.25 : 0.15) : 0;
+    return {
+        ...base,
+        borderColor: color,
+        backgroundColor: bgAlpha ? hexToRgba(color, bgAlpha) : 'transparent'
+    };
+};
+
+const getDateVisualStyle = (box) => {
+  const base = getDateStyle(box);
+  const color = box.color || '#3b82f6';
+
+  // If no signed date → use box color
+  if (!box.signedDate && !box.signedBy) {
+    return {
+      ...base,
+      borderColor: color,
+      color: color,
+      backgroundColor: hexToRgba(color, 0.1),
+    };
+  }
+
+  else{
+  // If signed date → use white
+  return {
+    ...base,
+    borderColor: '#36454F',
+    color: '#36454F',
+  };
+}
+};
+
+
+
 const goToNextPage = () => { if (currentViewPage.value < totalPages.value) currentViewPage.value++; };
 const goToPrevPage = () => { if (currentViewPage.value > 1) currentViewPage.value--; };
 
-// --- NEW SCROLL FUNCTION ---
+// --- Scroll to a box and select it ---
 const selectAndScrollToBox = async (box) => {
-    // 1. Set selection and switch page
     selectedBoxId.value = box.id;
     currentViewPage.value = box.page;
 
-    // 2. Wait for Vue to update the DOM (so the correct canvas is visible)
     await nextTick();
 
-    // 3. Calculate Scroll Position
-    // containerRef is the inner wrapper. The scrollbar is on its PARENT.
     if (containerRef.value && containerRef.value.parentElement) {
-        const scrollContainer = containerRef.value.parentElement;
-
-        // Calculate the position to center the box in the viewport
-        const containerHeight = scrollContainer.clientHeight;
+        const scrollContainerEl = containerRef.value.parentElement;
+        const containerHeight = scrollContainerEl.clientHeight;
         const targetScrollTop = box.y - (containerHeight / 2) + (box.height / 2);
 
-        // Scroll smoothly
-        scrollContainer.scrollTo({
+        scrollContainerEl.scrollTo({
             top: Math.max(0, targetScrollTop),
             behavior: 'smooth'
         });
@@ -458,8 +620,9 @@ const saveSignatures = () => {
             };
         }
 
-        // **CRITICAL FIX: Preserve existing signature data**
+        // Preserve existing signature fields OR use defaults
         const existingSignature = props.existingSignatures?.find(sig => sig.id === box.id);
+        const signer = findSigner(box.assignedEmplId, box.assignedTo);
 
         return {
             id: box.id,
@@ -474,29 +637,38 @@ const saveSignatures = () => {
             canvasHeight: canvas.height,
             pdfLibY: pdfLibY,
 
-            // Preserve existing signature fields OR use defaults
             imageSrc: existingSignature?.imageSrc || box.imageSrc || null,
             isEmpty: existingSignature?.isEmpty ?? box.isEmpty ?? true,
             signedBy: existingSignature?.signedBy || box.signedBy || null,
 
             hasDate: box.hasDate,
-            datePosition: dateObj
+            datePosition: dateObj,
+
+            color: box.color || signer?.color || null,
+            lockSize: !!box.lockSize
         };
     }).filter(Boolean);
-
 
     emit('save-signatures', formattedData);
     emit('close');
 
     query.value.search = "";
     availableApprovers.value = null;
+    approverIndex.value = -1;
     newBoxForm.value = {
         assignedTo: '',
         hasDate: true,
         dateOffset: 5,
         assignedEmplId: "",
+        assignedColor: undefined,
+        signatureWidth: 200,
+        signatureHeight: 60,
+        lockSize: false,
+        dateWidth: 100,
+        dateHeight: 30,
     };
 };
+
 onMounted(() => document.addEventListener('mouseup', handleMouseUp));
 onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
 </script>
@@ -510,7 +682,7 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
             <div class="flex items-center justify-between p-4 border-b">
                 <div>
                     <h2 class="text-xl font-semibold">Place Signature Boxes</h2>
-                    <p class="text-sm text-gray-600 mt-1">Draw boxes and position the date fields independently</p>
+                    <p class="text-sm text-gray-600 mt-1">Click to place a fixed-size signature area. Drag to move.</p>
                 </div>
                 <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -523,6 +695,26 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
             <div class="flex flex-1 overflow-hidden">
                 <!-- Left Sidebar -->
                 <div class="w-80 border-r bg-gray-50 p-4 overflow-y-auto">
+                    <!-- Signers List -->
+                    <div class="bg-white rounded-lg shadow p-4 mb-4">
+                        <h3 class="font-semibold mb-3">Signers ({{ signers.length }})</h3>
+                        <div v-if="signers.length === 0" class="text-sm text-gray-500">
+                            No signers yet. Use "Assign" to add from the directory.
+                        </div>
+                        <div class="space-y-2">
+                            <button v-for="s in signers" :key="s.emplId || s.name" @click="setActiveSigner(s)"
+                                class="w-full flex items-center justify-between px-3 py-2 border rounded hover:bg-gray-50 transition"
+                                :class="(newBoxForm.assignedEmplId === s.emplId || newBoxForm.assignedTo === s.name) ? 'border-blue-500' : 'border-gray-300'">
+                                <span class="flex items-center gap-2">
+                                    <span class="inline-block w-3 h-3 rounded"
+                                        :style="{ backgroundColor: s.color }"></span>
+                                    <span class="font-medium">{{ s.name }}</span>
+                                </span>
+                                <span class="text-xs text-gray-500">Click to set active</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Add Box Form -->
                     <div class="bg-white rounded-lg shadow p-4 mb-4">
                         <button @click="showAddForm = !showAddForm"
@@ -541,30 +733,26 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                     Assign To *
                                 </label>
 
-                                <div class="flex gap-2">
+                                <div class="flex gap-2 items-center">
                                     <!-- INPUT -->
                                     <input v-model="newBoxForm.assignedTo" type="text" placeholder="Enter user name..."
                                         class="flex-1 border rounded px-3 py-2 text-sm" disabled />
+                                    <!-- Color dot
+                                    <span class="inline-block w-5 h-5 rounded border"
+                                        :style="{ backgroundColor: newBoxForm.assignedColor || '#e5e7eb' }"
+                                        title="Signer color"></span> -->
 
                                     <!-- BUTTON -->
                                     <button @click="handleAssignUser"
-                                        class="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
+                                        class="px-2 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
                                         Assign
                                     </button>
                                 </div>
                             </div>
-
-
                             <div class="flex items-center gap-2">
                                 <input type="checkbox" v-model="newBoxForm.hasDate" id="hasDate" class="rounded" />
                                 <label for="hasDate" class="text-sm font-medium text-gray-700">Include date
                                     field</label>
-                            </div>
-
-                            <div v-if="newBoxForm.hasDate">
-                                <label class="block text-sm font-medium text-gray-700 mb-1">Default Date Offset</label>
-                                <input v-model.number="newBoxForm.dateOffset" type="number" min="0"
-                                    class="w-full border rounded px-3 py-2 text-sm" />
                             </div>
                         </div>
                     </div>
@@ -578,7 +766,11 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                 :class="selectedBoxId === box.id ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'"
                                 @click="selectAndScrollToBox(box)">
                                 <div class="flex items-start justify-between mb-1">
-                                    <p class="font-semibold text-gray-900">{{ box.assignedTo }}</p>
+                                    <p class="font-semibold text-gray-900">
+                                        <span class="inline-block w-3 h-3 rounded mr-2"
+                                            :style="{ backgroundColor: box.color || '#3b82f6' }"></span>
+                                        {{ box.assignedTo }}
+                                    </p>
                                     <button @click.stop="deleteBox(index)"
                                         class="text-red-500 hover:text-red-700">🗑️</button>
                                 </div>
@@ -627,62 +819,52 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                             </button>
                         </div>
                     </div>
+
                     <!-- PDF Canvas Area -->
                     <div class="flex-1 overflow-auto p-6 bg-gray-100">
                         <!-- Scroll Container is HERE (parent of containerRef) -->
                         <div ref="containerRef" class="relative inline-block" @mousemove="handleMouseMove">
                             <div class="relative border-2 border-gray-400 rounded shadow-lg bg-white"
-                                @mousedown="startDrawingBox">
+                                @mousedown="placeSignatureOnClick">
                                 <canvas v-for="i in totalPages" :key="i" v-show="i === currentViewPage"
                                     :ref="el => { if (el) canvasRefs[i - 1] = el }"
                                     class="block cursor-crosshair"></canvas>
                             </div>
 
-                            <!-- Drawing Preview -->
-                            <div v-if="isDrawing && currentBox"
-                                class="absolute border-2 border-dashed border-blue-500 bg-blue-100 bg-opacity-30 pointer-events-none"
-                                :style="{
-                                    left: currentBox.x + 'px',
-                                    top: currentBox.y + 'px',
-                                    width: currentBox.width + 'px',
-                                    height: currentBox.height + 'px'
-                                }"></div>
-
                             <!-- PLACED ITEMS -->
                             <template v-for="box in getCurrentPageBoxes()" :key="box.id">
 
                                 <!-- 1. Signature Box -->
-                                <div class="absolute border-2 rounded transition-all draggable-item" :class="{
-                                    // Classes for a signed (not empty) box. It's not movable.
-                                    'border-green-600 cursor-default': !box.isEmpty,
-
-                                    // Classes for an empty, draggable box.
-                                    'group cursor-move': box.isEmpty,
-                                    'border-blue-500 bg-blue-100 bg-opacity-40': box.isEmpty && selectedBoxId === box.id,
-                                    'border-purple-400 bg-purple-50 bg-opacity-30 hover:border-purple-600': box.isEmpty && selectedBoxId !== box.id
-                                }" :style="getBoxStyle(box)"
-                                    @mousedown.stop="startDragging($event, box.id, 'box')">
-
-                                    <div
-                                        class="absolute -top-6 left-0 bg-purple-600 text-white text-xs px-2 py-1 rounded font-semibold whitespace-nowrap">
+                                <div class="absolute rounded transition-all draggable-item group"
+                                    :style="getBoxVisualStyle(box)" :class="{
+                                        'border-2' : !box.signedBy,
+                                        'cursor-default': !box.isEmpty,
+                                        'cursor-move': box.isEmpty && !(isDragging && selectedBoxId === box.id && dragTargetType === 'box'),
+                                        'cursor-grabbing': box.isEmpty && isDragging && selectedBoxId === box.id && dragTargetType === 'box'
+                                    }" @mousedown.stop="startDragging($event, box.id, 'box')">
+                                    <!-- Label uses signer color -->
+                                    <div v-if="!box.signedBy" class="absolute -top-6 left-0 text-white text-xs px-2 py-1 rounded font-semibold whitespace-nowrap"
+                                        :style="{ backgroundColor: box.color || '#3b82f6' }">
                                         {{ box.assignedTo }}
                                     </div>
 
                                     <!-- IF EMPTY: Show placeholder and resize handles -->
-                                    <template v-if="box.isEmpty">
-                                        <!-- Resize Handles -->
-                                        <div class="absolute w-3 h-3 bg-blue-500 rounded-full -top-1 -left-1 cursor-nw-resize opacity-0 group-hover:opacity-100"
-                                            @mousedown.stop="startResizing($event, box.id, 'nw')"></div>
-                                        <div class="absolute w-3 h-3 bg-blue-500 rounded-full -top-1 -right-1 cursor-ne-resize opacity-0 group-hover:opacity-100"
-                                            @mousedown.stop="startResizing($event, box.id, 'ne')"></div>
-                                        <div class="absolute w-3 h-3 bg-blue-500 rounded-full -bottom-1 -left-1 cursor-sw-resize opacity-0 group-hover:opacity-100"
-                                            @mousedown.stop="startResizing($event, box.id, 'sw')"></div>
-                                        <div class="absolute w-3 h-3 bg-blue-500 rounded-full -bottom-1 -right-1 cursor-se-resize opacity-0 group-hover:opacity-100"
-                                            @mousedown.stop="startResizing($event, box.id, 'se')"></div>
+                                    <template v-if="box.isEmpty || box.isEmpty == null">
+                                        <!-- Resize Handles (only if not locked) -->
+                                        <template v-if="!box.lockSize">
+                                            <div class="absolute w-3 h-3 bg-blue-500 rounded-full -top-1 -left-1 cursor-nw-resize opacity-0 group-hover:opacity-100"
+                                                @mousedown.stop="startResizing($event, box.id, 'nw')"></div>
+                                            <div class="absolute w-3 h-3 bg-blue-500 rounded-full -top-1 -right-1 cursor-ne-resize opacity-0 group-hover:opacity-100"
+                                                @mousedown.stop="startResizing($event, box.id, 'ne')"></div>
+                                            <div class="absolute w-3 h-3 bg-blue-500 rounded-full -bottom-1 -left-1 cursor-sw-resize opacity-0 group-hover:opacity-100"
+                                                @mousedown.stop="startResizing($event, box.id, 'sw')"></div>
+                                            <div class="absolute w-3 h-3 bg-blue-500 rounded-full -bottom-1 -right-1 cursor-se-resize opacity-0 group-hover:opacity-100"
+                                                @mousedown.stop="startResizing($event, box.id, 'se')"></div>
+                                        </template>
 
                                         <div class="flex items-center justify-center h-full">
-                                            <span class="text-xs font-bold text-purple-700 opacity-50">Signature
-                                                Area</span>
+                                            <span class="text-xs font-bold opacity-50"
+                                                :style="{ color: box.color || '#3b82f6' }">Signature Area</span>
                                         </div>
                                     </template>
 
@@ -698,15 +880,16 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
 
                                 <!-- 2. Date Box -->
                                 <div v-if="box.hasDate"
-                                    class="absolute border border-dashed px-2 py-1 text-xs font-semibold rounded draggable-item flex items-center justify-center hover:z-50"
+                                    class="absolute px-2 py-1 text-xs font-semibold rounded draggable-item flex items-center justify-center hover:z-50"
                                     :class="{
-                                        'border-green-500 bg-green-50 bg-opacity-80 text-green-700 cursor-move hover:bg-green-100 hover:border-green-700': box.isEmpty,
-                                        'border-gray-400 bg-gray-100 text-gray-500 cursor-default': !box.isEmpty,
-                                        'ring-2 ring-blue-300': selectedBoxId === box.id
-                                    }" :style="getDateStyle(box)"
+                                        'border border-dashed' : box.isEmpty || box.isEmpty == null,
+                                        'ring-2 ring-blue-300': selectedBoxId === box.id && !box.signedBy,
+                                        'cursor-default': !box.isEmpty,
+                                        'cursor-grabbing': box.isEmpty && isDragging && selectedBoxId === box.id && dragTargetType === 'date',
+                                        'cursor-move': box.isEmpty && !(isDragging && selectedBoxId === box.id && dragTargetType === 'date')
+                                    }" :style="getDateVisualStyle(box)"
                                     @mousedown.stop="startDragging($event, box.id, 'date')">
-                                    {{ box.isEmpty || box.isEmpty == null ? "MM/DD/YYYY" : box.datePosition.dateText }}
-
+                                    {{ box.isEmpty || box.isEmpty == null ? "MM/DD/YYYY" : box.datePosition?.dateText }}
                                 </div>
 
                             </template>
@@ -731,6 +914,7 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
         </div>
     </div>
 
+    <!-- Directory Modal -->
     <div v-if="showModal" @click.self="cancelButton" @keydown.esc="cancelButton"
         class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]">
         <div class="w-full max-w-4xl bg-white shadow-lg rounded-lg p-6 relative">
@@ -750,15 +934,16 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
             </div>
             <div class="max-h-60 overflow-y-auto border border-gray-300 rounded mt-2" ref="scrollContainer">
                 <div tabindex="0">
-                    <div v-for="(user, index) in availableApprovers" :key="index" @click="selectUser(user)"
-                        class="px-4 py-2 hover:bg-gray-200 cursor-pointer"
+                    <div v-for="(user, index) in availableApprovers" :key="index" data-approver
+                        @click="selectUser(user)" class="px-4 py-2 hover:bg-gray-200 cursor-pointer"
                         :class="{ 'bg-gray-200 font-bold': index === approverIndex }">
                         {{ user.employeename2 }}
                     </div>
                     <div v-if="loading" class="p-2 text-gray-400 text-center">
                         Loading users...
                     </div>
-                    <div v-else-if="availableApprovers.length === 0" class="p-2 text-gray-400 text-center">
+                    <div v-else-if="!availableApprovers || availableApprovers.length === 0"
+                        class="p-2 text-gray-400 text-center">
                         No users found.
                     </div>
                 </div>

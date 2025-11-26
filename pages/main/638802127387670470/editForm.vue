@@ -572,6 +572,38 @@
                 </div>
               </div>
 
+                 <!-- Character Case -->
+              <div v-if="
+                element.objectType === 'TEXTFROMSOURCE' ||
+                element.objectType === 'TEXT' ||
+                element.objectType === 'LINKTOOBJECT' ||
+                element.objectType === 'TEXTAREA'
+              " class="col-span-6 mt-1">
+                <label class="text-md text-gray-700 font-medium">Character Case</label>
+
+                <div class="flex items-center space-x-6 mt-2">
+
+                  <!-- Normal -->
+                  <label class="flex items-center space-x-2">
+                    <input type="radio" class="accent-blue-600" value="normal" v-model="element.charactercase" />
+                    <span>Normal</span>
+                  </label>
+
+                  <!-- Uppercase -->
+                  <label class="flex items-center space-x-2">
+                    <input type="radio" class="accent-blue-600" value="upper" v-model="element.charactercase" />
+                    <span>Uppercase</span>
+                  </label>
+
+                  <!-- Lowercase -->
+                  <label class="flex items-center space-x-2">
+                    <input type="radio" class="accent-blue-600" value="lower" v-model="element.charactercase" />
+                    <span>Lowercase</span>
+                  </label>
+
+                </div>
+              </div>
+
             <!-- Remove Form Button -->
             <div
               v-if="forms.formObjects.length > 1"
@@ -1783,6 +1815,8 @@ const saveFormObjects = async () => {
     formData.append(`formObjects[${i}].isRequired`, obj.isRequired);
     formData.append(`formObjects[${i}].autofilluser`, obj.autofillUser? "1" : "0");
     formData.append(`formObjects[${i}].datasourcescript`, obj.datasourcescript);
+    formData.append(`formObjects[${i}].charactercase`, obj.charactercase);
+
     if (obj.objectlinkid) {
       formData.append(`formObjects[${i}].objectlinkId`, obj.objectlinkid);
     }

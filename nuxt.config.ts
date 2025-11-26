@@ -1,38 +1,41 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
 
-  modules: [
-    '@nuxtjs/tailwindcss',
-  ],
+  modules: ["@nuxtjs/tailwindcss"],
 
   ssr: false,
 
   router: {
     options: {
-      hashMode: true
-    }
+      hashMode: true,
+    },
   },
 
   app: {
-    baseURL: '/aso',
+    baseURL: "/aso",
     head: {
       script: [
         {
-          src: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"
-        }
-      ]
-    }
+          src: "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js",
+        },
+      ],
+    },
   },
 
   runtimeConfig: {
+    // Server-only
+    secretKey: process.env.SECRET_KEY,
+
     public: {
-      apiBaseUrl: process.env.NUXT_PUBLIC_API_BASE_URL,
-    }
+      localApi: process.env.LOCAL_API,
+      liveApi: process.env.LIVE_API,
+      secretKey: process.env.SECRET_KEY,
+    },
   },
 
   vite: {
     esbuild: {
-      drop: ['console', 'debugger'],
+      drop: ["console", "debugger"],
     },
-  }
+  },
 });

@@ -1,26 +1,11 @@
 <template>
   <BreadCrumbs :nenunames="nenunames" />
-  <button
-    @click="backButton"
-    type="button"
-    class="flex items-center ms-6 mt-8 text-gray-700 hover:text-blue-600 transition-colors duration-200"
-  >
-    <svg
-      class="w-9 h-9"
-      aria-hidden="true"
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <path
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        d="M5 12h14M5 12l4-4m-4 4 4 4"
-      />
+  <button @click="backButton" type="button"
+    class="flex items-center ms-6 mt-8 text-gray-700 hover:text-blue-600 transition-colors duration-200">
+    <svg class="w-9 h-9" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+      viewBox="0 0 24 24">
+      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M5 12h14M5 12l4-4m-4 4 4 4" />
     </svg>
     <span class="text-lg font-bold">Back</span>
   </button>
@@ -29,109 +14,52 @@
     <div class="grid grid-cols-[auto,1fr] items-center gap-x-4 border-b pb-10">
       <label class="text-gray-700 font-bold text-2xl">Form </label>
       <div ref="dropdownRef" class="relative">
-        <button
-          @click="toggleDropdown"
-          class="border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-left"
-        >
+        <button @click="toggleDropdown"
+          class="border border-gray-300 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-left">
           {{ selectedTitle || "Select Form Title" }}
         </button>
-        <div
-          v-if="isOpen"
-          @keydown="handleKeyDown"
-          tabindex="0"
-          class="absolute z-10 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-gray-300 rounded-md shadow-md"
-        >
+        <div v-if="isOpen" @keydown="handleKeyDown" tabindex="0"
+          class="absolute z-10 mt-1 w-full max-h-60 overflow-y-auto bg-white border border-gray-300 rounded-md shadow-md">
           <!-- 🔍 Search Input Inside Dropdown -->
           <div class="flex gap-2 sticky top-0 bg-white z-10">
-            <div
-              class="relative text-gray-500 focus-within:text-gray-900 mb-4 w-full"
-            >
+            <div class="relative text-gray-500 focus-within:text-gray-900 mb-4 w-full">
               <!-- Left Icon -->
-              <div
-                class="absolute inset-y-0 left-3 flex items-center pointer-events-none"
-              >
-                <svg
-                  class="w-5 h-5"
-                  viewBox="0 0 20 20"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                >
+              <div class="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                <svg class="w-5 h-5" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path
                     d="M17.5 17.5L15.4167 15.4167M15.8333 9.16667C15.8333 5.48477 12.8486 2.5 9.16667 2.5C5.48477 2.5 2.5 5.48477 2.5 9.16667C2.5 12.8486 5.48477 15.8333 9.16667 15.8333C11.0005 15.8333 12.6614 15.0929 13.8667 13.8947C15.0814 12.6872 15.8333 11.0147 15.8333 9.16667Z"
-                    stroke="#9CA3AF"
-                    stroke-width="1.6"
-                    stroke-linecap="round"
-                  />
+                    stroke="#9CA3AF" stroke-width="1.6" stroke-linecap="round" />
                 </svg>
               </div>
 
               <!-- Right Icon -->
-              <div
-                v-if="searchTitle"
-                class="absolute inset-y-0 right-1 flex items-center"
-              >
-                <svg
-                  @click="clearSearch"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke-width="1.5"
-                  stroke="currentColor"
-                  class="size-6 cursor-pointer text-red-700"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
-                  />
+              <div v-if="searchTitle" class="absolute inset-y-0 right-1 flex items-center">
+                <svg @click="clearSearch" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                  stroke-width="1.5" stroke="currentColor" class="size-6 cursor-pointer text-red-700">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
                 </svg>
               </div>
 
               <!-- Input Field -->
-              <input
-                ref="searchInputRef"
-                type="text"
-                v-model="searchTitle"
-                autocomplete="off"
-                @keydown.enter.prevent="handleEnterKey"
-                @keydown.down.prevent="moveDown"
-                @keydown.up.prevent="moveUp"
+              <input ref="searchInputRef" type="text" v-model="searchTitle" autocomplete="off"
+                @keydown.enter.prevent="handleEnterKey" @keydown.down.prevent="moveDown" @keydown.up.prevent="moveUp"
                 class="block w-full h-11 pr-10 pl-10 py-2.5 text-base font-normal shadow-xs text-gray-900 bg-transparent border border-gray-950 rounded-md placeholder-gray-400 focus:outline-none mx-1"
-                placeholder="Search"
-              />
+                placeholder="Search" />
             </div>
-            <button
-              @click="getFormTitle"
-              class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700"
-            >
-              <svg
-                class="w-6 h-6 text-gray-800 dark:text-white"
-                aria-hidden="true"
-                xmlns="http://www.w3.org/2000/svg"
-                width="24"
-                height="24"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke="currentColor"
-                  stroke-linecap="round"
-                  stroke-width="2"
-                  d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
-                />
+            <button @click="getFormTitle" class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700">
+              <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+                width="24" height="24" fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" stroke-linecap="round" stroke-width="2"
+                  d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
               </svg>
             </button>
           </div>
           <div ref="scrollContainer">
             <div v-if="formTitles && formTitles.length > 0">
-              <div
-                v-for="(formTitle, index) in formTitles"
-                :key="formTitle.id"
-                :style="{ scrollMarginTop: '5.5rem' }"
-                @click="selectForm(formTitle)"
-                class="px-4 py-2 hover:bg-gray-200 cursor-pointer"
-                :class="{ 'bg-gray-200 font-bold': index === highlightedIndex }"
-              >
+              <div v-for="(formTitle, index) in formTitles" :key="formTitle.id" :style="{ scrollMarginTop: '5.5rem' }"
+                @click="selectForm(formTitle)" class="px-4 py-2 hover:bg-gray-200 cursor-pointer"
+                :class="{ 'bg-gray-200 font-bold': index === highlightedIndex }">
                 {{ formTitle.title }}
               </div>
             </div>
@@ -164,23 +92,12 @@
       <LoadingModal />
     </div>
 
-    <div
-      v-if="!isLoading && (!formDetails || !formDetails.formObjects?.length)"
-      class="flex flex-col items-center justify-center p-6 rounded-lg mt-6 max-w-full mx-auto animate-fade-in"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        fill="none"
-        viewBox="0 0 24 24"
-        stroke-width="1.5"
-        stroke="currentColor"
-        class="size-52"
-      >
-        <path
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
-        />
+    <div v-if="!isLoading && (!formDetails || !formDetails.formObjects?.length)"
+      class="flex flex-col items-center justify-center p-6 rounded-lg mt-6 max-w-full mx-auto animate-fade-in">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+        class="size-52">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
       </svg>
 
       <p class="text-gray-600 text-xl font-medium">
@@ -190,29 +107,17 @@
 
     <div v-if="!isLoading && formDetails">
       <div class="rounded-t-lg">
-        <h1
-          class="text-lg font-semibold text-gray-700 mb-10 border-b break-all line-clamp-2"
-        >
+        <h1 class="text-lg font-semibold text-gray-700 mb-10 border-b break-all line-clamp-2">
           {{ formDetails.formDescription }}
         </h1>
       </div>
 
-      <div
-        v-for="(formObject, index) in formDetails.formObjects"
-        :key="formObject.id"
-        class="mb-6"
-      >
+      <div v-for="(formObject, index) in formDetails.formObjects" :key="formObject.id" class="mb-6">
         <div>
-          <div
-            v-if="formObject.objecttype !== 'LABEL'"
-            class="flex justify-between"
-          >
+          <div v-if="formObject.objecttype !== 'LABEL'" class="flex justify-between">
             <label class="text-gray-700 font-semibold mb-2 break-all block">
               {{ formObject.label }}
-              <span
-                v-if="formObject.isrequired === 1"
-                class="text-red-500 text-sm"
-              >
+              <span v-if="formObject.isrequired === 1" class="text-red-500 text-sm">
                 *
               </span>
             </label>
@@ -224,132 +129,58 @@
             </h3>
           </div>
           <div v-else-if="formObject.objecttype === 'TEXT'">
-            <input
-              type="text"
-              v-model="formAnswers[formObject.id]"
-              @input="onInput(formObject.id)"
-              maxlength="55"
-              :class="[
-                'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-                formErrors[formObject.id]
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-gray-300 focus:ring-blue-500',
-              ]"
-              :style="getInputStyle(formObject.id)"
-            />
-            <!-- Radio Buttons for Capitalization -->
-            <div class="flex space-x-4 mt-2 text-sm text-gray-700">
-              <label class="flex items-center space-x-1">
-                <input
-                  type="radio"
-                  :name="`caps-${formObject.id}`"
-                  value="original"
-                  v-model="capsSettings[formObject.id]"
-                  @change="applyCapsSetting(formObject.id)"
-                />
-                <span>Original</span>
-              </label>
-
-              <label class="flex items-center space-x-1">
-                <input
-                  type="radio"
-                  :name="`caps-${formObject.id}`"
-                  value="uppercase"
-                  v-model="capsSettings[formObject.id]"
-                  @change="applyCapsSetting(formObject.id)"
-                />
-                <span>Uppercase</span>
-              </label>
-
-              <label class="flex items-center space-x-1">
-                <input
-                  type="radio"
-                  :name="`caps-${formObject.id}`"
-                  value="lowercase"
-                  v-model="capsSettings[formObject.id]"
-                  @change="applyCapsSetting(formObject.id)"
-                />
-                <span>Lowercase</span>
-              </label>
-            </div>
+            <input type="text" v-model="formAnswers[formObject.id]" 
+            :style="{
+              textTransform:
+                formObject.charactercase === 'upper'
+                  ? 'uppercase'
+                  : formObject.charactercase === 'lower'
+                    ? 'lowercase'
+                    : 'none'
+            }" 
+            maxlength="55" 
+            :class="[
+              'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+              formErrors[formObject.id]
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-blue-500',
+            ]" />
           </div>
 
-          <input
-            v-else-if="formObject.objecttype === 'NUMBER'"
-            type="number"
-            :value="String(formAnswers[formObject.id] || '')"
-            @input="handleNumberInput($event, formObject.id)"
-            onkeypress="return event.charCode >= 48 && event.charCode <= 57"
-            :class="[
+          <input v-else-if="formObject.objecttype === 'NUMBER'" type="number"
+            :value="String(formAnswers[formObject.id] || '')" @input="handleNumberInput($event, formObject.id)"
+            onkeypress="return event.charCode >= 48 && event.charCode <= 57" :class="[
               'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
               formErrors[formObject.id]
                 ? 'border-red-500 focus:ring-red-500'
                 : 'border-gray-300 focus:ring-blue-500',
-            ]"
-          />
+            ]" />
 
-          <input
-            v-else-if="formObject.objecttype === 'DECIMAL'"
-            type="number"
-            step="0.01"
-            :value="String(formAnswers[formObject.id] || '')"
-            @input="formAnswers[formObject.id] = $event.target.value"
+          <input v-else-if="formObject.objecttype === 'DECIMAL'" type="number" step="0.01"
+            :value="String(formAnswers[formObject.id] || '')" @input="formAnswers[formObject.id] = $event.target.value"
             :class="[
               'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
               formErrors[formObject.id]
                 ? 'border-red-500 focus:ring-red-500'
                 : 'border-gray-300 focus:ring-blue-500',
-            ]"
-          />
-          
+            ]" />
+
           <div v-else-if="formObject.objecttype === 'TEXTAREA'">
-            <textarea
-              v-model="formAnswers[formObject.id]"
-              @input="onInput(formObject.id)"
-              maxlength="250"
-              :class="[
-                'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-                formErrors[formObject.id]
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-gray-300 focus:ring-blue-500',
-              ]"
-              :style="getInputStyle(formObject.id)"
-            ></textarea>
-            <!-- Radio Buttons for Capitalization -->
-            <div class="flex space-x-4 mt-2 text-sm text-gray-700">
-              <label class="flex items-center space-x-1">
-                <input
-                  type="radio"
-                  :name="`caps-${formObject.id}`"
-                  value="original"
-                  v-model="capsSettings[formObject.id]"
-                  @change="applyCapsSetting(formObject.id)"
-                />
-                <span>Original</span>
-              </label>
-
-              <label class="flex items-center space-x-1">
-                <input
-                  type="radio"
-                  :name="`caps-${formObject.id}`"
-                  value="uppercase"
-                  v-model="capsSettings[formObject.id]"
-                  @change="applyCapsSetting(formObject.id)"
-                />
-                <span>Uppercase</span>
-              </label>
-
-              <label class="flex items-center space-x-1">
-                <input
-                  type="radio"
-                  :name="`caps-${formObject.id}`"
-                  value="lowercase"
-                  v-model="capsSettings[formObject.id]"
-                  @change="applyCapsSetting(formObject.id)"
-                />
-                <span>Lowercase</span>
-              </label>
-            </div>
+            <textarea v-model="formAnswers[formObject.id]"
+             :style="{
+              textTransform:
+                formObject.charactercase === 'upper'
+                  ? 'uppercase'
+                  : formObject.charactercase === 'lower'
+                    ? 'lowercase'
+                    : 'none'
+            }" 
+             maxlength="250" :class="[
+              'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+              formErrors[formObject.id]
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-blue-500',
+            ]"></textarea>
           </div>
           <div v-else-if="formObject.objecttype === 'TIME'">
             <div>
@@ -357,79 +188,47 @@
             </div>
           </div>
 
-          <select
-            v-else-if="formObject.objecttype === 'LIST'"
-            v-model="formAnswers[formObject.id]"
-            :class="[
-              'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-              formErrors[formObject.id]
-                ? 'border-red-500 focus:ring-red-500'
-                : 'border-gray-300 focus:ring-blue-500',
-            ]"
-          >
+          <select v-else-if="formObject.objecttype === 'LIST'" v-model="formAnswers[formObject.id]" :class="[
+            'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+            formErrors[formObject.id]
+              ? 'border-red-500 focus:ring-red-500'
+              : 'border-gray-300 focus:ring-blue-500',
+          ]">
             <option hidden>Select {{ formObject.label }}</option>
-            <option
-              v-for="option in formObject.options"
-              :key="option.id"
-              :value="option.value"
-            >
+            <option v-for="option in formObject.options" :key="option.id" :value="option.value">
               {{ option.value }}
             </option>
           </select>
 
-          <input
-            v-else-if="formObject.objecttype === 'DATE'"
-            type="date"
-            :value="formAnswers[formObject.id] || ''"
-            @input="formAnswers[formObject.id] = $event.target.value.toString()"
-            :class="[
+          <input v-else-if="formObject.objecttype === 'DATE'" type="date" :value="formAnswers[formObject.id] || ''"
+            @input="formAnswers[formObject.id] = $event.target.value.toString()" :class="[
               'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
               formErrors[formObject.id]
                 ? 'border-red-500 focus:ring-red-500'
                 : 'border-gray-300 focus:ring-blue-500',
-            ]"
-          />
+            ]" />
 
           <div v-else-if="formObject.objecttype === 'CHOICES'">
-            <div
-              v-for="option in formObject.options"
-              :key="option.id"
-              class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition"
-            >
-              <input
-                type="checkbox"
-                :id="'chk-' + option.id"
-                :value="option.value"
+            <div v-for="option in formObject.options" :key="option.id"
+              class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition">
+              <input type="checkbox" :id="'chk-' + option.id" :value="option.value"
                 :checked="formAnswers[formObject.id]?.includes(option.value)"
                 @change="toggleChecklist(formObject.id, option.value)"
-                class="w-6 h-6 text-blue-600 border-gray-300 rounded focus:ring focus:ring-blue-400"
-              />
-              <label
-                :for="'chk-' + option.id"
-                class="text-gray-700 font-medium cursor-pointer hover:text-blue-600 transition"
-              >
+                class="w-6 h-6 text-blue-600 border-gray-300 rounded focus:ring focus:ring-blue-400" />
+              <label :for="'chk-' + option.id"
+                class="text-gray-700 font-medium cursor-pointer hover:text-blue-600 transition">
                 {{ option.value }}
               </label>
             </div>
           </div>
 
           <div v-else-if="formObject.objecttype === 'OPTION'">
-            <div
-              v-for="option in formObject.options"
-              :key="option.id"
-              class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition"
-            >
-              <input
-                type="radio"
-                :id="'radio-' + option.id"
-                :value="option.value"
-                v-model="formAnswers[formObject.id]"
-                class="w-6 h-6 text-blue-600 border-gray-300 focus:ring focus:ring-blue-400"
-              />
-              <label
-                :for="'radio-' + option.id"
-                class="text-gray-700 font-medium cursor-pointer hover:text-blue-600 transition"
-              >
+            <div v-for="option in formObject.options" :key="option.id"
+              class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition">
+              <input type="radio" :id="'radio-' + option.id" :value="option.value" v-model="formAnswers[formObject.id]"
+                class="w-6 h-6 text-blue-600 border-gray-300 focus:ring focus:ring-blue-400" />
+              <label :for="'radio-' + option.id"
+                class="text-gray-700 font-medium cursor-pointer hover:text-blue-600 transition">
                 {{ option.value }}
               </label>
             </div>
@@ -438,190 +237,86 @@
           <div v-else-if="formObject.objecttype === 'TEXTFROMSOURCE'">
             <div class="flex justify-between items-center">
               <!-- Flex container -->
-              <input
-                @focus="
-                  formObject.autoFillUser == 0
-                    ? openModal(formObject.id, 'textfromsource')
-                    : null
-                "
-                readonly
-                type="text"
-                @input="onInput(formObject.id)"
-                v-model="formDisplays[formObject.id]"
-                maxlength="55"
-                :class="[
+              <input @focus="
+                formObject.autoFillUser == 0
+                  ? openModal(formObject.id, 'textfromsource')
+                  : null
+                " readonly type="text"
+                 v-model="formDisplays[formObject.id]"
+                  :style="{
+              textTransform:
+                formObject.charactercase === 'upper'
+                  ? 'uppercase'
+                  : formObject.charactercase === 'lower'
+                    ? 'lowercase'
+                    : 'none'
+                    }" 
+                maxlength="55" :class="[
                   'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
                   formErrors[formObject.id]
                     ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-blue-500',
-                ]"
-                :style="getInputStyle(formObject.id)"
-              />
-              <button
-                v-if="formObject.autoFillUser == 0"
-                @click="openModal(formObject.id, 'textfromsource')"
-                class="ml-2 px-4 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg"
-              >
-                <svg
-                  class="w-6 h-6 text-gray-800 dark:text-white"
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-width="2"
-                    d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
-                  />
+                ]" />
+              <button v-if="formObject.autoFillUser == 0" @click="openModal(formObject.id, 'textfromsource')"
+                class="ml-2 px-4 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg">
+                <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+                  width="24" height="24" fill="none" viewBox="0 0 24 24">
+                  <path stroke="currentColor" stroke-linecap="round" stroke-width="2"
+                    d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
                 </svg>
               </button>
 
             </div>
-             <!-- Radio Buttons for Capitalization -->
-        <div class="flex space-x-4 mt-2 text-sm text-gray-700">
-          <label class="flex items-center space-x-1">
-            <input
-              type="radio"
-              :name="`caps-${formObject.id}`"
-              value="original"
-              v-model="capsSettings[formObject.id]"
-              @change="applyCapsSetting(formObject.id)"
-            />
-            <span>Original</span>
-          </label>
-
-          <label class="flex items-center space-x-1">
-            <input
-              type="radio"
-              :name="`caps-${formObject.id}`"
-              value="uppercase"
-              v-model="capsSettings[formObject.id]"
-              @change="applyCapsSetting(formObject.id)"
-            />
-            <span>Uppercase</span>
-          </label>
-
-          <label class="flex items-center space-x-1">
-            <input
-              type="radio"
-              :name="`caps-${formObject.id}`"
-              value="lowercase"
-              v-model="capsSettings[formObject.id]"
-              @change="applyCapsSetting(formObject.id)"
-            />
-            <span>Lowercase</span>
-          </label>
-        </div>
+           
           </div>
 
           <div v-else-if="formObject.objecttype === 'DYNAMICSIGNATORY'">
             <!-- Render each name as its own input -->
-            <div
-              v-for="(name, index) in formAnswers[formObject.id] || []"
-              :key="index"
-              class="mb-2 flex items-center gap-2"
-            >
-              <input
-                readonly
-                type="text"
-                v-model="getDisplayBinding(formObject.id, index).value"
-                maxlength="55"
-                :class="[
-                  'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-                  formErrors[formObject.id]
-                    ? 'border-red-500 focus:ring-red-500'
-                    : 'border-gray-300 focus:ring-blue-500',
-                ]"
-              />
+            <div v-for="(name, index) in formAnswers[formObject.id] || []" :key="index"
+              class="mb-2 flex items-center gap-2">
+              <input readonly type="text" v-model="getDisplayBinding(formObject.id, index).value" maxlength="55" :class="[
+                'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+                formErrors[formObject.id]
+                  ? 'border-red-500 focus:ring-red-500'
+                  : 'border-gray-300 focus:ring-blue-500',
+              ]" />
 
               <!-- Remove Button -->
-              <button
-                type="button"
-                @click="removeAnswer(formObject.id, index)"
-                class="text-red-600 hover:text-red-800"
-                title="Remove"
-              >
+              <button type="button" @click="removeAnswer(formObject.id, index)" class="text-red-600 hover:text-red-800"
+                title="Remove">
                 ✕
               </button>
             </div>
 
             <!-- Button to add new name (via modal) -->
             <div class="flex justify-center mt-2">
-              <button
-                @click="openModal(formObject.id, 'dynamicsignatory')"
-                class="w-full flex items-center justify-center px-4 py-3 bg-gray-400 hover:bg-gray-500 text-white rounded-lg"
-              >
-                <svg
-                  class="w-6 h-6 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 12h14m-7 7V5"
-                  />
+              <button @click="openModal(formObject.id, 'dynamicsignatory')"
+                class="w-full flex items-center justify-center px-4 py-3 bg-gray-400 hover:bg-gray-500 text-white rounded-lg">
+                <svg class="w-6 h-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M5 12h14m-7 7V5" />
                 </svg>
               </button>
             </div>
           </div>
           <div v-else-if="formObject.objecttype === 'LINKTOOBJECT'">
-          <input
-            disabled
-            type="text"
-            @input="onInput(formObject.id)"
-            v-model="formAnswers[formObject.id]"
-            :class="[
+            <input disabled type="text"
+             v-model="formAnswers[formObject.id]"
+              :style="{
+              textTransform:
+                formObject.charactercase === 'upper'
+                  ? 'uppercase'
+                  : formObject.charactercase === 'lower'
+                    ? 'lowercase'
+                    : 'none'
+            }"  
+             :class="[
               'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
               formErrors[formObject.id]
                 ? 'border-red-500 focus:ring-red-500'
                 : 'border-gray-300 focus:ring-blue-500',
-            ]"
-             :style="getInputStyle(formObject.id)"
-          />
-            <!-- Radio Buttons for Capitalization -->
-        <div class="flex space-x-4 mt-2 text-sm text-gray-700">
-          <label class="flex items-center space-x-1">
-            <input
-              type="radio"
-              :name="`caps-${formObject.id}`"
-              value="original"
-              v-model="capsSettings[formObject.id]"
-              @change="applyCapsSetting(formObject.id)"
-            />
-            <span>Original</span>
-          </label>
-
-          <label class="flex items-center space-x-1">
-            <input
-              type="radio"
-              :name="`caps-${formObject.id}`"
-              value="uppercase"
-              v-model="capsSettings[formObject.id]"
-              @change="applyCapsSetting(formObject.id)"
-            />
-            <span>Uppercase</span>
-          </label>
-
-          <label class="flex items-center space-x-1">
-            <input
-              type="radio"
-              :name="`caps-${formObject.id}`"
-              value="lowercase"
-              v-model="capsSettings[formObject.id]"
-              @change="applyCapsSetting(formObject.id)"
-            />
-            <span>Lowercase</span>
-          </label>
-        </div>
-           </div> 
+            ]" />
+          </div>
           <p v-else class="text-red-500 font-medium">
             Unknown type: {{ formObject.objecttype }}
           </p>
@@ -632,19 +327,12 @@
       </div>
 
       <!-- Approver Section -->
-      <div
-        v-for="(approverGroup, approverNumber) in formDetails.approvers"
-        :key="approverNumber"
-        class="mt-2 p-4 bg-gray-50 rounded-lg"
-      >
+      <div v-for="(approverGroup, approverNumber) in formDetails.approvers" :key="approverNumber"
+        class="mt-2 p-4 bg-gray-50 rounded-lg">
         <h2 class="text-md font-semibold text-gray-800 mb-2">
           Approver {{ approverNumber }}
         </h2>
-        <div
-          v-for="approver in approverGroup"
-          :key="approver.id"
-          class="p-2 bg-white rounded-md shadow-sm mb-2"
-        >
+        <div v-for="approver in approverGroup" :key="approver.id" class="p-2 bg-white rounded-md shadow-sm mb-2">
           <h2 class="text-sm font-bold text-gray-800 mb-2">
             {{ approver.mainApprover == 1 ? "Main" : "Proxy" }}
           </h2>
@@ -658,31 +346,12 @@
       </div>
 
       <div class="flex justify-end">
-        <button
-          @click="submitAnswers"
-          :disabled="isSubmitting"
-          class="px-6 py-2 bg-blue-600 hover:bg-blue-900 text-white rounded-lg mt-4 flex items-center"
-        >
-          <svg
-            v-if="isSubmitting"
-            class="animate-spin h-5 w-5 mr-2 text-white"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              class="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              stroke-width="4"
-            ></circle>
-            <path
-              class="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8H4z"
-            ></path>
+        <button @click="submitAnswers" :disabled="isSubmitting"
+          class="px-6 py-2 bg-blue-600 hover:bg-blue-900 text-white rounded-lg mt-4 flex items-center">
+          <svg v-if="isSubmitting" class="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg"
+            fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
           </svg>
           {{ isSubmitting ? "Submitting..." : "Save" }}
         </button>
@@ -690,42 +359,19 @@
     </div>
   </div>
 
-  <div
-    v-if="showModal"
-    @click.self="showModal = false"
-    @keydown.esc="showModal = false"
-    class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]"
-  >
+  <div v-if="showModal" @click.self="showModal = false" @keydown.esc="showModal = false"
+    class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]">
     <div class="w-full max-w-6xl bg-white shadow-lg rounded-lg p-6 relative">
       <!-- Search Input -->
       <div class="flex gap-1 mb-1">
-        <input
-          type="text"
-          v-model="searchQuery"
-          @keydown.enter="debouncedSearch(storeId)"
-          placeholder="Enter to search"
-          ref="inputRef"
-          class="w-full p-4 h-11 rounded border border-gray-600 focus:outline-none"
-        />
-        <button
-          @click="debouncedSearch(storeId)"
-          class="py-3 px-4 h-11 bg-blue-500 text-white rounded-md hover:bg-blue-700"
-        >
-          <svg
-            class="w-6 h-6 text-gray-800 dark:text-white"
-            aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-width="2"
-              d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
-            />
+        <input type="text" v-model="searchQuery" @keydown.enter="debouncedSearch(storeId)" placeholder="Enter to search"
+          ref="inputRef" class="w-full p-4 h-11 rounded border border-gray-600 focus:outline-none" />
+        <button @click="debouncedSearch(storeId)"
+          class="py-3 px-4 h-11 bg-blue-500 text-white rounded-md hover:bg-blue-700">
+          <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+            width="24" height="24" fill="none" viewBox="0 0 24 24">
+            <path stroke="currentColor" stroke-linecap="round" stroke-width="2"
+              d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
           </svg>
         </button>
       </div>
@@ -736,38 +382,24 @@
             <div class="min-w-full inline-block align-middle">
               <div class="border rounded-md border-gray-300">
                 <!-- Table for Dynamic Columns -->
-                <table
-                  v-if="!loading && justifications.length"
-                  class="table-auto min-w-full rounded-xl"
-                >
+                <table v-if="!loading && justifications.length" class="table-auto min-w-full rounded-xl">
                   <thead>
                     <tr class="bg-gray-50 sticky top-0">
                       <!-- Dynamically generate headers based on data -->
-                      <th
-                        v-for="header in Object.keys(
-                          justifications[0]?.all || {}
-                        )"
-                        :key="header"
-                        scope="col"
-                        class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
-                      >
+                      <th v-for="header in Object.keys(
+                        justifications[0]?.all || {}
+                      )" :key="header" scope="col"
+                        class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize">
                         {{ header }}
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr
-                      v-for="(justification, index) in justifications"
-                      :key="index"
-                      @click="selectEmployee(storeId, justification)"
-                      class="hover:bg-gray-200 cursor-pointer"
-                    >
+                    <tr v-for="(justification, index) in justifications" :key="index"
+                      @click="selectEmployee(storeId, justification)" class="hover:bg-gray-200 cursor-pointer">
                       <!-- Dynamically populate rows -->
-                      <td
-                        v-for="header in Object.keys(justification.all)"
-                        :key="header"
-                        class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
-                      >
+                      <td v-for="header in Object.keys(justification.all)" :key="header"
+                        class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
                         {{ justification.all[header] }}
                       </td>
                     </tr>
@@ -775,10 +407,7 @@
                 </table>
 
                 <!-- No Results Found -->
-                <div
-                  v-else-if="searchQuery && !loading"
-                  class="p-2 text-gray-400 text-center"
-                >
+                <div v-else-if="searchQuery && !loading" class="p-2 text-gray-400 text-center">
                   No results found.
                 </div>
                 <div v-else-if="loading" class="p-2 text-gray-400 text-center">
@@ -794,10 +423,7 @@
       </div>
       <!-- Buttons -->
       <div class="mt-4 flex justify-end gap-2">
-        <button
-          @click="showModal = false"
-          class="px-4 py-2 bg-red-500 text-white rounded-lg"
-        >
+        <button @click="showModal = false" class="px-4 py-2 bg-red-500 text-white rounded-lg">
           Cancel
         </button>
       </div>
@@ -853,50 +479,6 @@ const capsSettings = ref({});
 const backButton = () => {
   router.push("/main/638799853882007798");
 };
-
-// Detect capitalization automatically
-function onInput(id) {
-  const text = formAnswers.value[id] || formDisplays.value[id] || ''
-  if (text === text.toUpperCase() && /[A-Z]/.test(text)) {
-    capsSettings.value[id] = 'uppercase'
-  } else if (text === text.toLowerCase() && /[a-z]/.test(text)) {
-    capsSettings.value[id] = 'lowercase'
-  } else {
-    capsSettings.value[id] = 'original'
-  }
-}
-
-// Apply user-selected capitalization
-function applyCapsSetting(id) {
-  const setting = capsSettings.value[id]
-  let text = formAnswers.value[id] || formDisplays.value[id] || ''
-
-  if (setting === 'uppercase') text = text.toUpperCase()
-  else if (setting === 'lowercase') text = text.toLowerCase()
-
-  formAnswers.value[id] = text
-  formDisplays.value[id] = text
-}
-
-// Watch for programmatic value changes (e.g., from modal)
-watch(
-  () => formAnswers.value,
-  (newVal) => {
-    Object.keys(newVal).forEach(id => {
-      onInput(id)
-    })
-  },
-  { deep: true }
-)
-
-// UI styling
-function getInputStyle(id) {
-  const setting = capsSettings.value[id]
-  if (setting === 'uppercase') return { textTransform: 'uppercase' }
-  if (setting === 'lowercase') return { textTransform: 'lowercase' }
-  return {}
-}
-
 
 const toggleDropdown = () => {
   isOpen.value = !isOpen.value;
@@ -1157,6 +739,22 @@ const submitAnswers = async () => {
     }
   });
 
+ Object.entries(formAnswers.value).forEach(([id, val]) => {
+  const obj = formDetails.value.formObjects.find(f => f.id == id);
+  if (!obj) return;
+
+  // Apply case transform ONLY for specific object types
+  const allowedTypes = ["TEXT", "TEXTAREA", "TEXTFROMSOURCE", "LINKTOOBJECT"];
+
+  if (!allowedTypes.includes(obj.objecttype)) return;
+
+  if (obj.charactercase === "upper" && val) {
+    formAnswers.value[id] = val.toUpperCase();
+  } else if (obj.charactercase === "lower" && val) {
+    formAnswers.value[id] = val.toLowerCase();
+  }
+});
+
   if (Object.keys(formErrors.value).length > 0) {
     isSubmitting.value = false;
     errorAnchor.value?.scrollIntoView({
@@ -1186,42 +784,42 @@ const submitAnswers = async () => {
     formId: formId.value,
     approverDtos: formDetails.value.approvers
       ? Object.values(formDetails.value.approvers || {})
-          .flat()
-          .map((approver) => ({
-            approverId: approver.id,
-            approverNumber: Number(approver.approverNumber),
-            mainApprover: Number(approver.mainApprover),
-          }))
+        .flat()
+        .map((approver) => ({
+          approverId: approver.id,
+          approverNumber: Number(approver.approverNumber),
+          mainApprover: Number(approver.mainApprover),
+        }))
       : [],
     formObjectAnswerDtos: Object.entries(formAnswers.value).flatMap(
       ([id, value]) =>
         Array.isArray(value)
           ? value.map((v) =>
-              typeof v === "object" && v !== null && "value" in v
-                ? {
-                    formObjectId: parseInt(id),
-                    value: v.value,
-                    type: v.type,
-                    display: v.display, // add display if present
-                  }
-                : {
-                    formObjectId: parseInt(id),
-                    value: v,
-                  }
-            )
+            typeof v === "object" && v !== null && "value" in v
+              ? {
+                formObjectId: parseInt(id),
+                value: v.value,
+                type: v.type,
+                display: v.display, // add display if present
+              }
+              : {
+                formObjectId: parseInt(id),
+                value: v,
+              }
+          )
           : [
-              typeof value === "object" && value !== null && "value" in value
-                ? {
-                    formObjectId: parseInt(id),
-                    value: value.value,
-                    type: value.type,
-                    display: value.display, // add display if present
-                  }
-                : {
-                    formObjectId: parseInt(id),
-                    value: value?.toString().trim() || "",
-                  },
-            ]
+            typeof value === "object" && value !== null && "value" in value
+              ? {
+                formObjectId: parseInt(id),
+                value: value.value,
+                type: value.type,
+                display: value.display, // add display if present
+              }
+              : {
+                formObjectId: parseInt(id),
+                value: value?.toString().trim() || "",
+              },
+          ]
     ),
   };
 
@@ -1275,12 +873,6 @@ onMounted(async () => {
   await fetchCanAccess(paramid.value);
   nenunames.value.push("Create");
   document.addEventListener("click", handleClickOutside);
-
-  formDetails.value.formObjects.forEach((obj) => {
-    if (obj.objecttype !== "LABEL") {
-      capsSettings.value[obj.id] = "original";
-    }
-  });
 });
 
 onBeforeUnmount(() => {

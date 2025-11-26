@@ -165,9 +165,15 @@
           <div v-else-if="item.objecttype === 'TEXTAREA'">
             <textarea
               v-model="item.value"
-              @input="onInput(item.id, item.value)"
               maxlength="250"
-              :style="getInputStyle(item.id)"
+               :style="{
+              textTransform:
+                item.charactercase === 'upper'
+                  ? 'uppercase'
+                  : item.charactercase === 'lower'
+                    ? 'lowercase'
+                    : 'none'
+            }" 
               :class="[
                 'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
                 formErrors[index]
@@ -175,24 +181,6 @@
                   : 'border-gray-300 focus:ring-blue-500',
               ]"
             ></textarea>
-            <!-- Radio Buttons for Capitalization -->
-            <!-- Capitalization Radio Buttons -->
-            <div class="flex space-x-4 mt-2 text-sm text-gray-700">
-              <label
-                v-for="opt in ['original', 'uppercase', 'lowercase']"
-                :key="opt"
-                class="flex items-center space-x-1"
-              >
-                <input
-                  type="radio"
-                  :name="`caps-${item.id}`"
-                  :value="opt"
-                  v-model="capsSettings[item.id]"
-                  @change="applyCapsSetting(item.id, item)"
-                />
-                <span>{{ opt }}</span>
-              </label>
-            </div>
           </div>
 
           <div v-else-if="item.objecttype === 'TIME'">
@@ -210,12 +198,17 @@
                     ? openModal(index, item.formObjectId, 'textfromsource')
                     : null
                 "
-                 @input="onInput(item.id, item.value)"
-              :style="getInputStyle(item.id)"
-
-                readonly
+                readonly  
                 type="text"
                 v-model="item.value"
+                :style="{
+              textTransform:
+                item.charactercase === 'upper'
+                  ? 'uppercase'
+                  : item.charactercase === 'lower'
+                    ? 'lowercase'
+                    : 'none'
+            }" 
                 maxlength="55"
                 :class="[
                   'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
@@ -247,22 +240,7 @@
                 </svg>
               </button>
             </div>
-             <div class="flex space-x-4 mt-2 text-sm text-gray-700">
-              <label
-                v-for="opt in ['original', 'uppercase', 'lowercase']"
-                :key="opt"
-                class="flex items-center space-x-1"
-              >
-                <input
-                  type="radio"
-                  :name="`caps-${item.id}`"
-                  :value="opt"
-                  v-model="capsSettings[item.id]"
-                  @change="applyCapsSetting(item.id, item)"
-                />
-                <span>{{ opt }}</span>
-              </label>
-            </div>
+          
           </div>
 
           <!-- NUMBER -->
@@ -347,9 +325,15 @@
           <div v-else-if="item.objecttype === 'LINKTOOBJECT'">
           <input
             v-model="item.value"
-            @input="onInput(item.id, item.value)"
             type="text"
-            :style="getInputStyle(item.id)"
+            :style="{
+              textTransform:
+                item.charactercase === 'upper'
+                  ? 'uppercase'
+                  : item.charactercase === 'lower'
+                    ? 'lowercase'
+                    : 'none'
+            }" 
             disabled
             :class="[
               'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
@@ -358,27 +342,19 @@
                 : 'border-gray-300 focus:ring-blue-500',
             ]"
           />
-            <div class="flex space-x-4 mt-2 text-sm text-gray-700">
-              <label
-                v-for="opt in ['original', 'uppercase', 'lowercase']"
-                :key="opt"
-                class="flex items-center space-x-1"
-              >
-                <input
-                  type="radio"
-                  :name="`caps-${item.id}`"
-                  :value="opt"
-                  v-model="capsSettings[item.id]"
-                  @change="applyCapsSetting(item.id, item)"
-                />
-                <span>{{ opt }}</span>
-              </label>
-            </div>
           </div>
 
           <input
             v-else
             v-model="item.value"
+             :style="{
+              textTransform:
+                item.charactercase === 'upper'
+                  ? 'uppercase'
+                  : item.charactercase === 'lower'
+                    ? 'lowercase'
+                    : 'none'
+            }" 
             type="text"
             maxlength="55"
             :class="[
@@ -583,44 +559,11 @@ const objecttype = ref();
 const backButton = () => {
   router.push("/main/638799853882007798");
 };
-function onInput(id, text) {
-  if (!text) return;
-  if (text === text.toUpperCase() && /[A-Z]/.test(text)) {
-    capsSettings.value[id] = "uppercase";
-  } else if (text === text.toLowerCase() && /[a-z]/.test(text)) {
-    capsSettings.value[id] = "lowercase";
-  } else {
-    capsSettings.value[id] = "original";
-  }
-}
 
-function applyCapsSetting(id, item) {
-  const setting = capsSettings.value[id];
-  let text = item.value || "";
 
-  if (setting === "uppercase") text = text.toUpperCase();
-  else if (setting === "lowercase") text = text.toLowerCase();
-
-  item.value = text; // directly updates your data
-}
-
-function getInputStyle(id) {
-  const setting = capsSettings.value[id];
-  if (setting === "uppercase") return { textTransform: "uppercase" };
-  if (setting === "lowercase") return { textTransform: "lowercase" };
-  return {};
-}
 
 // Watch programmatic changes (e.g. autofill)
-watch(
-  () => transactions.value.formObjects.map((obj) => obj.value),
-  (newValues) => {
-    transactions.value.formObjects.forEach((obj, index) => {
-      onInput(obj.id, newValues[index]);
-    });
-  },
-  { deep: true }
-);
+
 
 const toggleChecklist = (item, option) => {
   if (!Array.isArray(item.values)) {
@@ -763,7 +706,7 @@ const saveForm = async () => {
 
     return;
   }
-
+  const allowedTypes = ["TEXT", "TEXTAREA", "TEXTFROMSOURCE", "LINKTOOBJECT"];
   const token = getToken();
   const payload = transactions.value.formObjects.map((item) => ({
     id: item.id ?? 0,
@@ -773,7 +716,13 @@ const saveForm = async () => {
     options: Array.isArray(item.options) ? item.options : [],
     isRequired: item.isRequired ?? 0,
     isDelete: item.isDelete ?? 0,
-    value: item.value ?? "",
+    value: allowedTypes.includes(item.objecttype)
+    ? item.charactercase === "upper"
+      ? (item.value ?? "").toUpperCase()
+      : item.charactercase === "lower"
+        ? (item.value ?? "").toLowerCase()
+        : item.value ?? ""
+    : item.value ?? "",
     values: Array.isArray(item.values)
       ? item.values.map((val) => ({
           id: val.id ?? 0, // Default to 0 if val.id is undefined
@@ -782,7 +731,7 @@ const saveForm = async () => {
         }))
       : [],
   }));
-
+  
   try {
     await $fetch(`${API_BASE_URL}/api/Transaction/update-transaction`, {
       method: "POST",

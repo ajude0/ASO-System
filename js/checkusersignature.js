@@ -46,3 +46,52 @@ export const checkusersignature = async ($swal) => {
     }
   }
 };
+
+export const getusersignature = async ($swal) => {
+  const token = getToken();
+
+  try {
+    // Fetch the file as a Blob
+    const blob = await $fetch(`${API_BASE_URL}/api/Signature/GetUserSignatureImage`, {
+      method: "GET",
+      headers: {
+        token: token,
+      },
+      // important: tell Nuxt to treat the response as a Blob
+      responseType: "blob",
+    });
+    if (blob != null){
+    // Convert Blob to File (optional, so you can treat it like an uploaded file)
+    const file = new File([blob], "user-signature.png", { type: blob.type });
+
+    // Return the File object
+    return file;
+    }
+    else{
+      return null;
+    }
+
+  } catch (error) {
+    console.error("Error fetching signature:", error);
+
+    let errorMessage = "Something went wrong. Please try again later.";
+
+    if (error?.data) {
+      if (error.data.innerError) errorMessage = error.data.innerError;
+      else if (error.data.error) errorMessage = error.data.error;
+      else if (error.data.message) errorMessage = error.data.message;
+    }
+
+    $swal.fire({
+      title: "Error!",
+      text: errorMessage,
+      icon: "error",
+      width: 400,
+      timer: 1200,
+      showConfirmButton: false,
+    });
+
+    return null;
+  }
+};
+

@@ -288,11 +288,27 @@ const dragSignature = (e) => {
   const canvas = canvasRefs.value[sig.page - 1];
   const canvasRect = canvas.getBoundingClientRect();
 
+  const oldX = sig.x;
+  const oldY = sig.y;
+
   const newX = e.clientX - canvasRect.left - dragOffsetSig.value.x;
   const newY = e.clientY - canvasRect.top - dragOffsetSig.value.y;
 
   sig.x = Math.max(0, Math.min(newX, canvas.width - sig.width));
   sig.y = Math.max(0, Math.min(newY, canvas.height - sig.height));
+
+  // Move the date along with the signature
+  if (sig.datePosition) {
+    const deltaX = sig.x - oldX;
+    const deltaY = sig.y - oldY;
+
+    sig.datePosition.x += deltaX;
+    sig.datePosition.y += deltaY;
+
+    // Keep date within canvas bounds
+    sig.datePosition.x = Math.max(0, Math.min(sig.datePosition.x, canvas.width - 100));
+    sig.datePosition.y = Math.max(0, Math.min(sig.datePosition.y, canvas.height - 30));
+  }
 
   // Update visual position
   nextTick(() => updatePrePlacedPositions());
@@ -457,7 +473,7 @@ onUnmounted(() => {
         <div>
           <h2 class="text-xl font-semibold">Sign PDF Document</h2>
           <p class="text-sm text-gray-600 mt-1">Signing as: <span class="font-semibold text-blue-600">{{ currentUserName
-              }}</span></p>
+          }}</span></p>
           <div class="flex gap-4 mt-2 text-xs">
             <p class="text-green-600">
               ✓ Completed: {{ getMyCompletedSignatures() }}
