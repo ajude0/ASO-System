@@ -11,51 +11,14 @@ export const totalEntries = ref(0);
 export const totalPages = ref(0);
 export const query = ref({
   Search: "",
-  Status:"",
+  Status: "",
   SortBy: 'Createddate',  // default sort (backend fallback also handles this)
   IsDescending: true,
   IsApproved: "",
   PageNumber: 1,
   PageSize: 5,
 });
-export const lastSearched = ref();
-export const searchTitle = ref();
 
-export const getFormTitle = async () => {
-    const token = getToken();
-    try {
-      const response = await $fetch(`${API_BASE_URL}/api/FormObject`, {
-        headers: {
-          token: token,
-        },
-        params: {
-          formTitle: searchTitle.value || '', // safe fallback to fetch all
-        },
-      });
-      formTitles.value = response;
-      lastSearched.value = searchTitle.value
-    } catch (error) {
-      console.error("Error fetching menus:", error);
-    } 
-}
-
-export const getFormDetails = async (formId) => {
-    try {
-      const token = getToken();
-      const response = await $fetch(
-        `${API_BASE_URL}/api/FormObject/${formId}`,
-        {
-          headers: {
-            token: token,
-          },
-        }
-      );
-      formDetails.value = response.data;
-      // console.log(formDetails.value);
-    } catch (error) {
-      console.error("Error fetching form details:", error);
-    } 
-  };
 
   export const getListOfDocuments = async () => {
     loading.value = true;
@@ -95,18 +58,18 @@ export const getFormDetails = async (formId) => {
       query.value.SortBy = column
       query.value.IsDescending = false
     }
-    getListOfForms()
+    getListOfDocuments()
   }
   
   export const changePageSize = () => {
     query.value.PageNumber = 1 // reset to first page
-    getListOfForms()
+    getListOfDocuments()
   }
 
   export const changePage = (page) => {
     if (page < 1 || page > totalPages.value) return;
     query.value.PageNumber = page;
-    getListOfForms();
+    getListOfDocuments();
   };
   
   export const generatePagination = () => {
@@ -147,7 +110,7 @@ export const getFormDetails = async (formId) => {
           token: token,
         },
       });
-      getListOfForms();
+      getListOfDocuments();
     } catch (error) {
       console.error("Error deleting transaction:", error);
     } finally{

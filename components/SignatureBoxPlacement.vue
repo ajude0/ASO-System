@@ -1,5 +1,6 @@
 <script setup>
 import { ref, watch, onMounted, onUnmounted, nextTick } from 'vue';
+import draggable from 'vuedraggable';
 import {
     getEmployees,
     availableApprovers,
@@ -48,8 +49,12 @@ const selectedBoxId = ref(null);
 const goToPageNumber = ref(1);
 
 // Signers list and active selection
-const signers = ref([]); // [{ name, emplId, color }]
-const activeSignerKey = ref(null); // key to track active signer (emplId or name)
+// signer: { name, emplId, color, approvalOrder }
+const signers = ref([]);
+const activeSignerKey = ref(null);
+
+// Sequential approval toggle
+const enforceSequentialOrder = ref(false);
 
 // Color management
 const colorPalette = [
@@ -79,19 +84,35 @@ const getNextColor = () => {
     for (const c of colorPalette) {
         if (!used.has(c)) return c;
     }
-    // If exhausted, cycle
     return colorPalette[signers.value.length % colorPalette.length];
 };
 
 const findSigner = (emplId, name) =>
     signers.value.find(s => (emplId && s.emplId === emplId) || (name && s.name === name));
 
-const upsertSigner = ({ name, emplId }) => {
+const getNextApprovalOrder = () => {
+    if (signers.value.length === 0) return 1;
+    const maxOrder = Math.max(
+        ...signers.value.map(s => Number(s.approvalOrder || 0) || 0)
+    );
+    return maxOrder + 1;
+};
+
+const upsertSigner = ({ name, emplId, approvalOrder ,color}) => {
     if (!name && !emplId) return null;
     let s = findSigner(emplId, name);
     if (!s) {
-        s = { name, emplId: emplId || null, color: getNextColor() };
+        s = {
+            name,
+            emplId: emplId || null,
+            color:color!=null?color: getNextColor(),
+            approvalOrder: Number(
+                approvalOrder != null ? approvalOrder : getNextApprovalOrder()
+            ),
+        };
         signers.value.push(s);
+    } else if (approvalOrder != null) {
+        s.approvalOrder = Number(approvalOrder);
     }
     return s;
 };
@@ -104,7 +125,63 @@ const setActiveSigner = (signer) => {
     showAddForm.value = true;
 };
 
-// New box form (now includes fixed sizes and lock)
+// Move signer up in order (still allowed in addition to drag)
+const moveSignerUp = (index) => {
+    if (index === 0) return;
+    const temp = signers.value[index];
+    signers.value[index] = signers.value[index - 1];
+    signers.value[index - 1] = temp;
+    updateApprovalOrderFromList();
+};
+
+// Move signer down in order
+const moveSignerDown = (index) => {
+    if (index === signers.value.length - 1) return;
+    const temp = signers.value[index];
+    signers.value[index] = signers.value[index + 1];
+    signers.value[index + 1] = temp;
+    updateApprovalOrderFromList();
+};
+
+// Remove signer from list
+const removeSigner = (index) => {
+    const signer = signers.value[index];
+    const hasBoxes = signatureBoxes.value.some(box =>
+        box.assignedEmplId === signer.emplId || box.assignedTo === signer.name
+    );
+
+    if (hasBoxes) {
+        alert('Cannot remove this signer as they have signature boxes assigned. Please delete those boxes first.');
+        return;
+    }
+
+    signers.value.splice(index, 1);
+    updateApprovalOrderFromList();
+};
+
+// When the signers list order changes (drag or up/down buttons),
+// and sequential mode is ON, we want approvalOrder to reflect the list.
+const updateApprovalOrderFromList = () => {
+    if (!enforceSequentialOrder.value) return;
+
+    signers.value.forEach((signer, idx) => {
+        signer.approvalOrder = idx + 1;
+    });
+
+    signatureBoxes.value.forEach(box => {
+        const signer = findSigner(box.assignedEmplId, box.assignedTo);
+        if (signer) {
+            box.approvalOrder = Number(signer.approvalOrder);
+        }
+    });
+};
+
+// Draggable (vuedraggable) handler – called after drag sorting
+const onSignersDragEnd = () => {
+    updateApprovalOrderFromList();
+};
+
+// New box form
 const showAddForm = ref(false);
 const newBoxForm = ref({
     assignedTo: '',
@@ -112,17 +189,15 @@ const newBoxForm = ref({
     dateOffset: 5,
     assignedEmplId: "",
     assignedColor: undefined,
-    // Fixed signature size (click-to-place)
     signatureWidth: 200,
     signatureHeight: 60,
-    // Optional: lock size (no resizing)
-    lockSize: false,
-    // Optional: date size
+    signatureLock: false,
+    dateLock: false,
     dateWidth: 100,
     dateHeight: 30,
 });
 
-// Optional: keyboard navigation in modal list
+// Optional: keyboard navigation in directory modal
 const approverIndex = ref(-1);
 const scrollContainer = ref(null);
 const moveDown = () => {
@@ -170,15 +245,30 @@ const cancelButton = async () => {
         assignedColor: undefined,
         signatureWidth: 200,
         signatureHeight: 60,
-        lockSize: false,
+        signatureLock: false,
+        dateLock: false,
         dateWidth: 100,
         dateHeight: 30,
     };
 };
 
+// User display formatting
+const formatUserName = (user) => {
+    if (!user) return '';
+
+    if (user.employeename2 && user.employeename1) {
+        return `${user.employeename2}, ${user.employeename1}`;
+    }
+    return user.employeename2 || user.employeename1 || user.name || 'Unknown User';
+};
+
 const selectUser = (user) => {
-    // User object expected from directory: { employeename2, emplId }
-    const signer = upsertSigner({ name: user.employeename2, emplId: user.emplId });
+    const displayName = formatUserName(user);
+    const signer = upsertSigner({
+        name: displayName,
+        emplId: user.emplId,
+        color: user.color
+    });
     if (signer) setActiveSigner(signer);
 
     showModal.value = false;
@@ -192,7 +282,7 @@ const scrollToPage = (pageNum) => {
     }
 };
 
-// Helper to generate truly unique IDs
+// Unique ID
 const generateId = () => `sig_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 
 watch(currentViewPage, async () => {
@@ -200,19 +290,32 @@ watch(currentViewPage, async () => {
     signatureBoxes.value = signatureBoxes.value.map(box => ({ ...box }));
 });
 
-// Load PDF and Data
+// Load PDF and data
 watch(() => props.isOpen, async (newVal) => {
     if (newVal && props.pdfFile) {
         await loadPdf();
 
-        // Build signers list from existing signatures first
+        signers.value = [];
+
         if (props.existingSignatures && props.existingSignatures.length > 0) {
+            // 1) Build signers with approvalOrder from existing signatures
             for (const sig of props.existingSignatures) {
-                upsertSigner({ name: sig.assignedTo, emplId: sig.assignedEmplId });
+                upsertSigner({
+                    name: sig.assignedTo,
+                    emplId: sig.assignedEmplId,
+                    approvalOrder: sig.approvalOrder,
+                    color:sig.color
+                });
             }
 
+            // 2) Sort signers by approvalOrder so visual order matches number
+            signers.value.sort((a, b) =>
+                Number(a.approvalOrder || 0) - Number(b.approvalOrder || 0)
+            );
+
+            // 3) Build boxes and sort them by approvalOrder
             const seenIds = new Set();
-            signatureBoxes.value = props.existingSignatures.map(sig => {
+            const boxes = props.existingSignatures.map(sig => {
                 let safeId = sig.id;
                 if (!safeId || seenIds.has(safeId)) {
                     safeId = generateId();
@@ -226,21 +329,31 @@ watch(() => props.isOpen, async (newVal) => {
                     hasDate: sig.hasDate === true || (sig.datePosition !== null && sig.datePosition !== undefined),
                     id: safeId,
                     color: sig.color || s?.color || getNextColor(),
-                    lockSize: sig.lockSize ?? true, // default to locked if not provided
+                    signatureLock: sig.signatureLock ?? true,
+                    dateLock: sig.dateLock ?? true,
+                    approvalOrder: Number(sig.approvalOrder ?? s?.approvalOrder ?? 1),
                 };
             });
+
+            boxes.sort((a, b) => Number(a.approvalOrder || 0) - Number(b.approvalOrder || 0));
+            signatureBoxes.value = boxes;
+
+            if (props.existingSignatures.some(sig => sig.enforceSequentialOrder)) {
+                enforceSequentialOrder.value = true;
+            }
         } else {
             signatureBoxes.value = [];
         }
 
-        // Default active signer from availableUsers if provided
-        if (props.availableUsers.length > 0) {
+        // Default active signer from availableUsers (optional)
+        if (props.availableUsers.length > 0 && signers.value.length === 0) {
             const first = props.availableUsers[0];
             let signer;
             if (typeof first === 'string') {
                 signer = upsertSigner({ name: first, emplId: null });
             } else if (first && typeof first === 'object') {
-                signer = upsertSigner({ name: first.employeename2, emplId: first.emplId });
+                const displayName = formatUserName(first);
+                signer = upsertSigner({ name: displayName, emplId: first.emplId });
             }
             if (signer) setActiveSigner(signer);
         }
@@ -280,7 +393,6 @@ const renderPage = async (pageNum) => {
 
 // CLICK-TO-PLACE: place a fixed-size signature box
 const placeSignatureOnClick = (e) => {
-    // Ignore if clicking on an existing draggable element
     if (e.target.closest('.draggable-item')) return;
 
     if (!showAddForm.value || !newBoxForm.value.assignedTo) {
@@ -297,16 +409,12 @@ const placeSignatureOnClick = (e) => {
     const sigW = Math.max(20, Number(newBoxForm.value.signatureWidth || 0));
     const sigH = Math.max(20, Number(newBoxForm.value.signatureHeight || 0));
 
-    // Clamp position so box stays within canvas
     const x = Math.max(0, Math.min(rawX, canvas.width - sigW));
     const y = Math.max(0, Math.min(rawY, canvas.height - sigH));
 
-    const signerColor =
-        newBoxForm.value.assignedColor ||
-        (findSigner(newBoxForm.value.assignedEmplId, newBoxForm.value.assignedTo)?.color) ||
-        getNextColor();
+    const signer = findSigner(newBoxForm.value.assignedEmplId, newBoxForm.value.assignedTo);
+    const signerColor = newBoxForm.value.assignedColor || signer?.color || getNextColor();
 
-    // Create the box
     const box = {
         id: generateId(),
         assignedTo: newBoxForm.value.assignedTo,
@@ -320,10 +428,11 @@ const placeSignatureOnClick = (e) => {
         isEmpty: true,
         datePosition: null,
         color: signerColor,
-        lockSize: !!newBoxForm.value.lockSize,
+        signatureLock: !!newBoxForm.value.signatureLock,
+        dateLock: !!newBoxForm.value.dateLock,
+        approvalOrder: Number(signer?.approvalOrder || 1),
     };
 
-    // Date placement and clamping
     if (box.hasDate) {
         const dateW = Math.max(30, Number(newBoxForm.value.dateWidth || 0));
         const dateH = Math.max(16, Number(newBoxForm.value.dateHeight || 0));
@@ -353,7 +462,6 @@ const startDragging = (e, id, type = 'box') => {
 
     selectedBoxId.value = id;
 
-    // If signed (not empty), prevent dragging from starting
     if (box.isEmpty === false) {
         return;
     }
@@ -416,8 +524,7 @@ const startResizing = (e, id, handle) => {
     e.stopPropagation();
 
     const box = signatureBoxes.value.find(b => b.id === id);
-    // Prevent resizing if box is not empty or lockSize is on
-    if (!box || box.isEmpty === false || box.lockSize) {
+    if (!box || box.isEmpty === false || box.signatureLock) {
         return;
     }
 
@@ -456,7 +563,7 @@ const resizeBox = (e) => {
         case 'sw':
             box.width = Math.max(50, dragStart.value.boxWidth - dx);
             box.height = Math.min(Math.max(30, dragStart.value.boxHeight + dy), canvas.height - box.y);
-            box.width = Math.min(box.width, dragStart.value.boxX + dragStart.value.boxWidth); // ensure not beyond left edge
+            box.width = Math.min(box.width, dragStart.value.boxX + dragStart.value.boxWidth);
             box.x = dragStart.value.boxX + (dragStart.value.boxWidth - box.width);
             break;
         case 'ne':
@@ -475,7 +582,6 @@ const resizeBox = (e) => {
             break;
     }
 
-    // Keep date in-bounds if any
     if (box.hasDate && box.datePosition) {
         box.datePosition.x = Math.max(0, Math.min(box.datePosition.x, canvas.width - (box.datePosition.width || 100)));
         box.datePosition.y = Math.max(0, Math.min(box.datePosition.y, canvas.height - (box.datePosition.height || 30)));
@@ -502,7 +608,8 @@ const deleteBox = (index) => {
     signatureBoxes.value.splice(index, 1);
 };
 
-const getCurrentPageBoxes = () => signatureBoxes.value.filter(box => box.page === currentViewPage.value);
+const getCurrentPageBoxes = () =>
+    signatureBoxes.value.filter(box => box.page === currentViewPage.value);
 
 // Position-only styles
 const getBoxStyle = (box) => {
@@ -548,35 +655,29 @@ const getBoxVisualStyle = (box) => {
 };
 
 const getDateVisualStyle = (box) => {
-  const base = getDateStyle(box);
-  const color = box.color || '#3b82f6';
+    const base = getDateStyle(box);
+    const color = box.color || '#3b82f6';
 
-  // If no signed date → use box color
-  if (!box.signedDate && !box.signedBy) {
-    return {
-      ...base,
-      borderColor: color,
-      color: color,
-      backgroundColor: hexToRgba(color, 0.1),
-    };
-  }
-
-  else{
-  // If signed date → use white
-  return {
-    ...base,
-    borderColor: '#36454F',
-    color: '#36454F',
-  };
-}
+    if (!box.signedDate && !box.signedBy) {
+        return {
+            ...base,
+            borderColor: color,
+            color: color,
+            backgroundColor: hexToRgba(color, 0.1),
+        };
+    } else {
+        return {
+            ...base,
+            borderColor: '#36454F',
+            color: '#36454F',
+        };
+    }
 };
-
-
 
 const goToNextPage = () => { if (currentViewPage.value < totalPages.value) currentViewPage.value++; };
 const goToPrevPage = () => { if (currentViewPage.value > 1) currentViewPage.value--; };
 
-// --- Scroll to a box and select it ---
+// Scroll to box and select
 const selectAndScrollToBox = async (box) => {
     selectedBoxId.value = box.id;
     currentViewPage.value = box.page;
@@ -620,7 +721,6 @@ const saveSignatures = () => {
             };
         }
 
-        // Preserve existing signature fields OR use defaults
         const existingSignature = props.existingSignatures?.find(sig => sig.id === box.id);
         const signer = findSigner(box.assignedEmplId, box.assignedTo);
 
@@ -645,7 +745,10 @@ const saveSignatures = () => {
             datePosition: dateObj,
 
             color: box.color || signer?.color || null,
-            lockSize: !!box.lockSize
+            signatureLock: !!box.signatureLock,
+            dateLock: !!box.dateLock,
+            approvalOrder: Number(box.approvalOrder || signer?.approvalOrder || 1),
+            enforceSequentialOrder: enforceSequentialOrder.value,
         };
     }).filter(Boolean);
 
@@ -663,7 +766,8 @@ const saveSignatures = () => {
         assignedColor: undefined,
         signatureWidth: 200,
         signatureHeight: 60,
-        lockSize: false,
+        signatureLock: false,
+        dateLock: false,
         dateWidth: 100,
         dateHeight: 30,
     };
@@ -695,24 +799,118 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
             <div class="flex flex-1 overflow-hidden">
                 <!-- Left Sidebar -->
                 <div class="w-80 border-r bg-gray-50 p-4 overflow-y-auto">
-                    <!-- Signers List -->
+
+                    <!-- Sequential Order Toggle -->
+                    <div class="bg-white rounded-lg shadow p-4 mb-4">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <input 
+                                    type="checkbox" 
+                                    v-model="enforceSequentialOrder" 
+                                    id="sequentialOrder" 
+                                    class="rounded w-4 h-4"
+                                />
+                                <label for="sequentialOrder" class="text-sm font-semibold text-gray-700">
+                                    Enforce Sequential Signer Order
+                                </label>
+                            </div>
+                            <div v-if="enforceSequentialOrder" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                ENABLED
+                            </div>
+                        </div>
+                        <p class="text-xs text-gray-500 mt-2">
+                            When enabled, signatures must be completed in the order listed below.
+                        </p>
+                    </div>
+
+                    <!-- Signers List (Draggable) -->
                     <div class="bg-white rounded-lg shadow p-4 mb-4">
                         <h3 class="font-semibold mb-3">Signers ({{ signers.length }})</h3>
                         <div v-if="signers.length === 0" class="text-sm text-gray-500">
                             No signers yet. Use "Assign" to add from the directory.
                         </div>
-                        <div class="space-y-2">
-                            <button v-for="s in signers" :key="s.emplId || s.name" @click="setActiveSigner(s)"
-                                class="w-full flex items-center justify-between px-3 py-2 border rounded hover:bg-gray-50 transition"
-                                :class="(newBoxForm.assignedEmplId === s.emplId || newBoxForm.assignedTo === s.name) ? 'border-blue-500' : 'border-gray-300'">
-                                <span class="flex items-center gap-2">
-                                    <span class="inline-block w-3 h-3 rounded"
-                                        :style="{ backgroundColor: s.color }"></span>
-                                    <span class="font-medium">{{ s.name }}</span>
-                                </span>
-                                <span class="text-xs text-gray-500">Click to set active</span>
-                            </button>
-                        </div>
+
+                        <draggable
+                            v-model="signers"
+                            item-key="emplId"
+                            @end="onSignersDragEnd"
+                            handle=".signer-drag-handle"
+                            class="space-y-2"
+                        >
+                            <template #item="{ element: s, index }">
+                                <div
+                                    class="w-full border rounded p-2 transition flex items-center justify-between gap-2"
+                                    :class="(newBoxForm.assignedEmplId === s.emplId || newBoxForm.assignedTo === s.name)
+                                        ? 'border-blue-500 bg-blue-50'
+                                        : 'border-gray-300'"
+                                >
+                                    <!-- Left side: drag handle, number, color, name -->
+                                    <div class="flex items-center gap-2 flex-1 min-w-0">
+                                        <span
+                                            class="signer-drag-handle cursor-move text-gray-400 hover:text-gray-600"
+                                            title="Drag to reorder"
+                                        >
+                                            ⋮⋮
+                                        </span>
+                                        <span
+                                            v-if="enforceSequentialOrder"
+                                            class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-200 text-gray-700 text-xs font-bold flex items-center justify-center"
+                                        >
+                                            {{ s.approvalOrder }}
+                                        </span>
+                                        <span
+                                            class="flex-shrink-0 inline-block w-3 h-3 rounded"
+                                            :style="{ backgroundColor: s.color }"
+                                        ></span>
+                                        <span class="font-medium truncate">{{ s.name }}</span>
+                                    </div>
+
+                                    <!-- Right side: action buttons -->
+                                    <div class="flex items-center gap-1 flex-shrink-0">
+                                        <!-- Up/Down (optional, you can remove them if dragging is enough) -->
+                                        <!-- <template v-if="enforceSequentialOrder">
+                                            <button
+                                                @click="moveSignerUp(index)"
+                                                :disabled="index === 0"
+                                                class="p-1 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                                title="Move up"
+                                            >
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                                                </svg>
+                                            </button>
+                                            <button
+                                                @click="moveSignerDown(index)"
+                                                :disabled="index === signers.length - 1"
+                                                class="p-1 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                                                title="Move down"
+                                            >
+                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                                </svg>
+                                            </button>
+                                        </template> -->
+
+                                        <button
+                                            @click="setActiveSigner(s)"
+                                            class="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                                        >
+                                            Select
+                                        </button>
+
+                                        <button
+                                            @click="removeSigner(index)"
+                                            class="p-1 hover:bg-red-100 text-red-600 rounded"
+                                            title="Remove signer"
+                                        >
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                            </template>
+                        </draggable>
                     </div>
 
                     <!-- Add Box Form -->
@@ -734,30 +932,34 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                 </label>
 
                                 <div class="flex gap-2 items-center">
-                                    <!-- INPUT -->
                                     <input v-model="newBoxForm.assignedTo" type="text" placeholder="Enter user name..."
                                         class="flex-1 border rounded px-3 py-2 text-sm" disabled />
-                                    <!-- Color dot
-                                    <span class="inline-block w-5 h-5 rounded border"
-                                        :style="{ backgroundColor: newBoxForm.assignedColor || '#e5e7eb' }"
-                                        title="Signer color"></span> -->
 
-                                    <!-- BUTTON -->
                                     <button @click="handleAssignUser"
                                         class="px-2 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
                                         Assign
                                     </button>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-2">
-                                <input type="checkbox" v-model="newBoxForm.hasDate" id="hasDate" class="rounded" />
-                                <label for="hasDate" class="text-sm font-medium text-gray-700">Include date
-                                    field</label>
+                            <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" v-model="newBoxForm.hasDate" id="hasDate" class="rounded" />
+                                    <label for="hasDate" class="text-sm font-medium text-gray-700">Date field</label>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" v-model="newBoxForm.signatureLock" id="signatureLock"
+                                        class="rounded" />
+                                    <label for="signatureLock" class="text-sm font-medium text-gray-700">Sig Lock</label>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" v-model="newBoxForm.dateLock" id="dateLock" class="rounded" />
+                                    <label for="dateLock" class="text-sm font-medium text-gray-700">Date Lock</label>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- List -->
+                    <!-- Boxes List -->
                     <div class="bg-white rounded-lg shadow p-4">
                         <h3 class="font-semibold mb-3">Boxes ({{ signatureBoxes.length }})</h3>
                         <div class="space-y-2 max-h-96 overflow-y-auto">
@@ -766,10 +968,15 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                 :class="selectedBoxId === box.id ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'"
                                 @click="selectAndScrollToBox(box)">
                                 <div class="flex items-start justify-between mb-1">
-                                    <p class="font-semibold text-gray-900">
-                                        <span class="inline-block w-3 h-3 rounded mr-2"
+                                    <p class="font-semibold text-gray-900 flex items-center gap-2">
+                                        <span class="inline-block w-3 h-3 rounded"
                                             :style="{ backgroundColor: box.color || '#3b82f6' }"></span>
                                         {{ box.assignedTo }}
+                                        <span v-if="enforceSequentialOrder" 
+                                            class="text-xs px-1.5 py-0.5 rounded text-white"
+                                            :style="{ backgroundColor: box.color || '#3b82f6' }">
+                                            #{{ box.approvalOrder }}
+                                        </span>
                                     </p>
                                     <button @click.stop="deleteBox(index)"
                                         class="text-red-500 hover:text-red-700">🗑️</button>
@@ -777,6 +984,16 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                 <div class="text-xs text-gray-500">
                                     Page {{ box.page }} <span v-if="box.hasDate"
                                         class="text-green-600 ml-1">(+Date)</span>
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    Signature Lock =
+                                   <span v-if="box.signatureLock == true" class="text-white rounded-lg bg-green-600 px-2"> True</span>
+                                   <span v-else class="text-white rounded-lg bg-red-600 px-2">  False</span>
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    Date Lock = 
+                                   <span v-if="box.dateLock == true" class="text-white rounded-lg bg-green-600 px-2"> True</span>
+                                   <span v-else class="text-white rounded-lg bg-red-600 px-2"> False</span>
                                 </div>
                             </div>
                         </div>
@@ -822,7 +1039,6 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
 
                     <!-- PDF Canvas Area -->
                     <div class="flex-1 overflow-auto p-6 bg-gray-100">
-                        <!-- Scroll Container is HERE (parent of containerRef) -->
                         <div ref="containerRef" class="relative inline-block" @mousemove="handleMouseMove">
                             <div class="relative border-2 border-gray-400 rounded shadow-lg bg-white"
                                 @mousedown="placeSignatureOnClick">
@@ -831,27 +1047,30 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                     class="block cursor-crosshair"></canvas>
                             </div>
 
-                            <!-- PLACED ITEMS -->
+                            <!-- Placed items -->
                             <template v-for="box in getCurrentPageBoxes()" :key="box.id">
 
-                                <!-- 1. Signature Box -->
+                                <!-- Signature Box -->
                                 <div class="absolute rounded transition-all draggable-item group"
                                     :style="getBoxVisualStyle(box)" :class="{
-                                        'border-2' : !box.signedBy,
+                                        'border-2': !box.signedBy,
                                         'cursor-default': !box.isEmpty,
                                         'cursor-move': box.isEmpty && !(isDragging && selectedBoxId === box.id && dragTargetType === 'box'),
                                         'cursor-grabbing': box.isEmpty && isDragging && selectedBoxId === box.id && dragTargetType === 'box'
                                     }" @mousedown.stop="startDragging($event, box.id, 'box')">
-                                    <!-- Label uses signer color -->
-                                    <div v-if="!box.signedBy" class="absolute -top-6 left-0 text-white text-xs px-2 py-1 rounded font-semibold whitespace-nowrap"
+
+                                    <div v-if="!box.signedBy"
+                                        class="absolute -top-6 left-0 text-white text-xs px-2 py-1 rounded font-semibold whitespace-nowrap flex items-center gap-1"
                                         :style="{ backgroundColor: box.color || '#3b82f6' }">
                                         {{ box.assignedTo }}
+                                        <span v-if="enforceSequentialOrder" class="ml-1 px-1 py-0.5 bg-white bg-opacity-30 rounded">
+                                            #{{ box.approvalOrder }}
+                                        </span>
+                                        <span v-if="box.signatureLock">🔒</span>
                                     </div>
 
-                                    <!-- IF EMPTY: Show placeholder and resize handles -->
                                     <template v-if="box.isEmpty || box.isEmpty == null">
-                                        <!-- Resize Handles (only if not locked) -->
-                                        <template v-if="!box.lockSize">
+                                        <template v-if="!box.signatureLock">
                                             <div class="absolute w-3 h-3 bg-blue-500 rounded-full -top-1 -left-1 cursor-nw-resize opacity-0 group-hover:opacity-100"
                                                 @mousedown.stop="startResizing($event, box.id, 'nw')"></div>
                                             <div class="absolute w-3 h-3 bg-blue-500 rounded-full -top-1 -right-1 cursor-ne-resize opacity-0 group-hover:opacity-100"
@@ -868,7 +1087,6 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                         </div>
                                     </template>
 
-                                    <!-- IF SIGNED (NOT EMPTY): Show the signature image -->
                                     <template v-else>
                                         <img v-if="box.imageSrc" :src="box.imageSrc" alt="Signature"
                                             class="w-full h-full object-contain" />
@@ -878,18 +1096,23 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                     </template>
                                 </div>
 
-                                <!-- 2. Date Box -->
+                                <!-- Date Box -->
                                 <div v-if="box.hasDate"
                                     class="absolute px-2 py-1 text-xs font-semibold rounded draggable-item flex items-center justify-center hover:z-50"
                                     :class="{
-                                        'border border-dashed' : box.isEmpty || box.isEmpty == null,
+                                        'border border-dashed': box.isEmpty || box.isEmpty == null,
                                         'ring-2 ring-blue-300': selectedBoxId === box.id && !box.signedBy,
                                         'cursor-default': !box.isEmpty,
                                         'cursor-grabbing': box.isEmpty && isDragging && selectedBoxId === box.id && dragTargetType === 'date',
                                         'cursor-move': box.isEmpty && !(isDragging && selectedBoxId === box.id && dragTargetType === 'date')
                                     }" :style="getDateVisualStyle(box)"
                                     @mousedown.stop="startDragging($event, box.id, 'date')">
-                                    {{ box.isEmpty || box.isEmpty == null ? "MM/DD/YYYY" : box.datePosition?.dateText }}
+
+                                    <span class="flex items-center">
+                                        {{ box.isEmpty || box.isEmpty == null ? "MM/DD/YYYY" :
+                                        box.datePosition?.dateText }}
+                                        <span v-if="box.dateLock && box.isEmpty" class="ml-1 text-xs">🔒</span>
+                                    </span>
                                 </div>
 
                             </template>
@@ -902,6 +1125,9 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
             <div class="flex items-center justify-between p-4 border-t bg-gray-50">
                 <div class="text-sm text-gray-600">
                     {{ signatureBoxes.length }} item(s) placed
+                    <span v-if="enforceSequentialOrder" class="ml-2 text-blue-600 font-semibold">
+                        • Sequential Order Enabled
+                    </span>
                 </div>
                 <div class="flex gap-3">
                     <button @click="emit('close')" class="px-4 py-2 border rounded hover:bg-gray-50">Cancel</button>
@@ -937,7 +1163,7 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                     <div v-for="(user, index) in availableApprovers" :key="index" data-approver
                         @click="selectUser(user)" class="px-4 py-2 hover:bg-gray-200 cursor-pointer"
                         :class="{ 'bg-gray-200 font-bold': index === approverIndex }">
-                        {{ user.employeename2 }}
+                        <div class="font-medium">{{ formatUserName(user) }}</div>
                     </div>
                     <div v-if="loading" class="p-2 text-gray-400 text-center">
                         Loading users...
@@ -960,5 +1186,8 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
 <style scoped>
 .cursor-crosshair {
     cursor: crosshair;
+}
+.signer-drag-handle {
+    user-select: none;
 }
 </style>

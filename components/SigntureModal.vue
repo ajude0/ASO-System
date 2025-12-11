@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, onMounted, onUnmounted, nextTick, reactive } from 'vue';
+import { ref, watch, onMounted, onUnmounted, nextTick, reactive, computed } from 'vue';
 
 // Props
 const props = defineProps({
@@ -47,6 +47,52 @@ const resizeStartSig = ref({ x: 0, y: 0, width: 0, height: 0 });
 
 // Create a reactive copy of the prePlacedSignatures (local working copy)
 const localSignatures = reactive([]);
+
+// Check if sequential order is enforced
+const isSequentialOrderEnforced = computed(() => {
+  return localSignatures.some(sig => sig.enforceSequentialOrder === true);
+});
+
+// Get the current approval order that should be signing
+const getCurrentRequiredOrder = computed(() => {
+  if (!isSequentialOrderEnforced.value) return null;
+  
+  // Find the lowest order number that is still empty
+  const emptyOrders = localSignatures
+    .filter(sig => sig.isEmpty)
+    .map(sig => sig.approvalOrder || 1);
+  
+  return emptyOrders.length > 0 ? Math.min(...emptyOrders) : null;
+});
+
+// Check if user is waiting (sequential order is on and it's not their turn)
+const isUserWaiting = (sig) => {
+  if (!isSequentialOrderEnforced.value) return false;
+  if (!sig.isEmpty) return false;
+  if (sig.assignedEmplId !== props.currentEmplId) return false;
+  
+  const currentOrder = getCurrentRequiredOrder.value;
+  const sigOrder = sig.approvalOrder || 1;
+  
+  return sigOrder > currentOrder;
+};
+
+// Get who needs to sign next
+const getNextSignerInfo = computed(() => {
+  if (!isSequentialOrderEnforced.value) return null;
+  
+  const nextOrder = getCurrentRequiredOrder.value;
+  if (!nextOrder) return null;
+  
+  const nextSig = localSignatures.find(sig => 
+    sig.isEmpty && sig.approvalOrder === nextOrder
+  );
+  
+  return nextSig ? {
+    name: nextSig.assignedTo,
+    order: nextSig.approvalOrder
+  } : null;
+});
 
 // Initialize local signatures when modal opens
 watch(() => props.isOpen, (isOpen) => {
@@ -171,12 +217,35 @@ const updatePrePlacedPositions = () => {
 
 // Check if current user can sign this box
 const canUserSign = (sig) => {
-  return sig.isEmpty && sig.assignedEmplId === props.currentEmplId;
+  // Can't sign if already signed
+  if (!sig.isEmpty) return false;
+  
+  // Can't sign if not assigned to user
+  if (sig.assignedEmplId !== props.currentEmplId) return false;
+  
+  // Can't sign if waiting for sequential order
+  if (isUserWaiting(sig)) return false;
+  
+  return true;
+};
+
+const currentUser = (sig) => {
+  return sig.assignedEmplId === props.currentEmplId;
 };
 
 // Check if user can edit this signature
 const canUserEdit = (sig) => {
   return !sig.isEmpty && sig.assignedEmplId === props.currentEmplId;
+};
+
+// Check if signature is locked
+const isSignatureLocked = (sig) => {
+  return sig.signatureLock === true;
+};
+
+// Check if date is locked
+const isDateLocked = (sig) => {
+  return sig.dateLock === true;
 };
 
 // Track if user actually dragged (to distinguish from click)
@@ -196,15 +265,25 @@ const handlePrePlacedClick = (sig, index) => {
     return;
   }
 
-  // If empty and assigned to user, sign it
-  if (!canUserSign(sig)) {
+  // Check if user is waiting due to sequential order
+  if (isUserWaiting(sig)) {
+    const nextSigner = getNextSignerInfo.value;
+    alert(`Sequential approval is enabled. Waiting for "${nextSigner?.name}" (Signer Number ${nextSigner?.order}) to sign first.`);
+    return;
+  }
+
+  // If not assigned to user
+  if (sig.assignedEmplId !== props.currentEmplId) {
     if (!sig.isEmpty) {
       return; // Already signed by someone else
     }
-    if (sig.assignedEmplId !== props.currentEmplId) {
-      alert(`This signature box is assigned to "${sig.assignedTo}". You cannot sign here.`);
-      return;
-    }
+    alert(`This signature box is assigned to "${sig.assignedTo}". You cannot sign here.`);
+    return;
+  }
+
+  // If empty and assigned to user, sign it
+  if (!canUserSign(sig)) {
+    return;
   }
 
   if (!userSignatureSrc.value) {
@@ -226,10 +305,10 @@ const handlePrePlacedClick = (sig, index) => {
   };
 };
 
-// Start dragging signature
+// Start dragging signature - CHECK LOCK
 const startDraggingSignature = (e, index) => {
   const sig = localSignatures[index];
-  if (!canUserEdit(sig)) return;
+  if (!canUserEdit(sig) || isSignatureLocked(sig)) return;
 
   e.stopPropagation();
   e.preventDefault();
@@ -251,10 +330,10 @@ const startDraggingSignature = (e, index) => {
   };
 };
 
-// Start dragging date
+// Start dragging date - CHECK LOCK
 const startDraggingDate = (e, sigIndex) => {
   const sig = localSignatures[sigIndex];
-  if (!canUserEdit(sig) || !sig.datePosition) return;
+  if (!canUserEdit(sig) || !sig.datePosition || isDateLocked(sig)) return;
 
   e.stopPropagation();
   e.preventDefault();
@@ -280,11 +359,13 @@ const startDraggingDate = (e, sigIndex) => {
 const dragSignature = (e) => {
   if (!isDraggingSignature.value || editingSignatureIndex.value === null) return;
 
+  const sig = localSignatures[editingSignatureIndex.value];
+  if (isSignatureLocked(sig)) return;
+
   const dx = e.clientX - dragStartPos.value.x;
   const dy = e.clientY - dragStartPos.value.y;
   draggedDistance.value = Math.sqrt(dx * dx + dy * dy);
 
-  const sig = localSignatures[editingSignatureIndex.value];
   const canvas = canvasRefs.value[sig.page - 1];
   const canvasRect = canvas.getBoundingClientRect();
 
@@ -297,8 +378,8 @@ const dragSignature = (e) => {
   sig.x = Math.max(0, Math.min(newX, canvas.width - sig.width));
   sig.y = Math.max(0, Math.min(newY, canvas.height - sig.height));
 
-  // Move the date along with the signature
-  if (sig.datePosition) {
+  // Move the date along with the signature (if date is not locked)
+  if (sig.datePosition && !isDateLocked(sig)) {
     const deltaX = sig.x - oldX;
     const deltaY = sig.y - oldY;
 
@@ -318,12 +399,12 @@ const dragSignature = (e) => {
 const dragDate = (e) => {
   if (!isDraggingDate.value || currentDraggingDateIndex.value === null) return;
 
+  const sig = localSignatures[currentDraggingDateIndex.value];
+  if (isDateLocked(sig)) return;
+
   const dx = e.clientX - dragStartPos.value.x;
   const dy = e.clientY - dragStartPos.value.y;
   draggedDistance.value = Math.sqrt(dx * dx + dy * dy);
-
-  const sig = localSignatures[currentDraggingDateIndex.value];
-  if (!sig.datePosition) return;
 
   const canvas = canvasRefs.value[sig.page - 1];
   const canvasRect = canvas.getBoundingClientRect();
@@ -338,10 +419,10 @@ const dragDate = (e) => {
   nextTick(() => updatePrePlacedPositions());
 };
 
-// Start resizing signature
+// Start resizing signature - CHECK LOCK
 const startResizingSignature = (e, index) => {
   const sig = localSignatures[index];
-  if (!canUserEdit(sig)) return;
+  if (!canUserEdit(sig) || isSignatureLocked(sig)) return;
 
   e.stopPropagation();
   isResizingSignature.value = true;
@@ -363,6 +444,8 @@ const resizeSignature = (e) => {
   if (!isResizingSignature.value || editingSignatureIndex.value === null) return;
 
   const sig = localSignatures[editingSignatureIndex.value];
+  if (isSignatureLocked(sig)) return;
+
   const canvas = canvasRefs.value[sig.page - 1];
   const canvasRect = canvas.getBoundingClientRect();
 
@@ -412,6 +495,10 @@ const getMyPendingSignatures = () => {
 
 const getMyCompletedSignatures = () => {
   return localSignatures.filter(s => !s.isEmpty && s.signedBy === props.currentUserName).length;
+};
+
+const getMyWaitingSignatures = () => {
+  return localSignatures.filter(s => isUserWaiting(s)).length;
 };
 
 // Page navigation
@@ -473,14 +560,10 @@ onUnmounted(() => {
         <div>
           <h2 class="text-xl font-semibold">Sign PDF Document</h2>
           <p class="text-sm text-gray-600 mt-1">Signing as: <span class="font-semibold text-blue-600">{{ currentUserName
-          }}</span></p>
-          <div class="flex gap-4 mt-2 text-xs">
-            <p class="text-green-600">
-              ✓ Completed: {{ getMyCompletedSignatures() }}
-            </p>
-            <p class="text-orange-600">
-              ⏳ Pending: {{ getMyPendingSignatures() }}
-            </p>
+              }}</span></p>
+       
+          <div v-if="isSequentialOrderEnforced && getNextSignerInfo" class="mt-2 text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded border border-blue-200">
+            🔄 Sequential Order: Waiting for <strong>{{ getNextSignerInfo.name }}</strong> (Signer Number {{ getNextSignerInfo.order }})
           </div>
         </div>
         <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition">
@@ -540,17 +623,47 @@ onUnmounted(() => {
             :ref="el => { if (el) prePlacedSigRefs[index] = el }" v-show="sig.page === currentViewPage"
             class="absolute rounded transition-all group" :class="{
               'border-2 border-dashed border-green-500 bg-green-50 cursor-pointer hover:bg-green-100 hover:border-green-600': canUserSign(sig),
-              'border-2 border-dashed border-gray-300 bg-gray-50 cursor-not-allowed': sig.isEmpty && sig.assignedEmplId !== currentEmplId,
+              'border-2 border-dashed border-purple-400 bg-purple-50 cursor-not-allowed': isUserWaiting(sig),
+              'border-2 border-dashed border-gray-300 bg-gray-50 cursor-not-allowed': sig.isEmpty && sig.assignedEmplId !== currentEmplId && !isUserWaiting(sig),
               'border-2 border-blue-500 bg-blue-50': canUserEdit(sig) && editingSignatureIndex === index,
               'border-2 border-blue-400 bg-blue-50 hover:border-blue-600': canUserEdit(sig) && editingSignatureIndex !== index,
               'border-2 border-gray-400 bg-gray-100': !sig.isEmpty && sig.signedBy !== currentUserName,
               'cursor-move': canUserEdit(sig)
             }" :style="{ width: sig.width + 'px', height: sig.height + 'px', left: sig.x + 'px', top: sig.y + 'px' }"
             @mouseup="handlePrePlacedClick(sig, index)"
-            @mousedown="canUserEdit(sig) ? startDraggingSignature($event, index) : null"
+            @mousedown="(!isSignatureLocked(sig) && canUserEdit(sig)) ? startDraggingSignature($event, index) : null"
             :title="sig.isEmpty ? `Assigned to: ${sig.assignedTo}` : `Signed by: ${sig.signedBy}`">
-            <!-- Empty signature box (for current user) -->
-            <div v-if="canUserSign(sig)"
+            
+            <!-- Waiting state (user's box but not their turn) -->
+            <div v-if="isUserWaiting(sig)"
+              class="flex flex-col items-center justify-center h-full p-2 pointer-events-none relative">
+              <!-- Text above box when too small -->
+              <div v-if="isSmallSignatureBox(sig)"
+                class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-1 rounded whitespace-nowrap z-10 border border-purple-300 shadow-md">
+                <span class="flex items-center">
+                  <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Waiting
+                </span>
+                <div
+                  class="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-purple-100">
+                </div>
+              </div>
+
+              <!-- Text inside box when large enough -->
+              <div v-else class="flex flex-col items-center justify-center h-full">
+                <svg class="w-8 h-8 text-purple-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p class="text-xs text-purple-700 font-semibold text-center">Waiting</p>
+                <p class="text-xs text-purple-600 mt-1 text-center">Signer Number {{ sig.approvalOrder }}</p>
+                <p class="text-xs text-purple-600 text-center">{{ sig.assignedTo }}</p>
+              </div>
+            </div>
+
+            <!-- Empty signature box (for current user - ready to sign) -->
+            <div v-else-if="canUserSign(sig)"
               class="flex flex-col items-center justify-center h-full p-2 pointer-events-none relative">
               <!-- Text above box when too small -->
               <div v-if="isSmallSignatureBox(sig)"
@@ -561,6 +674,7 @@ onUnmounted(() => {
                       d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                   </svg>
                   Click to sign
+                  <span v-if="isSequentialOrderEnforced" class="ml-1">(#{{ sig.approvalOrder }})</span>
                 </span>
                 <div
                   class="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-green-100">
@@ -574,6 +688,7 @@ onUnmounted(() => {
                     d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
                 <p class="text-xs text-green-700 font-semibold text-center">Click to sign</p>
+                <p v-if="isSequentialOrderEnforced" class="text-xs text-green-600 mt-1 text-center">Signer Number {{ sig.approvalOrder }}</p>
                 <p class="text-xs text-green-600 mt-1 text-center">{{ sig.assignedTo }}</p>
               </div>
             </div>
@@ -586,7 +701,8 @@ onUnmounted(() => {
                   d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
               <p class="text-xs text-gray-500 mt-1 text-center font-semibold">{{ sig.assignedTo }}</p>
-              <p class="text-xs text-gray-400 text-center">(Pending)</p>
+              <p v-if="isSequentialOrderEnforced" class="text-xs text-gray-400 text-center">Signer Number{{ sig.approvalOrder }}</p>
+              <p class="text-xs text-gray-400 text-center">{{ isSequentialOrderEnforced ?"(Waiting)":"(Pending)" }}</p>
             </div>
 
             <!-- Filled signature -->
@@ -595,8 +711,14 @@ onUnmounted(() => {
 
               <!-- Signed by text above box when too small -->
               <div v-if="isSmallSignatureBox(sig)"
-                class="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded whitespace-nowrap z-10 border border-blue-300 shadow-md">
+                class="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-semibold px-2 py-1 rounded whitespace-nowrap z-10 border shadow-md"
+                :class="{
+                      'text-blue-800 hover:border-blue-500 bg-blue-100 border-blue-300': currentUser(sig),
+                      'text-gray-800 hover:border-gray-500 bg-gray-100 border-gray-300': !currentUser(sig),
+
+                }">
                 {{ sig.signedBy }}
+                <span v-if="isSequentialOrderEnforced" class="ml-1">(#{{ sig.approvalOrder }})</span>
                 <div
                   class="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-blue-100">
                 </div>
@@ -606,15 +728,18 @@ onUnmounted(() => {
               <div v-else
                 class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs px-2 py-1 text-center pointer-events-none">
                 {{ sig.signedBy }}
+                <span v-if="isSequentialOrderEnforced" class="ml-1">(Signer Number {{ sig.approvalOrder }})</span>
               </div>
               <!-- Edit hint for user's own signature -->
               <div v-if="canUserEdit(sig)"
-                class="absolute top-0 left-0 right-0 bg-blue-500 text-white text-xs px-2 py-1 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                Click to edit • Drag to move
+                class="absolute top-0 left-0 right-0 text-white text-xs px-2 py-1 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                :class="sig.signatureLock ? 'bg-red-500' : 'bg-blue-500'">
+                <span v-if="sig.signatureLock == false"> Drag to move</span>
+                <span v-else> Locked</span>
               </div>
 
               <!-- Resize handle for user's own signature -->
-              <div v-if="canUserEdit(sig)"
+              <div v-if="canUserEdit(sig) && !isSignatureLocked(sig)"
                 class="absolute w-4 h-4 bg-blue-500 rounded-full -bottom-1 -right-1 cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity z-10"
                 @mousedown.stop="startResizingSignature($event, index)"></div>
             </div>
@@ -623,14 +748,16 @@ onUnmounted(() => {
           <!-- Dates for signed signatures - NOW DRAGGABLE -->
           <div v-for="(sig, index) in localSignatures.filter(s => s.datePosition)" :key="'date-' + index"
             :ref="el => { if (el) prePlacedDateRefs[index] = el }" v-show="sig.page === currentViewPage"
-            class="absolute select-none text-sm font-semibold text-gray-700 rounded px-2 py-1 border border-gray-300 bg-gray-50 transition-all"
+            class="absolute select-none text-sm font-semibold text-gray-700 rounded px-2 py-1 border border-gray-300 transition-all"
             :class="{
-              'cursor-move hover:bg-gray-200 hover:border-gray-500': canUserEdit(sig),
-              'cursor-default': !canUserEdit(sig)
+              'cursor-move hover:bg-blue-400 hover:border-blue-500 bg-blue-200': currentUser(sig) && !sig.isEmpty,
+              'cursor-move hover:bg-green-400 hover:border-green-500 bg-green-200': currentUser(sig) && sig.isEmpty && !isUserWaiting(sig),
+              'cursor-default hover:bg-purple-300 hover:border-purple-400 bg-purple-100': isUserWaiting(sig),
+              'cursor-default hover:bg-gray-200 hover:border-gray-500 bg-gray-50': !currentUser(sig),
             }" :style="{ left: sig.datePosition.x + 'px', top: sig.datePosition.y + 'px' }"
-            @mousedown="canUserEdit(sig) ? startDraggingDate($event, index) : null"
-            :title="canUserEdit(sig) ? 'Drag to move date' : ''">
-            {{ sig.datePosition.dateText }}
+            @mousedown="(!isDateLocked(sig) && canUserEdit(sig)) ? startDraggingDate($event, index) : null"
+            :title="canUserEdit(sig) && sig.dateLock == false ? 'Drag to move date' : 'Locked'">
+            {{ sig.datePosition.dateText ? sig.datePosition.dateText : "MM/DD/YYYY" }}
           </div>
         </div>
       </div>
@@ -640,6 +767,7 @@ onUnmounted(() => {
         <div class="text-sm text-gray-600">
           <p class="font-semibold">💡 Tips:</p>
           <p>• Click green boxes to sign</p>
+          <p v-if="isSequentialOrderEnforced" class="text-purple-600">• Purple boxes are waiting for previous signers</p>
           <p>• Click your signatures to edit, drag to move, resize from corner</p>
           <p>• Drag date fields independently to reposition them</p>
           <p class="text-orange-600 mt-2">⚠️ Changes will only be saved when you click "Done"</p>

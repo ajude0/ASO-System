@@ -340,7 +340,7 @@ onMounted(async () => {
               </button>
               <button @click="saveFinalPdf" :disabled="getStats().signed === 0"
                 class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold">
-                💾 Save PDF
+                💾 Download PDF
               </button>
             </div>
           </div>

@@ -1,6 +1,6 @@
 <template>
     <div class="flex mb-5 me-4">
-        <button @click="goToCreateDocument"
+        <button v-if="canAdd" @click="goToCreateDocument"
             class="flex px-3 py-3 bg-green-500 text-white rounded-lg hover:bg-green-700 place-items-center gap-1">
             <svg class="w-4 h-4 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                 width="24" height="24" fill="none" viewBox="0 0 24 24">
@@ -32,11 +32,12 @@
                 </div>
 
                 <!-- Input Field -->
-                <input type="text" id="default-search" v-model="query.Search" @keydown.enter="getListOfForms"
+                <input type="text" id="default-search" v-model="query.Search" @keydown.enter="getListOfDocuments"
                     class="block w-52 md:w-80 h-11 pr-10 pl-10 py-2.5 text-base font-normal shadow-xs text-gray-900 bg-transparent border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none"
                     placeholder="Search" />
             </div>
-            <button @click="getListOfForms" class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700">
+            <button @click="getListOfDocuments"
+                class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700">
                 <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
                     width="24" height="24" fill="none" viewBox="0 0 24 24">
                     <path stroke="currentColor" stroke-linecap="round" stroke-width="2"
@@ -48,11 +49,11 @@
             <div class="relative inline-block mr-4 mb-2">
                 <select id="dropdown"
                     class="px-5 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none pr-10"
-                    v-model="query.Status" @change="getListOfForms" @focus="isStatusOpen = true"
+                    v-model="query.Status" @change="getListOfDocuments" @focus="isStatusOpen = true"
                     @blur="isStatusOpen = false" @click="open">
                     <option value="" selected hidden>Select Status</option>
-                    <option value="1">Active</option>
-                    <option value="0">Inactive</option>
+                    <option value="1">Pending</option>
+                    <option value="2">Done</option>
                 </select>
                 <div v-if="query.Status"
                     class="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700">
@@ -96,10 +97,7 @@
                                                 :descending="query.IsDescending" />
                                         </div>
                                     </th>
-                                    <th scope="col"
-                                        class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize">
-                                        Description
-                                    </th>
+
                                     <th @click="sortBy('Status')"
                                         class="p-5 text-left text-sm font-semibold text-gray-900 capitalize cursor-pointer select-none">
                                         <div class="flex items-center gap-1">
@@ -144,48 +142,25 @@
                                     <td class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
                                         {{ form.title }}
                                     </td>
-                                    <td class="p-5 text-sm leading-6 font-medium text-gray-900 break"
-                                        :title="form.description">
-                                        <div class="flex flex-col 2xl:flex-row gap-2">
-                                            <div>
-                                                {{
-                                                    expandedIndex === index
-                                                        ? form.description
-                                                        : form.description.length > 30
-                                                            ? form.description.slice(0, 30) + "..."
-                                                : form.description
-                                                }}
-                                            </div>
-                                            <div v-if="form.description.length > 30">
-                                                <button @click="
-                                                    expandedIndex =
-                                                    expandedIndex === index ? null : index
-                                                    " class="mt-1 text-blue-500 hover:underline text-xs">
-                                                    {{
-                                                        expandedIndex === index ? "See less" : "See more"
-                                                    }}
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </td>
+
                                     <td
                                         class="p-5 items-center whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
                                         <div v-if="form.status == '1'"
+                                            class="py-1.5 px-2.5 bg-yellow-50 rounded-full flex items-center justify-center w-20 gap-1">
+                                            <svg width="5" height="6" viewBox="0 0 5 6" fill="none"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <circle cx="2.5" cy="3" r="2.5" fill=" #FDDA0D"></circle>
+                                            </svg>
+                                            <span class="font-medium text-xs text-yellow-600">Pending</span>
+                                        </div>
+
+                                        <div v-if="form.status == '2'"
                                             class="py-1.5 px-2.5 bg-green-50 rounded-full flex items-center justify-center w-20 gap-1">
                                             <svg width="5" height="6" viewBox="0 0 5 6" fill="none"
                                                 xmlns="http://www.w3.org/2000/svg">
                                                 <circle cx="2.5" cy="3" r="2.5" fill="#16A34A"></circle>
                                             </svg>
-                                            <span class="font-medium text-xs text-green-600">Active</span>
-                                        </div>
-
-                                        <div v-if="form.status == '0'"
-                                            class="py-1.5 px-2.5 bg-red-50 rounded-full flex items-center justify-center w-20 gap-1">
-                                            <svg width="5" height="6" viewBox="0 0 5 6" fill="none"
-                                                xmlns="http://www.w3.org/2000/svg">
-                                                <circle cx="2.5" cy="3" r="2.5" fill="#DC2626"></circle>
-                                            </svg>
-                                            <span class="font-medium text-xs text-red-600">Inactive</span>
+                                            <span class="font-medium text-xs text-green-600">Done</span>
                                         </div>
                                     </td>
                                     <td class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
@@ -200,12 +175,12 @@
                                                 day: "numeric",
                                                 hour: "numeric",
                                                 minute: "numeric",
-                                        hour12: true, // optional, for 12-hour format with AM/PM
-                                        })
+                                                hour12: true, // optional, for 12-hour format with AM/PM
+                                            })
                                         }}
                                     </td>
                                     <td class="flex p-5 items-center gap-0.5">
-                                        <button v-if="canEdit" @click="editForm(form.id)"
+                                        <button v-if="canEdit" @click="editDocumnet(form.id)"
                                             class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-yellow-600 flex item-center"
                                             title="Edit Form">
                                             <svg class="w-6 h-6 text-yellow-400" aria-hidden="true"
@@ -275,7 +250,8 @@
                 <div class="flex flex-wrap justify-center sm:justify-center space-x-2 order-last sm:order-none">
                     <a @click="changePage(query.PageNumber - 1)" :class="{
                         'cursor-not-allowed opacity-50': query.PageNumber === 1,
-                    }" class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none">
+                    }"
+                        class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none">
                         <svg xmlns="http://www.w3.org/2000/svg" width="1.5em" height="1.5em" viewBox="0 0 24 24">
                             <path fill="currentColor" d="m14 18l-6-6l6-6l1.4 1.4l-4.6 4.6l4.6 4.6z" />
                         </svg>
@@ -288,14 +264,16 @@
                         </span>
                         <a v-else @click="changePage(page)" :class="{
                             'ring ring-primary bg-primary/20': query.PageNumber === page,
-                        }" class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 ml-1 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none">
+                        }"
+                            class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 ml-1 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none">
                             {{ page }}
                         </a>
                     </template>
 
                     <a @click="changePage(query.PageNumber + 1)" :class="{
                         'cursor-not-allowed opacity-50': query.PageNumber === totalPages,
-                    }" class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none">
+                    }"
+                        class="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 mt-2 text-gray-600 border rounded-lg hover:bg-gray-100 focus:outline-none">
                         <svg xmlns="http://www.w3.org/2000/svg" width="1.5em" height="1.5em" viewBox="0 0 24 24">
                             <path fill="currentColor" d="M12.6 12L8 7.4L9.4 6l6 6l-6 6L8 16.6z" />
                         </svg>
@@ -320,13 +298,39 @@
 
 <script setup>
 import { getListOfDocuments, generatePagination, changePage, totalEntries, totalPages, query, loading, forms, softDeleteForm, sortBy, changePageSize } from "~/js/fetchDocument";
+import {
+    fetchCanAccess,
+    nenunames,
+    canAdd,
+    canDelete,
+    canEdit,
+} from "~/js/fetchMenu";
+import { encryptData } from "~/js/cryptoToken";
 const router = useRouter();
+const paramid = ref();
 
 function goToCreateDocument() {
-  router.push("/main/638992220838277083/addDocument");
+    router.push("/main/638992220838277083/addDocument");
+}
+function editDocumnet(id) {
+    localStorage.setItem("documentId", encryptData(id));
+   router.push("/main/638992220838277083/editDocument")
+
+}
+function clearStatus() {
+    query.value.Status = "";
+    getListOfDocuments();
+}
+function clearSearch() {
+    query.value.Search = "";
+    getListOfDocuments();
 }
 onMounted(() => {
     getListOfDocuments();
+    const hash = window.location.hash;
+    const parts = hash.split("/");
+    paramid.value = parts[parts.length - 1];
+    fetchCanAccess(paramid.value);
 });
 
 </script>

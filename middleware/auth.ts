@@ -9,8 +9,15 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
 
   if (hashQuery) {
     const transactionId = new URLSearchParams(hashQuery).get("transactionid");
+    const documenturlId = new URLSearchParams(hashQuery).get("documenturlid");
+
     if (transactionId) {
       localStorage.setItem("aso_urltransactionId", encryptData(transactionId));
+      localStorage.removeItem("documentUrlId");
+    }
+    if(documenturlId){
+      localStorage.setItem("documenturlid", encryptData(documenturlId));
+      localStorage.removeItem("aso_urltransactionId");
     }
   }
   

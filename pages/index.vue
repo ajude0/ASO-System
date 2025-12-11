@@ -320,10 +320,15 @@ const handleLogin = async () => {
 
     localStorage.setItem("user_token_aso", encryptData(response.stringParam1));
     const transactionId = localStorage.getItem("aso_urltransactionId");
+    const documentUrlId = localStorage.getItem("documenturlid");
 
     if (transactionId) {
       router.push(`main/transactions`);
-    } else {
+    }else if (documentUrlId)
+    {
+      router.push(`main/document`);
+    } 
+    else {
       router.push("main/dashboard");
     }
   } catch (error) {

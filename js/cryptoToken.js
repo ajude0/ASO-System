@@ -3,15 +3,12 @@ import CryptoJS from "crypto-js";
 export const encryptData = (data) => {
   const config = useRuntimeConfig();
   const secretKey = config.public.secretKey; // 👈 note the `.public`
-  console.log(secretKey);
-
   return CryptoJS.AES.encrypt(JSON.stringify(data), secretKey).toString();
 };
 
 export const decryptData = (encryptedData) => {
   const config = useRuntimeConfig();
   const secretKey = config.public.secretKey; // 👈 note the `.public`
-  console.log(secretKey);
   const bytes = CryptoJS.AES.decrypt(encryptedData, secretKey);
   return JSON.parse(bytes.toString(CryptoJS.enc.Utf8));
 };
@@ -29,8 +26,18 @@ export const getTransactionId = () => {
   return encryptedToken ? decryptData(encryptedToken) : null;
 };
 
+export const getDocumentId = () => {
+  const encryptedToken = localStorage.getItem("documentId");
+  return encryptedToken ? decryptData(encryptedToken) : null;
+};
+
 export const getUrlTransactionId = () => {
   const encryptedToken = localStorage.getItem("aso_urltransactionId");
+  return encryptedToken ? decryptData(encryptedToken) : null;
+};
+
+export const getUrlDocumentId = () => {
+  const encryptedToken = localStorage.getItem("documenturlid");
   return encryptedToken ? decryptData(encryptedToken) : null;
 };
 

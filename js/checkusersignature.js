@@ -48,6 +48,7 @@ export const checkusersignature = async ($swal) => {
 };
 
 export const getusersignature = async ($swal) => {
+  console.log("heree");
   const token = getToken();
 
   try {
