@@ -52,6 +52,7 @@ const handleSaveSignatures = async (boxes) => {
     boxes.forEach((sig, i) => {
         form.append(`signatories[${i}].id`, typeof sig.id === 'number' ? sig.id : 0);
         form.append(`signatories[${i}].employeeId`, sig.assignedEmplId)
+        form.append(`signatories[${i}].hasName`, sig.showName == true ? 1 : 0)
         form.append(`signatories[${i}].canvasHeight`, sig.canvasHeight)
         form.append(`signatories[${i}].canvasWidth`, sig.canvasWidth)
         form.append(`signatories[${i}].color`, sig.color)
@@ -320,6 +321,7 @@ const handleSaveAllSignatures = async (updatedSignatures) => {
         form.append(`signatories[${i}].employeeId`, sig.assignedEmplId)
         form.append(`signatories[${i}].canvasHeight`, sig.canvasHeight)
         form.append(`signatories[${i}].canvasWidth`, sig.canvasWidth)
+        form.append(`signatories[${i}].hasName`, sig.showName == true ? 1 : 0)
         form.append(`signatories[${i}].color`, sig.color)
         form.append(`signatories[${i}].dateLock`, sig.dateLock == true ? 1 : 0)
         form.append(`signatories[${i}].dateX`, sig.datePosition ? sig.datePosition.x : 0)
@@ -490,6 +492,85 @@ const saveFinalPdf = async () => {
             const scaleX = pageWidth / canvasWidth;
             const scaleY = pageHeight / canvasHeight;
 
+            if (sig.showName && sig.signedBy){
+                // Embed signature image
+            const imgResp = await fetch(sig.imageSrc);
+            const imgBytes = await imgResp.arrayBuffer();
+            let embeddedImage;
+            try {
+                embeddedImage = await pdfDoc.embedPng(imgBytes);
+            } catch {
+                embeddedImage = await pdfDoc.embedJpg(imgBytes);
+            }
+
+            // Adjust signature width for name like UI
+            const maxImgWidth = sig.showName && sig.signedBy
+                ? Math.max(sig.width - 16, sig.signedBy.length * 8) * scaleX
+                : sig.width * scaleX;
+
+            const maxImgHeight = sig.height * scaleY;
+
+            const imgAspect = embeddedImage.width / embeddedImage.height;
+            let drawWidth = maxImgWidth;
+            let drawHeight = drawWidth / imgAspect;
+            if (drawHeight > maxImgHeight) {
+                drawHeight = maxImgHeight;
+                drawWidth = drawHeight * imgAspect;
+            }
+
+            // Signature coordinates (flip Y axis) – exact match to UI
+            const xOnPdf = sig.x * scaleX + (sig.width * scaleX - drawWidth) / 2;
+            let yOnPdf = pageHeight - (sig.y + drawHeight) * scaleY;
+
+// Adjust y slightly if showing name
+                if (sig.showName && sig.signedBy) {
+                    yOnPdf -= 5; // reduces vertical position by 1px
+                }
+
+            // Draw signature
+            page.drawImage(embeddedImage, {
+                x: xOnPdf,
+                y: yOnPdf,
+                width: drawWidth,
+                height: drawHeight,
+            });
+
+            // Draw name slightly overlapping signature
+            if (sig.showName && sig.signedBy) {
+                const fontSize = Math.max(8, drawHeight * 0.18);
+                const textWidth = Math.min(helveticaFont.widthOfTextAtSize(sig.signedBy, fontSize), drawWidth);
+                const textX = xOnPdf + (drawWidth - textWidth) / 2;
+
+                // Small overlap with signature
+                const textY = yOnPdf - fontSize / 3;
+
+                page.drawText(sig.signedBy, {
+                    x: textX,
+                    y: textY,
+                    size: fontSize,
+                    font: helveticaFont,
+                    color: rgb(0, 0, 0),
+                });
+            }
+
+            // Draw date exactly at its canvas position
+            if (sig.hasDate && sig.datePosition) {
+                const dp = toRaw(sig.datePosition);
+                const dateX = dp.x * scaleX;
+                 let dateY = pageHeight - (dp.y + dp.height) * scaleY;
+                const fontSize = (dp.fontSize || 14) * scaleY;
+                const dateText = dp.dateText || sig.signedDate || "";
+                dateY -= 5;
+                page.drawText(dateText, {
+                    x: dateX,
+                    y: dateY + (dp.height * scaleY - fontSize) / 2, // vertical center
+                    size: fontSize,
+                    font: helveticaFont,
+                    color: rgb(0, 0, 0),
+                });
+            }
+            }
+            else{
             const xOnPdf = sig.x * scaleX;
             const yOnPdf = pageHeight - sig.y * scaleY - sig.height * scaleY;
             const widthOnPdf = sig.width * scaleX;
@@ -530,6 +611,7 @@ const saveFinalPdf = async () => {
                     color: rgb(0, 0, 0),
                 });
             }
+        }
         }
 
         // Save PDF and trigger download

@@ -161,6 +161,7 @@ function toggleDropdown() {
 function Logout() {
   localStorage.removeItem('user_token_aso');
   localStorage.removeItem('aso_urltransactionId');
+  localStorage.removeItem('documenturlid');
   router.push('/')
 }
 

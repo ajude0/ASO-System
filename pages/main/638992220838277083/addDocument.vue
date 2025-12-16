@@ -40,12 +40,14 @@ const handleSaveSignatures = async (boxes) => {
     const token = getToken();
     const form = new FormData()
 
-    form.append("title", pdfTitle.value)
+    form.append("title", pdfTitle.value =="undefined" ? null : pdfTitle.value)
+
     form.append("file", pdfFile.value)
 
     // append array correctly
     boxes.forEach((sig, i) => {
         form.append(`signatories[${i}].employeeId`, sig.assignedEmplId)
+        form.append(`signatories[${i}].hasName`, sig.showName == true ? 1 : 0)
         form.append(`signatories[${i}].canvasHeight`, sig.canvasHeight)
         form.append(`signatories[${i}].canvasWidth`, sig.canvasWidth)
         form.append(`signatories[${i}].color`, sig.color)

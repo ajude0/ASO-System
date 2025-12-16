@@ -1,12 +1,11 @@
 <template>
-    <div>
+    <div v-if="canViewPage">
         <div class="bg-white rounded-lg shadow-md p-6">
-              <div class="bg-white rounded-lg shadow-md p-6 mb-4">
-                        <div class="flex items-center gap-2 mb-4">
-
-                            <h2 class="text-xl font-semibold">{{ pdfTitle }}</h2>
-                        </div>
-                    </div>
+            <div class="bg-white rounded-lg shadow-md p-6 mb-4">
+                <div class="flex items-center gap-2 mb-4">
+                    <h2 class="text-xl font-semibold">{{ pdfTitle }}</h2>
+                </div>
+            </div>
             <div class="flex items-center gap-2 mb-4">
                 <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
                     1
@@ -37,14 +36,16 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
-                Sign Document
+                {{ userSignatures.length == 0 ? "View Document" : "Sign Document" }}
             </button>
-        
+
         </div>
         <SigntureModal :is-open="isSigningModalOpen" :pdf-file="pdfFile" :signature-file="signatureFile"
             :current-user-name="currentUserName" :current-empl-id="currentEmplId"
             :pre-placed-signatures="prePlacedSignatures" @close="closeSigningModal"
             @save-all-signatures="handleSaveAllSignatures" />
+        <ViewSignatureBoxPlacement :isOpen="isViewingModalopen" :pdfFile="pdfFile" :signatures="prePlacedSignatures"
+            @close="isViewingModalopen = false" />
     </div>
 </template>
 
@@ -60,6 +61,7 @@ import { fetchDocumentPdf, pdfFile } from "~/js/fetchDocumentPdf";
 import { fetchDocumentTitle, title } from "~/js/fetchDocumentTitle";
 import { getusersignature } from "~/js/checkusersignature";
 import { checkDocumentSignature } from '~/js/checkdocumentsignature';
+import ViewSignatureBoxPlacement from '~/components/ViewSignatureBoxPlacement.vue';
 
 const { $swal } = useNuxtApp();
 const documentId = ref();
@@ -68,6 +70,8 @@ const currentUserName = ref();
 const currentEmplId = ref();
 const pdfTitle = ref();
 const signatureFile = ref(null);
+const isViewingModalopen = ref(false);
+const canViewPage = ref(false);
 
 const getUserStats = (userName) => {
     const userSigs = prePlacedSignatures.value.filter(
@@ -77,7 +81,20 @@ const getUserStats = (userName) => {
     const pending = userSigs.length - signed;
     return { total: userSigs.length, signed, pending };
 };
+const userSignatures = computed(() =>
+    prePlacedSignatures.value.filter(
+        s =>
+            s.assignedEmplId === currentEmplId.value &&
+            s.isEmpty
+    )
+)
 
+const signaturesWithCurrentUserFlag = computed(() =>
+    prePlacedSignatures.value.map(s => ({
+        ...s,
+        isCurrentUser: s.assignedEmplId === currentEmplId.value
+    }))
+)
 // Open signing modal
 const openSigningModal = () => {
     if (!pdfFile.value) {
@@ -96,16 +113,16 @@ const openSigningModal = () => {
         return;
     }
 
-    const userSignatures = prePlacedSignatures.value.filter(
-        (s) => s.assignedEmplId === currentEmplId.value && s.isEmpty
-    );
+    // const userSignatures = prePlacedSignatures.value.filter(
+    //     (s) => s.assignedEmplId === currentEmplId.value && s.isEmpty
+    // );
 
-    if (userSignatures.length === 0) {
-        alert(`No pending signatures for ${currentUserName.value}`);
-        return;
+    if (userSignatures.value.length === 0) {
+        isViewingModalopen.value = true;
     }
-
-    isSigningModalOpen.value = true;
+    else {
+        isSigningModalOpen.value = true;
+    }
 };
 
 const createSignature = async (text) => {
@@ -349,7 +366,7 @@ const closeSigningModal = () => {
     isSigningModalOpen.value = false;
 };
 definePageMeta({
-  middleware: "auth", // 👈 Tells Nuxt to run the "auth" middleware
+    middleware: "auth", // 👈 Tells Nuxt to run the "auth" middleware
 });
 
 onMounted(async () => {
@@ -364,7 +381,30 @@ onMounted(async () => {
     await fetchDocumentPdf(documentId.value);
     await fetchDocumentTitle(documentId.value);
     pdfTitle.value = title.value;
+    const hasAccess = signaturesWithCurrentUserFlag.value.some(
+        s => s.isCurrentUser
+    )
+
+    if (!hasAccess) {
+        const result = await $swal.fire({
+        title: "Access Denied",
+        text: "You are not allowed to view this Document.",
+        icon: "error",
+        confirmButtonText: "Close", // Button at the bottom
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+      });
+
+      // Redirect only if the user clicks the "Close" button
+      if (result.isConfirmed) {
+        navigateTo("/main/dashboard");
+      }
+    }
+    else{
+        canViewPage.value = true;
+    }
 });
+
 </script>
 
 <style scoped></style>

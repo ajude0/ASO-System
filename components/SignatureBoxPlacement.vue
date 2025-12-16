@@ -38,6 +38,7 @@ const signatureBoxes = ref([]);
 
 // Drag/Resize state
 const isDragging = ref(false);
+const showNameOnBox = ref(false);   // <-- NEW
 const isResizing = ref(false);
 const dragStart = ref({ x: 0, y: 0, boxX: 0, boxY: 0, boxWidth: 0, boxHeight: 0 });
 const dragOffset = ref({ x: 0, y: 0 });
@@ -98,14 +99,14 @@ const getNextApprovalOrder = () => {
     return maxOrder + 1;
 };
 
-const upsertSigner = ({ name, emplId, approvalOrder ,color}) => {
+const upsertSigner = ({ name, emplId, approvalOrder, color }) => {
     if (!name && !emplId) return null;
     let s = findSigner(emplId, name);
     if (!s) {
         s = {
             name,
             emplId: emplId || null,
-            color:color!=null?color: getNextColor(),
+            color: color != null ? color : getNextColor(),
             approvalOrder: Number(
                 approvalOrder != null ? approvalOrder : getNextApprovalOrder()
             ),
@@ -195,6 +196,7 @@ const newBoxForm = ref({
     dateLock: false,
     dateWidth: 100,
     dateHeight: 30,
+    showName: false,
 });
 
 // Optional: keyboard navigation in directory modal
@@ -249,6 +251,7 @@ const cancelButton = async () => {
         dateLock: false,
         dateWidth: 100,
         dateHeight: 30,
+        showName: false,
     };
 };
 
@@ -304,7 +307,7 @@ watch(() => props.isOpen, async (newVal) => {
                     name: sig.assignedTo,
                     emplId: sig.assignedEmplId,
                     approvalOrder: sig.approvalOrder,
-                    color:sig.color
+                    color: sig.color
                 });
             }
 
@@ -428,6 +431,7 @@ const placeSignatureOnClick = (e) => {
         isEmpty: true,
         datePosition: null,
         color: signerColor,
+        showName: newBoxForm.value.showName,   // <-- NEW
         signatureLock: !!newBoxForm.value.signatureLock,
         dateLock: !!newBoxForm.value.dateLock,
         approvalOrder: Number(signer?.approvalOrder || 1),
@@ -743,7 +747,7 @@ const saveSignatures = () => {
 
             hasDate: box.hasDate,
             datePosition: dateObj,
-
+            showName: box.showName,
             color: box.color || signer?.color || null,
             signatureLock: !!box.signatureLock,
             dateLock: !!box.dateLock,
@@ -770,6 +774,7 @@ const saveSignatures = () => {
         dateLock: false,
         dateWidth: 100,
         dateHeight: 30,
+        showName: false,
     };
 };
 
@@ -804,17 +809,14 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                     <div class="bg-white rounded-lg shadow p-4 mb-4">
                         <div class="flex items-center justify-between">
                             <div class="flex items-center gap-2">
-                                <input 
-                                    type="checkbox" 
-                                    v-model="enforceSequentialOrder" 
-                                    id="sequentialOrder" 
-                                    class="rounded w-4 h-4"
-                                />
+                                <input type="checkbox" v-model="enforceSequentialOrder" id="sequentialOrder"
+                                    class="rounded w-4 h-4" />
                                 <label for="sequentialOrder" class="text-sm font-semibold text-gray-700">
                                     Enforce Sequential Signer Order
                                 </label>
                             </div>
-                            <div v-if="enforceSequentialOrder" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                            <div v-if="enforceSequentialOrder"
+                                class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
                                 ENABLED
                             </div>
                         </div>
@@ -830,38 +832,25 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                             No signers yet. Use "Assign" to add from the directory.
                         </div>
 
-                        <draggable
-                            v-model="signers"
-                            item-key="emplId"
-                            @end="onSignersDragEnd"
-                            handle=".signer-drag-handle"
-                            class="space-y-2"
-                        >
+                        <draggable v-model="signers" item-key="emplId" @end="onSignersDragEnd"
+                            handle=".signer-drag-handle" class="space-y-2">
                             <template #item="{ element: s, index }">
-                                <div
-                                    class="w-full border rounded p-2 transition flex items-center justify-between gap-2"
+                                <div class="w-full border rounded p-2 transition flex items-center justify-between gap-2"
                                     :class="(newBoxForm.assignedEmplId === s.emplId || newBoxForm.assignedTo === s.name)
                                         ? 'border-blue-500 bg-blue-50'
-                                        : 'border-gray-300'"
-                                >
+                                        : 'border-gray-300'">
                                     <!-- Left side: drag handle, number, color, name -->
                                     <div class="flex items-center gap-2 flex-1 min-w-0">
-                                        <span
-                                            class="signer-drag-handle cursor-move text-gray-400 hover:text-gray-600"
-                                            title="Drag to reorder"
-                                        >
+                                        <span class="signer-drag-handle cursor-move text-gray-400 hover:text-gray-600"
+                                            title="Drag to reorder">
                                             ⋮⋮
                                         </span>
-                                        <span
-                                            v-if="enforceSequentialOrder"
-                                            class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-200 text-gray-700 text-xs font-bold flex items-center justify-center"
-                                        >
+                                        <span v-if="enforceSequentialOrder"
+                                            class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-200 text-gray-700 text-xs font-bold flex items-center justify-center">
                                             {{ s.approvalOrder }}
                                         </span>
-                                        <span
-                                            class="flex-shrink-0 inline-block w-3 h-3 rounded"
-                                            :style="{ backgroundColor: s.color }"
-                                        ></span>
+                                        <span class="flex-shrink-0 inline-block w-3 h-3 rounded"
+                                            :style="{ backgroundColor: s.color }"></span>
                                         <span class="font-medium truncate">{{ s.name }}</span>
                                     </div>
 
@@ -891,20 +880,16 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                             </button>
                                         </template> -->
 
-                                        <button
-                                            @click="setActiveSigner(s)"
-                                            class="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
-                                        >
+                                        <button @click="setActiveSigner(s)"
+                                            class="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600">
                                             Select
                                         </button>
 
-                                        <button
-                                            @click="removeSigner(index)"
-                                            class="p-1 hover:bg-red-100 text-red-600 rounded"
-                                            title="Remove signer"
-                                        >
+                                        <button @click="removeSigner(index)"
+                                            class="p-1 hover:bg-red-100 text-red-600 rounded" title="Remove signer">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                    d="M6 18L18 6M6 6l12 12" />
                                             </svg>
                                         </button>
                                     </div>
@@ -949,11 +934,18 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                 <div class="flex items-center gap-2">
                                     <input type="checkbox" v-model="newBoxForm.signatureLock" id="signatureLock"
                                         class="rounded" />
-                                    <label for="signatureLock" class="text-sm font-medium text-gray-700">Sig Lock</label>
+                                    <label for="signatureLock" class="text-sm font-medium text-gray-700">Sig
+                                        Lock</label>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <input type="checkbox" v-model="newBoxForm.dateLock" id="dateLock" class="rounded" />
+                                    <input type="checkbox" v-model="newBoxForm.dateLock" id="dateLock"
+                                        class="rounded" />
                                     <label for="dateLock" class="text-sm font-medium text-gray-700">Date Lock</label>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" v-model="newBoxForm.showName" id="showNameOnBox" class="rounded" />
+                                    <label for="showNameOnBox" class="text-sm font-medium text-gray-700">Show name on
+                                        box</label>
                                 </div>
                             </div>
                         </div>
@@ -972,7 +964,7 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                         <span class="inline-block w-3 h-3 rounded"
                                             :style="{ backgroundColor: box.color || '#3b82f6' }"></span>
                                         {{ box.assignedTo }}
-                                        <span v-if="enforceSequentialOrder" 
+                                        <span v-if="enforceSequentialOrder"
                                             class="text-xs px-1.5 py-0.5 rounded text-white"
                                             :style="{ backgroundColor: box.color || '#3b82f6' }">
                                             #{{ box.approvalOrder }}
@@ -985,15 +977,23 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                     Page {{ box.page }} <span v-if="box.hasDate"
                                         class="text-green-600 ml-1">(+Date)</span>
                                 </div>
-                                <div class="text-xs text-gray-500">
-                                    Signature Lock =
-                                   <span v-if="box.signatureLock == true" class="text-white rounded-lg bg-green-600 px-2"> True</span>
-                                   <span v-else class="text-white rounded-lg bg-red-600 px-2">  False</span>
+                                  <div class="text-xs text-gray-500">
+                                    Has Name =
+                                    <span v-if="box.showName == true"
+                                        class="text-white rounded-lg bg-green-600 px-2"> True</span>
+                                    <span v-else class="text-white rounded-lg bg-red-600 px-2"> False</span>
                                 </div>
                                 <div class="text-xs text-gray-500">
-                                    Date Lock = 
-                                   <span v-if="box.dateLock == true" class="text-white rounded-lg bg-green-600 px-2"> True</span>
-                                   <span v-else class="text-white rounded-lg bg-red-600 px-2"> False</span>
+                                    Signature Lock =
+                                    <span v-if="box.signatureLock == true"
+                                        class="text-white rounded-lg bg-green-600 px-2"> True</span>
+                                    <span v-else class="text-white rounded-lg bg-red-600 px-2"> False</span>
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    Date Lock =
+                                    <span v-if="box.dateLock == true" class="text-white rounded-lg bg-green-600 px-2">
+                                        True</span>
+                                    <span v-else class="text-white rounded-lg bg-red-600 px-2"> False</span>
                                 </div>
                             </div>
                         </div>
@@ -1063,7 +1063,8 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                         class="absolute -top-6 left-0 text-white text-xs px-2 py-1 rounded font-semibold whitespace-nowrap flex items-center gap-1"
                                         :style="{ backgroundColor: box.color || '#3b82f6' }">
                                         {{ box.assignedTo }}
-                                        <span v-if="enforceSequentialOrder" class="ml-1 px-1 py-0.5 bg-white bg-opacity-30 rounded">
+                                        <span v-if="enforceSequentialOrder"
+                                            class="ml-1 px-1 py-0.5 bg-white bg-opacity-30 rounded">
                                             #{{ box.approvalOrder }}
                                         </span>
                                         <span v-if="box.signatureLock">🔒</span>
@@ -1081,19 +1082,53 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                                 @mousedown.stop="startResizing($event, box.id, 'se')"></div>
                                         </template>
 
-                                        <div class="flex items-center justify-center h-full">
-                                            <span class="text-xs font-bold opacity-50"
-                                                :style="{ color: box.color || '#3b82f6' }">Signature Area</span>
+                                        <div class="flex flex-col items-center justify-center h-full relative">
+                                            <!-- Signature text (centered between lines) -->
+                                            <span class="text-xs font-bold opacity-50 italic z-10 px-1"
+                                                :style="{ color: box.color || '#3b82f6' }">
+                                                Signature Area
+                                            </span>
+
+                                            <!-- Signature line -->
+                                            <div v-if="box.showName"
+                                                class="absolute bottom-3 w-4/5 border-t border-gray-400 text-black pb-2">
+                                            </div>
+
+                                            <!-- Printed name BELOW the line -->
+                                            <span v-if="box.showName"
+                                                class="absolute bottom-0 text-[11px] font-semibold tracking-wide text-center w-full text-black">
+                                                {{ box.assignedTo }}
+                                            </span>
                                         </div>
+
+
                                     </template>
 
                                     <template v-else>
-                                        <img v-if="box.imageSrc" :src="box.imageSrc" alt="Signature"
-                                            class="w-full h-full object-contain" />
-                                        <div v-else class="flex items-center justify-center h-full bg-gray-100">
-                                            <span class="text-xs text-gray-600">Signature Area</span>
+                                        <div class="flex flex-col items-center justify-center h-full relative">
+                                            <!-- Signature image -->
+                                            <img v-if="box.imageSrc" :src="box.imageSrc" alt="Signature"
+                                                class="w-full h-full object-contain z-10" />
+
+                                            <!-- Fallback if no image -->
+                                            <span v-else class="text-xs font-bold opacity-50 italic z-10 bg-white px-1"
+                                                :style="{ color: box.color || '#3b82f6' }">
+                                                Signature Area
+                                            </span>
+
+                                            <!-- Signature line -->
+                                            <div v-if="box.showName && box.isEmpty == true" class="absolute bottom-3 w-4/5 border-t border-gray-400 opacity-60">
+                                            </div>
+
+                                            <!-- Printed name BELOW the line -->
+                                            <span v-if="box.showName"
+                                                class="absolute bottom-0 text-[10px] font-semibold tracking-wide text-center w-full"
+                                                >
+                                                {{ box.assignedTo }}
+                                            </span>
                                         </div>
                                     </template>
+
                                 </div>
 
                                 <!-- Date Box -->
@@ -1110,7 +1145,7 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
 
                                     <span class="flex items-center">
                                         {{ box.isEmpty || box.isEmpty == null ? "MM/DD/YYYY" :
-                                        box.datePosition?.dateText }}
+                                            box.datePosition?.dateText }}
                                         <span v-if="box.dateLock && box.isEmpty" class="ml-1 text-xs">🔒</span>
                                     </span>
                                 </div>
@@ -1187,6 +1222,7 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
 .cursor-crosshair {
     cursor: crosshair;
 }
+
 .signer-drag-handle {
     user-select: none;
 }

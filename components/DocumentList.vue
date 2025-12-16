@@ -53,7 +53,7 @@
                     @blur="isStatusOpen = false" @click="open">
                     <option value="" selected hidden>Select Status</option>
                     <option value="1">Pending</option>
-                    <option value="2">Done</option>
+                    <option value="2">Signed</option>
                 </select>
                 <div v-if="query.Status"
                     class="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700">
@@ -75,7 +75,7 @@
     </div>
     <div class="bg-white flex flex-col rounded">
         <div class="flex flex-col">
-            <div class="overflow-x-auto pb-4">
+            <div class="overflow-auto w-full pb-4">
                 <div class="min-w-full inline-block align-middle">
                     <div class="overflow-hidden border rounded-md border-gray-300">
                         <table v-if="!loading" class="table-auto min-w-full rounded-xl">
@@ -160,7 +160,7 @@
                                                 xmlns="http://www.w3.org/2000/svg">
                                                 <circle cx="2.5" cy="3" r="2.5" fill="#16A34A"></circle>
                                             </svg>
-                                            <span class="font-medium text-xs text-green-600">Done</span>
+                                            <span class="font-medium text-xs text-green-600">Signed</span>
                                         </div>
                                     </td>
                                     <td class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
@@ -180,6 +180,18 @@
                                         }}
                                     </td>
                                     <td class="flex p-5 items-center gap-0.5">
+                                        <button @click="viewDocument(form.id)"
+                                            class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-green-600 flex item-center"
+                                            title="View Transaction">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
+                                                fill="currentColor" width="20" height="20">
+                                                <path class="fill-green-600 group-hover:fill-white"
+                                                    d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+                                                <path class="fill-green-600 group-hover:fill-white" fill-rule="evenodd"
+                                                    d="M1.323 11.447C2.811 6.976 7.028 3.75 12.001 3.75c4.97 0 9.185 3.223 10.675 7.69.12.362.12.752 0 1.113-1.487 4.471-5.705 7.697-10.677 7.697-4.97 0-9.186-3.223-10.675-7.69a1.762 1.762 0 0 1 0-1.113ZM17.25 12a5.25 5.25 0 1 1-10.5 0 5.25 5.25 0 0 1 10.5 0Z"
+                                                    clip-rule="evenodd" />
+                                            </svg>
+                                        </button>
                                         <button v-if="canEdit" @click="editDocumnet(form.id)"
                                             class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-yellow-600 flex item-center"
                                             title="Edit Form">
@@ -294,6 +306,14 @@
             </div>
         </div>
     </div>
+
+     <ViewSignatureBoxPlacement
+            :isOpen="isViewModalOpen"
+            :pdfTitle="title"
+            :pdfFile="pdfFile"
+            :signatures="prePlacedSignatures"
+            @close="isViewModalOpen = false"
+        />
 </template>
 
 <script setup>
@@ -306,16 +326,48 @@ import {
     canEdit,
 } from "~/js/fetchMenu";
 import { encryptData } from "~/js/cryptoToken";
+import { deleteDocumentUploadById } from "~/js/delete_documentUpload";
+import ViewSignatureBoxPlacement from "./ViewSignatureBoxPlacement.vue";
+import { getsignaturepositons, prePlacedSignatures } from "~/js/fetchsignatureposition";
+import { fetchDocumentPdf, pdfFile } from "~/js/fetchDocumentPdf";
+import { fetchDocumentTitle, title } from "~/js/fetchDocumentTitle";
+
 const router = useRouter();
 const paramid = ref();
+const { $swal } = useNuxtApp();
+const isViewModalOpen = ref(false);
 
 function goToCreateDocument() {
     router.push("/main/638992220838277083/addDocument");
 }
 function editDocumnet(id) {
     localStorage.setItem("documentId", encryptData(id));
-   router.push("/main/638992220838277083/editDocument")
+    router.push("/main/638992220838277083/editDocument")
 
+}
+async function viewDocument(id){
+    await fetchDocumentTitle(id);
+    await getsignaturepositons(id);
+    await fetchDocumentPdf(id);
+    isViewModalOpen.value = true;
+}
+
+async function softDeleted(id) {
+    // Show confirmation dialog
+    const result = await $swal.fire({
+        title: "Are you sure?",
+        text: "Do you really want to delete this document?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Yes, delete it",
+        cancelButtonText: "Cancel",
+    });
+
+    // Only proceed if user confirms
+    if (result.isConfirmed) {
+        await deleteDocumentUploadById(id, $swal);
+        await getListOfDocuments();
+    }
 }
 function clearStatus() {
     query.value.Status = "";

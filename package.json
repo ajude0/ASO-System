@@ -40,6 +40,8 @@
   "dependencies": {
     "@nuxtjs/axios": "^5.13.6",
     "crypto-js": "^4.2.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.4",
     "jsqr": "^1.4.0",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^5.4.394",

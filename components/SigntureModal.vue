@@ -56,12 +56,12 @@ const isSequentialOrderEnforced = computed(() => {
 // Get the current approval order that should be signing
 const getCurrentRequiredOrder = computed(() => {
   if (!isSequentialOrderEnforced.value) return null;
-  
+
   // Find the lowest order number that is still empty
   const emptyOrders = localSignatures
     .filter(sig => sig.isEmpty)
     .map(sig => sig.approvalOrder || 1);
-  
+
   return emptyOrders.length > 0 ? Math.min(...emptyOrders) : null;
 });
 
@@ -70,24 +70,24 @@ const isUserWaiting = (sig) => {
   if (!isSequentialOrderEnforced.value) return false;
   if (!sig.isEmpty) return false;
   if (sig.assignedEmplId !== props.currentEmplId) return false;
-  
+
   const currentOrder = getCurrentRequiredOrder.value;
   const sigOrder = sig.approvalOrder || 1;
-  
+
   return sigOrder > currentOrder;
 };
 
 // Get who needs to sign next
 const getNextSignerInfo = computed(() => {
   if (!isSequentialOrderEnforced.value) return null;
-  
+
   const nextOrder = getCurrentRequiredOrder.value;
   if (!nextOrder) return null;
-  
-  const nextSig = localSignatures.find(sig => 
+
+  const nextSig = localSignatures.find(sig =>
     sig.isEmpty && sig.approvalOrder === nextOrder
   );
-  
+
   return nextSig ? {
     name: nextSig.assignedTo,
     order: nextSig.approvalOrder
@@ -219,13 +219,13 @@ const updatePrePlacedPositions = () => {
 const canUserSign = (sig) => {
   // Can't sign if already signed
   if (!sig.isEmpty) return false;
-  
+
   // Can't sign if not assigned to user
   if (sig.assignedEmplId !== props.currentEmplId) return false;
-  
+
   // Can't sign if waiting for sequential order
   if (isUserWaiting(sig)) return false;
-  
+
   return true;
 };
 
@@ -560,10 +560,12 @@ onUnmounted(() => {
         <div>
           <h2 class="text-xl font-semibold">Sign PDF Document</h2>
           <p class="text-sm text-gray-600 mt-1">Signing as: <span class="font-semibold text-blue-600">{{ currentUserName
-              }}</span></p>
-       
-          <div v-if="isSequentialOrderEnforced && getNextSignerInfo" class="mt-2 text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded border border-blue-200">
-            🔄 Sequential Order: Waiting for <strong>{{ getNextSignerInfo.name }}</strong> (Signer Number {{ getNextSignerInfo.order }})
+          }}</span></p>
+
+          <div v-if="isSequentialOrderEnforced && getNextSignerInfo"
+            class="mt-2 text-xs bg-blue-50 text-blue-700 px-3 py-1 rounded border border-blue-200">
+            🔄 Sequential Order: Waiting for <strong>{{ getNextSignerInfo.name }}</strong> (Signer Number {{
+              getNextSignerInfo.order }})
           </div>
         </div>
         <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition">
@@ -633,7 +635,7 @@ onUnmounted(() => {
             @mouseup="handlePrePlacedClick(sig, index)"
             @mousedown="(!isSignatureLocked(sig) && canUserEdit(sig)) ? startDraggingSignature($event, index) : null"
             :title="sig.isEmpty ? `Assigned to: ${sig.assignedTo}` : `Signed by: ${sig.signedBy}`">
-            
+
             <!-- Waiting state (user's box but not their turn) -->
             <div v-if="isUserWaiting(sig)"
               class="flex flex-col items-center justify-center h-full p-2 pointer-events-none relative">
@@ -642,7 +644,8 @@ onUnmounted(() => {
                 class="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-purple-100 text-purple-800 text-xs font-semibold px-2 py-1 rounded whitespace-nowrap z-10 border border-purple-300 shadow-md">
                 <span class="flex items-center">
                   <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                   Waiting
                 </span>
@@ -654,7 +657,8 @@ onUnmounted(() => {
               <!-- Text inside box when large enough -->
               <div v-else class="flex flex-col items-center justify-center h-full">
                 <svg class="w-8 h-8 text-purple-500 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <p class="text-xs text-purple-700 font-semibold text-center">Waiting</p>
                 <p class="text-xs text-purple-600 mt-1 text-center">Signer Number {{ sig.approvalOrder }}</p>
@@ -688,7 +692,8 @@ onUnmounted(() => {
                     d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                 </svg>
                 <p class="text-xs text-green-700 font-semibold text-center">Click to sign</p>
-                <p v-if="isSequentialOrderEnforced" class="text-xs text-green-600 mt-1 text-center">Signer Number {{ sig.approvalOrder }}</p>
+                <p v-if="isSequentialOrderEnforced" class="text-xs text-green-600 mt-1 text-center">Signer Number {{
+                  sig.approvalOrder }}</p>
                 <p class="text-xs text-green-600 mt-1 text-center">{{ sig.assignedTo }}</p>
               </div>
             </div>
@@ -701,35 +706,90 @@ onUnmounted(() => {
                   d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
               </svg>
               <p class="text-xs text-gray-500 mt-1 text-center font-semibold">{{ sig.assignedTo }}</p>
-              <p v-if="isSequentialOrderEnforced" class="text-xs text-gray-400 text-center">Signer Number{{ sig.approvalOrder }}</p>
-              <p class="text-xs text-gray-400 text-center">{{ isSequentialOrderEnforced ?"(Waiting)":"(Pending)" }}</p>
+              <p v-if="isSequentialOrderEnforced" class="text-xs text-gray-400 text-center">Signer Number{{
+                sig.approvalOrder }}</p>
+              <p class="text-xs text-gray-400 text-center">{{ isSequentialOrderEnforced ? "(Waiting)" : "(Pending)" }}</p>
             </div>
 
             <!-- Filled signature -->
-            <div v-else class="relative w-full h-full">
-              <img :src="sig.imageSrc" class="w-full h-full object-contain select-none pointer-events-none" />
+            <div v-else class="relative w-full h-full flex flex-col">
+              <!-- Signature over printed name layout when showName is true -->
+              <template v-if="sig.showName">
+                <!-- Container for signature and name with tight spacing -->
+                <div class="flex flex-col items-center justify-end pb-2 px-2" style="margin-top: auto;">
+                  <!-- Signature image positioned just above the name -->
+                  <div class="flex items-end justify-center" style="margin-bottom: -10px;">
+                    <img :src="sig.imageSrc" class="select-none pointer-events-none object-contain" :style="{
+                      maxWidth: Math.max(sig.width - 16, sig.signedBy.length * 8) + 'px',
+                      maxHeight: (sig.height - 30) + 'px'
+                    }" />
+                  </div>
 
-              <!-- Signed by text above box when too small -->
-              <div v-if="isSmallSignatureBox(sig)"
-                class="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-semibold px-2 py-1 rounded whitespace-nowrap z-10 border shadow-md"
-                :class="{
-                      'text-blue-800 hover:border-blue-500 bg-blue-100 border-blue-300': currentUser(sig),
-                      'text-gray-800 hover:border-gray-500 bg-gray-100 border-gray-300': !currentUser(sig),
-
-                }">
-                {{ sig.signedBy }}
-                <span v-if="isSequentialOrderEnforced" class="ml-1">(#{{ sig.approvalOrder }})</span>
-                <div
-                  class="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-blue-100">
+                  <!-- Printed name with underline (like signature line on paper) -->
+                  <div class="text-center pointer-events-none pt-0.5"
+                    :class="isSmallSignatureBox(sig) ? 'text-xs' : 'text-sm'"
+                    :style="{ minWidth: Math.max(100, sig.signedBy.length * 8) + 'px' }">
+                    <div class="font-medium text-gray-800">
+                      {{ sig.signedBy }}
+                      <span v-if="isSequentialOrderEnforced" class="text-gray-500 text-xs">(#{{ sig.approvalOrder
+                        }})</span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </template>
 
-              <!-- Signed by text inside box when large enough -->
-              <div v-else
-                class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs px-2 py-1 text-center pointer-events-none">
-                {{ sig.signedBy }}
-                <span v-if="isSequentialOrderEnforced" class="ml-1">(Signer Number {{ sig.approvalOrder }})</span>
-              </div>
+              <!-- Original layout when showName is false -->
+              <template v-else>
+                <img :src="sig.imageSrc" class="w-full h-full object-contain select-none pointer-events-none" />
+
+                <!-- Signed by text above box when too small -->
+                <div v-if="isSmallSignatureBox(sig)"
+                  class="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-semibold px-2 py-1 rounded whitespace-nowrap z-10 border shadow-md"
+                  :class="{
+                    'text-blue-800 hover:border-blue-500 bg-blue-100 border-blue-300': currentUser(sig),
+                    'text-gray-800 hover:border-gray-500 bg-gray-100 border-gray-300': !currentUser(sig),
+
+                  }">
+                  {{ sig.signedBy }}
+                  <span v-if="isSequentialOrderEnforced" class="ml-1">(#{{ sig.approvalOrder }})</span>
+                  <div
+                    class="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-blue-100">
+                  </div>
+                </div>
+
+                <!-- Signed by text inside box when large enough -->
+                <div v-else
+                  class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs px-2 py-1 text-center pointer-events-none">
+                  {{ sig.signedBy }}
+                  <span v-if="isSequentialOrderEnforced" class="ml-1">(Signer Number {{ sig.approvalOrder }})</span>
+                </div>
+              </template>
+              <!-- Original layout when showName is false -->
+              <template v-else>
+                <img :src="sig.imageSrc" class="w-full h-full object-contain select-none pointer-events-none" />
+
+                <!-- Signed by text above box when too small -->
+                <div v-if="isSmallSignatureBox(sig)"
+                  class="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-semibold px-2 py-1 rounded whitespace-nowrap z-10 border shadow-md"
+                  :class="{
+                    'text-blue-800 hover:border-blue-500 bg-blue-100 border-blue-300': currentUser(sig),
+                    'text-gray-800 hover:border-gray-500 bg-gray-100 border-gray-300': !currentUser(sig),
+
+                  }">
+                  {{ sig.signedBy }}
+                  <span v-if="isSequentialOrderEnforced" class="ml-1">(#{{ sig.approvalOrder }})</span>
+                  <div
+                    class="absolute bottom-0 left-1/2 transform -translate-x-1/2 translate-y-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-blue-100">
+                  </div>
+                </div>
+
+                <!-- Signed by text inside box when large enough -->
+                <div v-else
+                  class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs px-2 py-1 text-center pointer-events-none">
+                  {{ sig.signedBy }}
+                  <span v-if="isSequentialOrderEnforced" class="ml-1">(Signer Number {{ sig.approvalOrder }})</span>
+                </div>
+              </template>
               <!-- Edit hint for user's own signature -->
               <div v-if="canUserEdit(sig)"
                 class="absolute top-0 left-0 right-0 text-white text-xs px-2 py-1 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
@@ -767,7 +827,8 @@ onUnmounted(() => {
         <div class="text-sm text-gray-600">
           <p class="font-semibold">💡 Tips:</p>
           <p>• Click green boxes to sign</p>
-          <p v-if="isSequentialOrderEnforced" class="text-purple-600">• Purple boxes are waiting for previous signers</p>
+          <p v-if="isSequentialOrderEnforced" class="text-purple-600">• Purple boxes are waiting for previous signers
+          </p>
           <p>• Click your signatures to edit, drag to move, resize from corner</p>
           <p>• Drag date fields independently to reposition them</p>
           <p class="text-orange-600 mt-2">⚠️ Changes will only be saved when you click "Done"</p>
