@@ -372,7 +372,7 @@ function forgot() {
   // Set the localStorage item first
   localStorage.setItem(
     "sourceapplication",
-    "https://apps.fastlogistics.com.ph/lrc/#/"
+    "https://apps.fastlogistics.com.ph/aso/#/"
   );
   // Use a short timeout to ensure the localStorage is set before navigating
   window.location.href = "https://apps.fastlogistics.com.ph/utility/";

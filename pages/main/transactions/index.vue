@@ -1,7 +1,11 @@
 <template>
-  <div class="w-full bg-white shadow-lg rounded-lg p-6 relative max-h-[90vh]">
+  <div v-if="showThankUPage">
+    <ThankYouPage :key="thankYouKey" :transaction-id="urltransactionId" :transaction-name="formTitle"
+      @refresh="refreshThankYou" />
+  </div>
+  <div v-else class="w-full bg-white shadow-lg rounded-lg p-6 relative max-h-[90vh]">
     <div class="flex items-center pb-3 border-b border-gray-300">
-      <h3 class="text-gray-800 text-xl font-bold flex-1">Transaction</h3>
+      <h3 class="text-gray-800 text-xl font-bold flex-1">Transactions</h3>
     </div>
     <div class="overflow-auto max-h-[60vh]">
       <div v-if="isTxLoading">
@@ -29,11 +33,7 @@
           {{ transactions.formTitle }}
         </h1>
 
-        <div
-          v-for="(item, index) in transactions?.formObjects"
-          :key="index"
-          class="mb-6"
-        >
+        <div v-for="(item, index) in transactions?.formObjects" :key="index" class="mb-6">
           <div v-if="item.objectType !== 'LABEL'" class="flex justify-between">
             <label class="text-gray-700 font-semibold mb-2">
               {{ item.label }}
@@ -45,37 +45,21 @@
               {{ item.label }}
             </h3>
           </div>
-          <div
-            v-else-if="item.objectType != 'DYNAMICSIGNATORY'"
-            class="border p-3 rounded-md w-full text-gray-800"
-          >
+          <div v-else-if="item.objectType != 'DYNAMICSIGNATORY'" class="border p-3 rounded-md w-full text-gray-800">
             <span v-for="(value, index) in item.values" :key="index">
               {{ value
               }}<span v-if="index !== item.values.length - 1"> , </span>
             </span>
           </div>
           <div v-else-if="item.objectType === 'DYNAMICSIGNATORY'">
-            <div
-              v-for="(group, groupIndex) in item?.dynamicsignatoriesvalues"
-              :key="groupIndex"
-            >
-              <div
-                v-for="(dynamic, index) in group.value"
-                :key="index"
-                class="mb-6"
-              >
-                <div
-                  class="flex items-center justify-between p-4 border rounded-lg bg-gray-50 shadow-sm mb-4"
-                >
+            <div v-for="(group, groupIndex) in item?.dynamicsignatoriesvalues" :key="groupIndex">
+              <div v-for="(dynamic, index) in group.value" :key="index" class="mb-6">
+                <div class="flex items-center justify-between p-4 border rounded-lg bg-gray-50 shadow-sm mb-4">
                   <!-- Left: Name / Value -->
-                  <div
-                    class="text-gray-800 font-medium flex items-center gap-2"
-                  >
+                  <div class="text-gray-800 font-medium flex items-center gap-2">
                     {{ dynamic.value }}
-                    <span
-                      v-if="dynamic.currentuser"
-                      class="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full"
-                    >
+                    <span v-if="dynamic.currentuser"
+                      class="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
                       YOU
                     </span>
                   </div>
@@ -83,19 +67,14 @@
                   <!-- Right: Status / Button -->
                   <div>
                     <!-- If current user and response is 0, show approve button -->
-                    <button
-                      v-if="dynamic.currentuser && dynamic.response === 0"
-                      class="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-800"
-                      @click="postSigned()"
-                    >
+                    <button v-if="dynamic.currentuser && dynamic.response === 0"
+                      class="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-800" @click="postSigned()">
                       SIGN
                     </button>
 
                     <!-- If current user and response is 1, show approved text -->
-                    <span
-                      v-else-if="dynamic.currentuser && dynamic.response === 1"
-                      class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full"
-                    >
+                    <span v-else-if="dynamic.currentuser && dynamic.response === 1"
+                      class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full">
                       SIGNED -
                       {{
                         new Date(dynamic.responsedate).toLocaleString("en-US", {
@@ -110,10 +89,8 @@
                     </span>
 
                     <!-- Other statuses for non-current users -->
-                    <span
-                      v-else-if="dynamic.response === 1"
-                      class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full"
-                    >
+                    <span v-else-if="dynamic.response === 1"
+                      class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full">
                       SIGNED -
                       {{
                         new Date(dynamic.responsedate).toLocaleString("en-US", {
@@ -126,16 +103,12 @@
                         })
                       }}
                     </span>
-                    <span
-                      v-else-if="dynamic.response === 0"
-                      class="inline-block px-3 py-1 text-sm font-semibold text-yellow-800 bg-yellow-100 rounded-full"
-                    >
+                    <span v-else-if="dynamic.response === 0"
+                      class="inline-block px-3 py-1 text-sm font-semibold text-yellow-800 bg-yellow-100 rounded-full">
                       PENDING
                     </span>
-                    <span
-                      v-else
-                      class="inline-block px-3 py-1 text-sm font-semibold text-gray-600 bg-gray-200 rounded-full"
-                    >
+                    <span v-else
+                      class="inline-block px-3 py-1 text-sm font-semibold text-gray-600 bg-gray-200 rounded-full">
                       UNKNOWN
                     </span>
                   </div>
@@ -146,69 +119,57 @@
         </div>
 
         <!-- Approver Section -->
-        <div
-          v-for="(approverGroup, approverNumber) in transactions.approvers"
-          :key="approverNumber"
-          class="mt-2 p-4 bg-gray-50 rounded-lg"
-        >
-          <div
-            v-if="
-              getGroupVisibilityStatus(
-                transactions.approvers,
-                approverNumber
-              ) !== 'hidden'
-            "
-          >
+        <div v-for="(approverGroup, approverNumber) in transactions.approvers" :key="approverNumber"
+          class="mt-2 p-4 bg-gray-50 rounded-lg">
+          <div v-if="
+            getGroupVisibilityStatus(
+              transactions.approvers,
+              approverNumber
+            ) !== 'hidden'
+          ">
             <h2 class="text-md font-semibold text-gray-800 mb-2">
               Approver {{ approverNumber }} -
-              <span
-                :class="{
-                  'text-green-600':
-                    getApprovalStatus(approverGroup) === 'approved',
-                  'text-red-600':
-                    getApprovalStatus(approverGroup) === 'rejected',
-                  'text-yellow-600':
-                    getApprovalStatus(approverGroup) !== 'approved' &&
-                    getApprovalStatus(approverGroup) !== 'rejected' &&
-                    getGroupVisibilityStatus(
-                      transactions.approvers,
-                      approverNumber
-                    ) === 'pending',
-                  'text-gray-500':
-                    getApprovalStatus(approverGroup) !== 'approved' &&
-                    getApprovalStatus(approverGroup) !== 'rejected' &&
-                    getGroupVisibilityStatus(
-                      transactions.approvers,
-                      approverNumber
-                    ) === 'waiting',
-                }"
-              >
+              <span :class="{
+                'text-green-600':
+                  getApprovalStatus(approverGroup) === 'approved',
+                'text-red-600':
+                  getApprovalStatus(approverGroup) === 'rejected',
+                'text-yellow-600':
+                  getApprovalStatus(approverGroup) !== 'approved' &&
+                  getApprovalStatus(approverGroup) !== 'rejected' &&
+                  getGroupVisibilityStatus(
+                    transactions.approvers,
+                    approverNumber
+                  ) === 'pending',
+                'text-gray-500':
+                  getApprovalStatus(approverGroup) !== 'approved' &&
+                  getApprovalStatus(approverGroup) !== 'rejected' &&
+                  getGroupVisibilityStatus(
+                    transactions.approvers,
+                    approverNumber
+                  ) === 'waiting',
+              }">
                 {{
                   getApprovalStatus(approverGroup) === "approved"
                     ? "Approved"
                     : getApprovalStatus(approverGroup) === "rejected"
-                    ? "Disapproved"
-                    : getGroupVisibilityStatus(
+                      ? "Disapproved"
+                      : getGroupVisibilityStatus(
                         transactions.approvers,
                         approverNumber
                       ) === "pending"
-                    ? "Pending"
-                    : "Waiting"
+                        ? "Pending"
+                        : "Waiting"
                 }}
               </span>
             </h2>
 
-            <div
-              v-for="approver in approverGroup"
-              :key="approver.id"
-              class="p-2 rounded-md shadow-sm mb-2"
-              :class="[
-                'rounded-xl p-5 shadow-md border mb-4 transition duration-300',
-                approver.isCurrentApprover
-                  ? 'bg-gray-400 border-white-400 text-white'
-                  : 'bg-white text-gray-800',
-              ]"
-            >
+            <div v-for="approver in approverGroup" :key="approver.id" class="p-2 rounded-md shadow-sm mb-2" :class="[
+              'rounded-xl p-5 shadow-md border mb-4 transition duration-300',
+              approver.isCurrentApprover
+                ? 'bg-gray-400 border-white-400 text-white'
+                : 'bg-white text-gray-800',
+            ]">
               <div class="flex justify-between">
                 <div>
                   <h2 class="text-sm font-bold mb-2">
@@ -216,11 +177,8 @@
                   </h2>
                 </div>
                 <div v-if="approver.isCurrentApprover">
-                  <span
-                    class="bg-white text-black text-[10px] font-bold px-2 py-0.5 rounded-full uppercase"
-                  >
-                    You</span
-                  >
+                  <span class="bg-white text-black text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                    You</span>
                 </div>
               </div>
               <div class="flex justify-between">
@@ -232,10 +190,8 @@
                     <strong>Email:</strong> {{ approver.approveremail }}
                   </p>
                 </div>
-                <div
-                  v-if="approver.response == 1"
-                  class="flex px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full"
-                >
+                <div v-if="approver.response == 1"
+                  class="flex px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full">
                   <div class="text-md font-bold">
                     Approved -
                     {{
@@ -250,10 +206,8 @@
                     }}
                   </div>
                 </div>
-                <div
-                  v-if="approver.response == 2"
-                  class="flex flex-col px-3 py-1 text-sm font-semibold text-red-700 bg-red-100 rounded-full"
-                >
+                <div v-if="approver.response == 2"
+                  class="flex flex-col px-3 py-1 text-sm font-semibold text-red-700 bg-red-100 rounded-full">
                   <!-- Disapprove + Date -->
                   <div class="text-md font-bold">
                     Disapprove -
@@ -270,10 +224,7 @@
                   </div>
 
                   <!-- Remarks below -->
-                  <div
-                    v-if="approver.remarks"
-                    class="flex text-gray-700 text-md mt-1 justify-end"
-                  >
+                  <div v-if="approver.remarks" class="flex text-gray-700 text-md mt-1 justify-end">
                     <div class="text-md font-bold">Remarks:</div>
                     <div class="text-md font-bold ml-1">
                       {{ approver.remarks }}
@@ -286,31 +237,19 @@
         </div>
       </div>
     </div>
-    <div
-      v-if="!transactions.hasResponse"
-      class="flex gap-1 items-center justify-end mb-0 mr-4 mt-3"
-    >
-      <button
-        @click="postApprove()"
-        v-if="transactions.hasCurrentApprover"
-        class="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-800"
-      >
+    <div v-if="!transactions.hasResponse" class="flex gap-1 items-center justify-end mb-0 mr-4 mt-3">
+      <button @click="postApprove()" v-if="transactions.hasCurrentApprover"
+        class="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-800">
         Approve
       </button>
-      <button
-        @click="postDisapprove()"
-        v-if="transactions.hasCurrentApprover"
-        class="py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-800"
-      >
+      <button @click="postDisapprove()" v-if="transactions.hasCurrentApprover"
+        class="py-2 px-4 bg-red-600 text-white rounded-md hover:bg-red-800">
         Disapprove
       </button>
     </div>
     <div class="flex gap-1 items-center justify-end mb-0 mr-4 mt-3">
-      <button
-        type="button"
-        @click="moveToTransactions"
-        class="px-4 py-2 rounded-lg text-gray-800 text-sm border-none outline-none tracking-wide bg-gray-200 hover:bg-gray-300 active:bg-gray-200"
-      >
+      <button type="button" @click="moveToTransactions"
+        class="px-4 py-2 rounded-lg text-gray-800 text-sm border-none outline-none tracking-wide bg-gray-200 hover:bg-gray-300 active:bg-gray-200">
         Close
       </button>
     </div>
@@ -332,10 +271,22 @@ import { getUrlTransactionId } from "~/js/cryptoToken";
 import SignaturePad from "signature_pad";
 import { checkusersignature, hasSignature } from "~/js/checkusersignature";
 import { postusersignature } from "~/js/usersignature";
+import ThankYouPage from "~/components/ThankYouPage.vue";
+import { getusersignature } from "~/js/checkusersignature";
 
 const urltransactionId = ref();
+const showThankUPage = ref(false);
 const readyToRender = ref(false); // Flag to control rendering
+const signatureFile = ref();
+const formTitle = ref();
 const router = useRouter();
+
+
+const refreshThankYou = async() => {
+  showThankUPage.value = false;
+  await checkusersignature($swal);
+  await getTransaction(urltransactionId.value);
+}
 const { $swal } = useNuxtApp();
 const getApprovalStatus = (approverGroup) => {
   if (!Array.isArray(approverGroup)) return "pending"; // fallback
@@ -413,16 +364,35 @@ const postApprove = async () => {
     }
   } else {
     // ✅ Ask confirmation before approving
+    const imageUrl = await getusersignature($swal);
+    signatureFile.value = URL.createObjectURL(imageUrl);
     const { isConfirmed } = await $swal.fire({
       title: "Confirm Approval",
       html: `
-        <div style="font-size:15px; color:#374151;">
-          Are you sure you want to <strong>approve</strong> this form request?<br><br>
-          <span style="font-size:13px; color:#6b7280;">
-            Once approved, this action cannot be undone.
-          </span>
-        </div>
-      `,
+  <div style="font-size:15px; color:#374151; text-align:center;">
+    <p>
+      Are you sure you want to <strong>approve</strong> this form request?
+    </p>
+
+    <img 
+      src="${signatureFile.value}" 
+      alt="Signature Preview"
+      style="
+        margin:12px auto;
+        max-width:220px;
+        max-height:100px;
+        object-fit:contain;
+        border:1px solid #e5e7eb;
+        padding:6px;
+        background:white;
+      "
+    />
+
+    <p style="font-size:13px; color:#6b7280;">
+      Once signed, this action cannot be undone.
+    </p>
+  </div>
+`,
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Yes, approve it",
@@ -441,269 +411,15 @@ const postApprove = async () => {
         timer: 1500,
         showConfirmButton: false,
       });
-      return navigateTo("/main/dashboard");
+      showThankUPage.value = true;
+      formTitle.value = transactions.value.formTitle;
     }
   }
 };
-// const postApprove = async () => {
 
-//   if (signaturepath?.value) {
-//     // Ask user which one they want
-//     const { value: choice, isDismissed } = await $swal.fire({
-//       title: "Choose Signature Option",
-//       text: "Would you like to use your saved signature or create a new one?",
-//       showDenyButton: true,                // 👈 use Deny for "Create New Signature"
-//       showCancelButton: true,              // 👈 Cancel = exit
-//       confirmButtonText: "Use Saved Signature",
-//       denyButtonText: "Create New Signature",
-//       cancelButtonText: "Close",
-//       reverseButtons: true,
-//       allowOutsideClick: true,
-//     });
-
-//     if (isDismissed) {
-//       return; // 🚀 totally close
-//     }
-
-//     if (choice) {
-//       // ✅ Use saved signature
-//       await confirmApproval(urltransactionId.value, null);
-//       $swal.fire({
-//       title: "✅ Approved!",
-//       text: "The request has been approved successfully.",
-//       icon: "success",
-//       width: 400,
-//       timer: 1200,
-//       showConfirmButton: false,
-//     })
-
-//     return navigateTo("/main/dashboard");
-//     }
-//   }
-  
-//   const { value: signature, isConfirmed } = await $swal.fire({
-//     title: "Approve Request",
-//     html: `
-//       <div style="display:flex; flex-direction:column; align-items:center; gap:1rem; width:100%;">
-//         <label style="font-weight:600; font-size:16px;">Please sign below:</label>
-//         <canvas id="signature-pad" width="700" height="250" 
-//           style="border:2px dashed #9ca3af; border-radius:12px; background:#f9fafb; width:100%; max-width:700px; height:250px;"></canvas>
-        
-//         <div style="display:flex; align-items:center; gap:10px; width:100%; max-width:700px; margin-top:12px;">
-//           <label style="font-size:14px; font-weight:600;">Stroke:</label>
-//           <input id="thickness-slider" type="range" min="1" max="10" value="4" style="flex:1; cursor:pointer;">
-//           <span id="thickness-value" style="min-width:25px; text-align:center; font-weight:600;">4</span>
-//         </div>
-
-//         <button id="clear-signature" class="swal2-cancel swal2-styled" 
-//           style="margin-top:12px; background:#ef4444; border-radius:6px; padding:8px 16px; font-size:14px;">
-//           Clear Signature
-//         </button>
-//       </div>
-//     `,
-//     width: 800,
-//     focusConfirm: false,
-//     showCancelButton: true,
-//     confirmButtonText: "Approve",
-//     cancelButtonText: "Cancel",
-//     didOpen: () => {
-//       const canvas = document.getElementById("signature-pad");
-//       const thicknessSlider = document.getElementById("thickness-slider");
-//       const thicknessValue = document.getElementById("thickness-value");
-
-//       // Default stroke = 5, slider starts at 4
-//       const signaturePad = new SignaturePad(canvas, {
-//         backgroundColor: "rgba(255,255,255,0)",
-//         penColor: "black",
-//         minWidth: 2,
-//         maxWidth: 5, // default stroke thickness
-//       });
-
-//       // Slider event
-//       thicknessSlider.addEventListener("input", (e) => {
-//         const value = parseInt(e.target.value);
-//         thicknessValue.textContent = value;
-//         signaturePad.minWidth = Math.max(1, value - 1);
-//         signaturePad.maxWidth = value;
-//       });
-
-//       // Clear button
-//       const clearBtn = document.getElementById("clear-signature");
-//       clearBtn?.addEventListener("click", () => signaturePad.clear());
-
-//       window.signaturePadInstance = signaturePad;
-//     },
-//     preConfirm: () => {
-//       const signaturePad = window.signaturePadInstance;
-
-//       if (!signaturePad || signaturePad.isEmpty()) {
-//         $swal.showValidationMessage(
-//           "✍️ Please provide a signature before approving."
-//         );
-//         return false;
-//       }
-
-//       return signaturePad.toDataURL("image/png");
-//     },
-//   });
-
-//   if (isConfirmed && signature) {
-//     // Convert base64 to Blob
-//     const byteString = atob(signature.split(",")[1]);
-//     const mimeString = signature.split(",")[0].split(":")[1].split(";")[0];
-//     const ab = new ArrayBuffer(byteString.length);
-//     const ia = new Uint8Array(ab);
-//     for (let i = 0; i < byteString.length; i++) {
-//       ia[i] = byteString.charCodeAt(i);
-//     }
-//     const blob = new Blob([ab], { type: mimeString });
-
-//     // Create FormData to send as file
-//     const formData = new FormData();
-//     formData.append("SignatureFile", blob, "signature.png");
-
-//     await confirmApproval(urltransactionId.value, formData);
-
-//     $swal.fire({
-//       title: "✅ Approved!",
-//       text: "The request has been approved successfully.",
-//       icon: "success",
-//       width: 400,
-//       timer: 1200,
-//       showConfirmButton: false,
-//     });
-//     return navigateTo("/main/dashboard");
-//   }
-// };
-// const postSigned = async () => {
-//   if (signaturepath?.value) {
-//     // Ask user which one they want
-//     const { value: choice, isDismissed } = await $swal.fire({
-//       title: "Choose Signature Option",
-//       text: "Would you like to use your saved signature or create a new one?",
-//       showDenyButton: true,                // 👈 use Deny for "Create New Signature"
-//       showCancelButton: true,              // 👈 Cancel = exit
-//       confirmButtonText: "Use Saved Signature",
-//       denyButtonText: "Create New Signature",
-//       cancelButtonText: "Close",
-//       reverseButtons: true,
-//       allowOutsideClick: true,
-//     });
-
-//     if (isDismissed) {
-//       return; // 🚀 totally close
-//     }
-
-//     if (choice) {
-//       // ✅ Use saved signature
-//       await confirmApproval(urltransactionId.value, null);
-//       $swal.fire({
-//       title: "Signed!",
-//       text: "The request has been signed successfully.",
-//       icon: "success",
-//       timer: 1000,
-//       showConfirmButton: false,
-//     })
-//      return navigateTo("/main/dashboard");
-//     }
-//     // Else → fallthrough to signature pad flow
-//   }
-//   const { value: signature, isConfirmed } = await $swal.fire({
-//     title: "Sign this request",
-//     html: `
-//       <div style="display:flex; flex-direction:column; align-items:center; gap:1rem; width:100%;">
-//         <label style="font-weight:600; font-size:16px;">Please sign below:</label>
-//         <canvas id="signature-pad" width="700" height="250" 
-//           style="border:2px dashed #9ca3af; border-radius:12px; background:#f9fafb; width:100%; max-width:700px; height:250px;"></canvas>
-        
-//         <div style="display:flex; align-items:center; gap:10px; width:100%; max-width:700px; margin-top:12px;">
-//           <label style="font-size:14px; font-weight:600;">Stroke:</label>
-//           <input id="thickness-slider" type="range" min="1" max="10" value="4" style="flex:1; cursor:pointer;">
-//           <span id="thickness-value" style="min-width:25px; text-align:center; font-weight:600;">4</span>
-//         </div>
-
-//         <button id="clear-signature" class="swal2-cancel swal2-styled" 
-//           style="margin-top:12px; background:#ef4444; border-radius:6px; padding:8px 16px; font-size:14px;">
-//           Clear Signature
-//         </button>
-//       </div>
-//     `,
-//     width: 800,
-//     focusConfirm: false,
-//     showCancelButton: true,
-//     confirmButtonText: "✅ Sign",
-//     cancelButtonText: "❌ Cancel",
-//     didOpen: () => {
-//       const canvas = document.getElementById("signature-pad");
-//       const thicknessSlider = document.getElementById("thickness-slider");
-//       const thicknessValue = document.getElementById("thickness-value");
-
-//       const signaturePad = new SignaturePad(canvas, {
-//         backgroundColor: "rgba(255,255,255,0)",
-//         penColor: "black",
-//         minWidth: 2,
-//         maxWidth: 5,
-//       });
-
-//       thicknessSlider.addEventListener("input", (e) => {
-//         const value = parseInt(e.target.value);
-//         thicknessValue.textContent = value;
-//         signaturePad.minWidth = Math.max(1, value - 1);
-//         signaturePad.maxWidth = value;
-//       });
-
-//       document
-//         .getElementById("clear-signature")
-//         ?.addEventListener("click", () => signaturePad.clear());
-//       window.signaturePadInstance = signaturePad;
-//     },
-//     preConfirm: () => {
-//       const signaturePad = window.signaturePadInstance;
-//       if (!signaturePad || signaturePad.isEmpty()) {
-//         $swal.showValidationMessage(
-//           "✍️ Please provide a signature before signing."
-//         );
-//         return false;
-//       }
-
-//       return {
-//         signature: signaturePad.toDataURL("image/png"),
-//       };
-//     },
-//   });
-
-//   if (isConfirmed && signature) {
-//     // Convert signature to Blob
-//     const byteString = atob(signature.signature.split(",")[1]);
-//     const mimeString = signature.signature
-//       .split(",")[0]
-//       .split(":")[1]
-//       .split(";")[0];
-//     const ab = new ArrayBuffer(byteString.length);
-//     const ia = new Uint8Array(ab);
-//     for (let i = 0; i < byteString.length; i++)
-//       ia[i] = byteString.charCodeAt(i);
-//     const blob = new Blob([ab], { type: mimeString });
-
-//     // Prepare FormData to send to server
-//     const formData = new FormData();
-//     formData.append("SignatureFile", blob, "signature.png");
-
-//     await confirmApproval(urltransactionId.value, formData);
-
-//     $swal.fire({
-//       title: "Signed!",
-//       text: "The request has been signed successfully.",
-//       icon: "success",
-//       timer: 1000,
-//       showConfirmButton: false,
-//     });
-//     return navigateTo("/main/dashboard");
-//   }
-// };
 const postSigned = async () => {
   // ✅ Check if user has a saved signature
-  if (hasSignature?.value == false) {
+  if (hasSignature?.value == false || !hasSignature.value) {
     const { isConfirmed } = await $swal.fire({
       title: "No Signature Found",
       text: "You don’t have a current signature. Do you want to create one?",
@@ -718,17 +434,36 @@ const postSigned = async () => {
       await createSignature("Signed"); // 🖋️ Create new signature
     }
   } else {
+    const imageUrl = await getusersignature($swal);
+    signatureFile.value = URL.createObjectURL(imageUrl);
     // ✅ Ask confirmation before approving
     const { isConfirmed } = await $swal.fire({
       title: "Confirm Approval",
       html: `
-        <div style="font-size:15px; color:#374151;">
-          Are you sure you want to <strong>sign</strong> this form request?<br><br>
-          <span style="font-size:13px; color:#6b7280;">
-            Once signed, this action cannot be undone.
-          </span>
-        </div>
-      `,
+  <div style="font-size:15px; color:#374151; text-align:center;">
+    <p>
+      Are you sure you want to <strong>sign</strong> this form request?
+    </p>
+
+    <img 
+      src="${signatureFile.value}" 
+      alt="Signature Preview"
+      style="
+        margin:12px auto;
+        max-width:220px;
+        max-height:100px;
+        object-fit:contain;
+        border:1px solid #e5e7eb;
+        padding:6px;
+        background:white;
+      "
+    />
+
+    <p style="font-size:13px; color:#6b7280;">
+      Once signed, this action cannot be undone.
+    </p>
+  </div>
+`,
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Yes, sign it",
@@ -741,13 +476,14 @@ const postSigned = async () => {
     if (isConfirmed) {
       await confirmApproval(urltransactionId.value, null);
       await $swal.fire({
-      title: "Form Signed!",
-      text: "The request has been signed successfully.",
-      icon: "success",
-      timer: 1000,
-      showConfirmButton: false,
-    })
-      return navigateTo("/main/dashboard");
+        title: "Form Signed!",
+        text: "The request has been signed successfully.",
+        icon: "success",
+        timer: 1000,
+        showConfirmButton: false,
+      })
+      showThankUPage.value = true;
+      formTitle.value = transactions.value.formTitle;
     }
   }
 }
@@ -898,8 +634,7 @@ const createSignature = async (text) => {
       timer: 1200,
       showConfirmButton: false,
     });
-    return navigateTo("/main/dashboard");
-
+    showThankUPage.value = true;
   }
 };
 const postDisapprove = async () => {
@@ -941,6 +676,7 @@ definePageMeta({
 
 onMounted(async () => {
   urltransactionId.value = getUrlTransactionId();
+  signatureFile.value = await getusersignature($swal);
   await checkusersignature($swal);
   await getTransaction(urltransactionId.value);
   if (!transactions.value.iscurrentuser) {

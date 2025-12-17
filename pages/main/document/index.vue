@@ -1,51 +1,56 @@
 <template>
-    <div v-if="canViewPage">
-        <div class="bg-white rounded-lg shadow-md p-6">
-            <div class="bg-white rounded-lg shadow-md p-6 mb-4">
+    <div v-if="showThankYouPage">
+        <ThankYouPage :transaction-id="documentId" :transaction-name="title"  @refresh="refreshThankYou"/>
+    </div>
+    <div v-else>
+        <div v-if="canViewPage">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <div class="bg-white rounded-lg shadow-md p-6 mb-4">
+                    <div class="flex items-center gap-2 mb-4">
+                        <h2 class="text-xl font-semibold">{{ pdfTitle }}</h2>
+                    </div>
+                </div>
                 <div class="flex items-center gap-2 mb-4">
-                    <h2 class="text-xl font-semibold">{{ pdfTitle }}</h2>
+                    <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
+                        1
+                    </div>
+                    <h2 class="text-xl font-semibold">Sign</h2>
                 </div>
-            </div>
-            <div class="flex items-center gap-2 mb-4">
-                <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
-                    1
-                </div>
-                <h2 class="text-xl font-semibold">Sign</h2>
-            </div>
 
-            <!-- Signature Upload -->
-            <div v-if="!signatureFile" class="mb-6 p-4 bg-gray-50 rounded-xl shadow-md flex flex-col items-center">
-                <!-- Button -->
-                <button @click="createSignature"
-                    class="flex items-center justify-center w-full max-w-xs px-4 py-3 bg-green-600 text-white font-semibold rounded-lg shadow hover:bg-green-700 active:bg-green-800 transition-colors duration-200 gap-2">
-                    Create Signature
+                <!-- Signature Upload -->
+                <div v-if="!signatureFile" class="mb-6 p-4 bg-gray-50 rounded-xl shadow-md flex flex-col items-center">
+                    <!-- Button -->
+                    <button @click="createSignature"
+                        class="flex items-center justify-center w-full max-w-xs px-4 py-3 bg-green-600 text-white font-semibold rounded-lg shadow hover:bg-green-700 active:bg-green-800 transition-colors duration-200 gap-2">
+                        Create Signature
+                    </button>
+
+                    <!-- Warning Label -->
+                    <p class="mt-3 text-center text-sm text-red-600 bg-red-100 rounded-md px-3 py-2 w-full shadow-sm">
+                        ⚠️ You don’t have a current signature. Please create one to
+                        continue.
+                    </p>
+                </div>
+
+                <!-- Sign Button -->
+                <button @click="openSigningModal" :disabled="!pdfFile || !signatureFile || prePlacedSignatures.length === 0
+                    "
+                    class="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-bold text-lg flex items-center justify-center gap-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    </svg>
+                    {{ userSignatures.length == 0 ? "View Document" : "Sign Document" }}
                 </button>
 
-                <!-- Warning Label -->
-                <p class="mt-3 text-center text-sm text-red-600 bg-red-100 rounded-md px-3 py-2 w-full shadow-sm">
-                    ⚠️ You don’t have a current signature. Please create one to
-                    continue.
-                </p>
             </div>
-
-            <!-- Sign Button -->
-            <button @click="openSigningModal" :disabled="!pdfFile || !signatureFile || prePlacedSignatures.length === 0
-                "
-                class="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-bold text-lg flex items-center justify-center gap-2">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-                {{ userSignatures.length == 0 ? "View Document" : "Sign Document" }}
-            </button>
-
+            <SigntureModal :is-open="isSigningModalOpen" :pdf-file="pdfFile" :signature-file="signatureFile"
+                :current-user-name="currentUserName" :current-empl-id="currentEmplId"
+                :pre-placed-signatures="prePlacedSignatures" @close="closeSigningModal"
+                @save-all-signatures="handleSaveAllSignatures" />
+            <ViewSignatureBoxPlacement :isOpen="isViewingModalopen" :pdfFile="pdfFile" :signatures="prePlacedSignatures"
+                @close="isViewingModalopen = false" />
         </div>
-        <SigntureModal :is-open="isSigningModalOpen" :pdf-file="pdfFile" :signature-file="signatureFile"
-            :current-user-name="currentUserName" :current-empl-id="currentEmplId"
-            :pre-placed-signatures="prePlacedSignatures" @close="closeSigningModal"
-            @save-all-signatures="handleSaveAllSignatures" />
-        <ViewSignatureBoxPlacement :isOpen="isViewingModalopen" :pdfFile="pdfFile" :signatures="prePlacedSignatures"
-            @close="isViewingModalopen = false" />
     </div>
 </template>
 
@@ -62,6 +67,7 @@ import { fetchDocumentTitle, title } from "~/js/fetchDocumentTitle";
 import { getusersignature } from "~/js/checkusersignature";
 import { checkDocumentSignature } from '~/js/checkdocumentsignature';
 import ViewSignatureBoxPlacement from '~/components/ViewSignatureBoxPlacement.vue';
+import ThankYouPage from '~/components/ThankYouPage.vue';
 
 const { $swal } = useNuxtApp();
 const documentId = ref();
@@ -72,6 +78,14 @@ const pdfTitle = ref();
 const signatureFile = ref(null);
 const isViewingModalopen = ref(false);
 const canViewPage = ref(false);
+const showThankYouPage = ref(false);
+
+const refreshThankYou = async() => {
+    showThankYouPage.value = false;
+    await getsignaturepositons(documentId.value);
+    await fetchDocumentPdf(documentId.value);
+    await fetchDocumentTitle(documentId.value);
+}
 
 const getUserStats = (userName) => {
     const userSigs = prePlacedSignatures.value.filter(
@@ -101,6 +115,7 @@ const openSigningModal = () => {
         alert("Please upload a PDF first!");
         return;
     }
+    console.log(signatureFile.value)
     if (!signatureFile.value) {
         alert("Please upload your signature image first!");
         return;
@@ -340,8 +355,7 @@ const handleSaveAllSignatures = async (updatedSignatures) => {
             showConfirmButton: false,
         });
         await checkDocumentSignature(documentId.value);
-
-        navigateTo("/main/dashboard")
+        showThankYouPage.value = true;
 
     } catch (error) {
         let errorMessage = "Something went wrong. Please try again later.";
@@ -371,38 +385,39 @@ definePageMeta({
 
 onMounted(async () => {
     await getProfile();
-    signatureFile.value = await getusersignature($swal);
-    console.log(signatureFile.value);
+
     currentEmplId.value = user.value.empid;
     currentUserName.value = user.value.requestorname;
     documentId.value = await getUrlDocumentId();
-    console.log(documentId.value);
+
     await getsignaturepositons(documentId.value);
     await fetchDocumentPdf(documentId.value);
     await fetchDocumentTitle(documentId.value);
-    pdfTitle.value = title.value;
     const hasAccess = signaturesWithCurrentUserFlag.value.some(
         s => s.isCurrentUser
     )
 
     if (!hasAccess) {
         const result = await $swal.fire({
-        title: "Access Denied",
-        text: "You are not allowed to view this Document.",
-        icon: "error",
-        confirmButtonText: "Close", // Button at the bottom
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-      });
+            title: "Access Denied",
+            text: "You are not allowed to view this Document.",
+            icon: "error",
+            confirmButtonText: "Close", // Button at the bottom
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+        });
 
-      // Redirect only if the user clicks the "Close" button
-      if (result.isConfirmed) {
-        navigateTo("/main/dashboard");
-      }
+        // Redirect only if the user clicks the "Close" button
+        if (result.isConfirmed) {
+            navigateTo("/main/dashboard");
+        }
     }
-    else{
+    else {
         canViewPage.value = true;
     }
+    pdfTitle.value = title.value;
+    signatureFile.value = await getusersignature($swal);
+
 });
 
 </script>

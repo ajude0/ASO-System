@@ -35,6 +35,10 @@ const isSmallSignatureBox = (sig) => {
   return sig.width <= SMALL_SIG_WIDTH || sig.height <= SMALL_SIG_HEIGHT;
 };
 
+watchEffect(() => {
+  console.log('signatureFile in modal:', props.signatureFile)
+})
+
 // Editing state for placed signatures
 const editingSignatureIndex = ref(null);
 const isDraggingSignature = ref(false);
@@ -119,6 +123,7 @@ watch(() => [props.isOpen, props.pdfFile], async ([isOpen, pdfFile]) => {
 watch(() => props.signatureFile, (newFile) => {
   if (newFile) {
     userSignatureSrc.value = URL.createObjectURL(newFile);
+    
   }
 });
 
@@ -287,7 +292,7 @@ const handlePrePlacedClick = (sig, index) => {
   }
 
   if (!userSignatureSrc.value) {
-    alert('Please upload your signature first!');
+    alert('Please upload your signature first!',userSignatureSrc.value);
     return;
   }
 

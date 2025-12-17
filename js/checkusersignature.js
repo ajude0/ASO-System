@@ -10,7 +10,7 @@ export const signaturepath =ref();
 export const checkusersignature = async ($swal) => {
   const token = getToken();
   try {
-    const data = await $fetch(`${API_BASE_URL}/api/Signature`, {
+    const data = await $fetch(`${API_BASE_URL}/api/Signature/getUserSignature`, {
       method: "GET",
       headers: {
         token: token,
@@ -21,7 +21,7 @@ export const checkusersignature = async ($swal) => {
     } else {
       hasSignature.value = data.hasSignature;
     }
-    console.log(hasSignature.value);
+  
  
   } catch (error) {
     console.error("Error:", error);
