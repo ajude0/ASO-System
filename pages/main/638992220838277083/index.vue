@@ -31,7 +31,7 @@
         <DocumentList :can-delete="canDelete" :can-edit="canEdit" />
       </div>
       <div v-if="activeTab === 'approver'">
-        <ListApprovalRequest :can-edit="canEdit" />
+        <PendingDocumentList/>
       </div>
     </div>
   </div>
@@ -49,6 +49,7 @@ import {
 
 
 import DocumentList from "~/components/DocumentList.vue";
+import PendingDocumentList from "~/components/PendingDocumentList.vue";
 
 const paramid = ref();
 const activeTab = ref("transactions");

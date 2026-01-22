@@ -1,9 +1,15 @@
 <template>
-    <div v-if="showThankYouPage">
-        <ThankYouPage :transaction-id="documentId" :transaction-name="title" type-name="Document" @refresh="refreshThankYou"/>
-    </div>
-    <div v-else>
-        <div v-if="canViewPage">
+    <div>
+        <button @click="backButton" type="button"
+            class="flex items-center ms-6 mt-8 text-gray-700 hover:text-blue-600 transition-colors duration-200">
+            <svg class="w-9 h-9" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                fill="none" viewBox="0 0 24 24">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M5 12h14M5 12l4-4m-4 4 4 4" />
+            </svg>
+            <span class="text-lg font-bold">Back</span>
+        </button>
+        <div>
             <div class="bg-white rounded-lg shadow-md p-6">
                 <div class="bg-white rounded-lg shadow-md p-6 mb-4">
                     <div class="flex items-center gap-2 mb-4">
@@ -57,7 +63,7 @@
 <script setup>
 import SigntureModal from '~/components/SigntureModal.vue';
 import SignaturePad from "signature_pad";
-import { getUrlDocumentId, getToken } from '~/js/cryptoToken';
+import { getToken, getSignDocumentId } from '~/js/cryptoToken';
 import { postusersignature } from "~/js/usersignature";
 import { API_BASE_URL } from "~/config";
 import { getProfile, user } from "~/js/fetchUserProfile";
@@ -80,12 +86,6 @@ const isViewingModalopen = ref(false);
 const canViewPage = ref(false);
 const showThankYouPage = ref(false);
 
-const refreshThankYou = async() => {
-    showThankYouPage.value = false;
-    await getsignaturepositons(documentId.value);
-    await fetchDocumentPdf(documentId.value);
-    await fetchDocumentTitle(documentId.value);
-}
 
 const getUserStats = (userName) => {
     const userSigs = prePlacedSignatures.value.filter(
@@ -485,7 +485,7 @@ const handleSaveAllSignatures = async (updatedSignatures) => {
             showConfirmButton: false,
         });
         await checkDocumentSignature(documentId.value);
-        showThankYouPage.value = true;
+
 
     } catch (error) {
         let errorMessage = "Something went wrong. Please try again later.";
@@ -509,42 +509,30 @@ const handleSaveAllSignatures = async (updatedSignatures) => {
 const closeSigningModal = () => {
     isSigningModalOpen.value = false;
 };
+
+const router = useRouter()
+
+const backButton = () => {
+  if (window.history.length > 1) {
+    router.back()
+  } else {
+     router.push("/main/638992220838277083");
+  }
+}
+
+
 definePageMeta({
     middleware: "auth", // 👈 Tells Nuxt to run the "auth" middleware
 });
 
 onMounted(async () => {
     await getProfile();
-
     currentEmplId.value = user.value.empid;
     currentUserName.value = user.value.requestorname;
-    documentId.value = await getUrlDocumentId();
-
+    documentId.value = await getSignDocumentId();
     await getsignaturepositons(documentId.value);
     await fetchDocumentPdf(documentId.value);
     await fetchDocumentTitle(documentId.value);
-    const hasAccess = signaturesWithCurrentUserFlag.value.some(
-        s => s.isCurrentUser
-    )
-
-    if (!hasAccess) {
-        const result = await $swal.fire({
-            title: "Access Denied",
-            text: "You are not allowed to view this Document.",
-            icon: "error",
-            confirmButtonText: "Close", // Button at the bottom
-            allowOutsideClick: false,
-            allowEscapeKey: false,
-        });
-
-        // Redirect only if the user clicks the "Close" button
-        if (result.isConfirmed) {
-            navigateTo("/main/dashboard");
-        }
-    }
-    else {
-        canViewPage.value = true;
-    }
     pdfTitle.value = title.value;
     signatureFile.value = await getusersignature($swal);
 

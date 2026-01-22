@@ -41,3 +41,8 @@ export const getUrlDocumentId = () => {
   return encryptedToken ? decryptData(encryptedToken) : null;
 };
 
+export const getSignDocumentId = () => {
+  const encryptedToken = localStorage.getItem("signDocumentId");
+  return encryptedToken ? decryptData(encryptedToken) : null;
+};
+

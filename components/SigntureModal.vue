@@ -625,16 +625,20 @@ onUnmounted(() => {
               :ref="el => { if (el) canvasRefs[i - 1] = el }" class="block"></canvas>
           </div>
 
-          <!-- Pre-placed Signature Boxes -->
+         <!-- Pre-placed Signature Boxes -->
           <div v-for="(sig, index) in localSignatures" :key="'preplaced-' + index"
             :ref="el => { if (el) prePlacedSigRefs[index] = el }" v-show="sig.page === currentViewPage"
             class="absolute rounded transition-all group" :class="{
               'border-2 border-dashed border-green-500 bg-green-50 cursor-pointer hover:bg-green-100 hover:border-green-600': canUserSign(sig),
               'border-2 border-dashed border-purple-400 bg-purple-50 cursor-not-allowed': isUserWaiting(sig),
               'border-2 border-dashed border-gray-300 bg-gray-50 cursor-not-allowed': sig.isEmpty && sig.assignedEmplId !== currentEmplId && !isUserWaiting(sig),
-              'border-2 border-blue-500 bg-blue-50': canUserEdit(sig) && editingSignatureIndex === index,
-              'border-2 border-blue-400 bg-blue-50 hover:border-blue-600': canUserEdit(sig) && editingSignatureIndex !== index,
-              'border-2 border-gray-400 bg-gray-100': !sig.isEmpty && sig.signedBy !== currentUserName,
+              'border-2 border-blue-500': canUserEdit(sig) && editingSignatureIndex === index && !sig.imageSrc,
+              'bg-blue-50': canUserEdit(sig) && editingSignatureIndex === index && !sig.imageSrc,
+              'border-2 border-blue-500': canUserEdit(sig) && editingSignatureIndex === index && sig.imageSrc,
+              'border-2 border-blue-400 bg-blue-50 hover:border-blue-600': canUserEdit(sig) && editingSignatureIndex !== index && !sig.imageSrc,
+              'border-2 border-blue-400 hover:border-blue-600': canUserEdit(sig) && editingSignatureIndex !== index && sig.imageSrc,
+              'border-2 border-gray-400 bg-gray-100': !sig.isEmpty && sig.signedBy !== currentUserName && !sig.imageSrc,
+              'border-2 border-gray-400': !sig.isEmpty && sig.signedBy !== currentUserName && sig.imageSrc,
               'cursor-move': canUserEdit(sig)
             }" :style="{ width: sig.width + 'px', height: sig.height + 'px', left: sig.x + 'px', top: sig.y + 'px' }"
             @mouseup="handlePrePlacedClick(sig, index)"

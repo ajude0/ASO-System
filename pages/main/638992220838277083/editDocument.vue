@@ -37,7 +37,7 @@ const openPlacementModal = () => {
 };
 
 const resendEmail = (emplId) => {
-    emailsignaturereminder(emplId,$swal);
+    emailsignaturereminder(emplId, $swal);
 }
 
 // Save signature boxes from placement modal
@@ -139,69 +139,139 @@ const openSigningModal = () => {
 
     isSigningModalOpen.value = true;
 };
+const removeWhiteBackground = (file) => {
+    return new Promise((resolve) => {
+        const img = new Image();
+        const reader = new FileReader();
+
+        reader.onload = () => (img.src = reader.result);
+        reader.readAsDataURL(file);
+
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            // Remove white / near-white pixels
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+
+                if (r > 245 && g > 245 && b > 245) {
+                    data[i + 3] = 0; // transparent
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+
+            canvas.toBlob((blob) => resolve(blob), "image/png", 1);
+        };
+    });
+};
+
 const createSignature = async (text) => {
-    const { value: signature, isConfirmed } = await $swal.fire({
-        title: `Create your own signature`,
+    const { value: result, isConfirmed } = await $swal.fire({
+        title: "Create your own signature",
         html: `
-                <div style="display:flex; flex-direction:column; align-items:center; gap:1rem; width:100%;">
-                    <label style="font-weight:600; font-size:16px;">Please sign below:</label>
-                    <canvas id="signature-pad" width="700" height="250" 
-                    style="border:2px dashed #9ca3af; border-radius:12px; background:#f9fafb; width:100%; max-width:700px; height:250px;"></canvas>
-                    
-                    <div style="display:flex; align-items:center; gap:10px; width:100%; max-width:700px; margin-top:12px;">
-                    <label style="font-size:14px; font-weight:600;">Stroke:</label>
-                    <input id="thickness-slider" type="range" min="1" max="10" value="4" style="flex:1; cursor:pointer;">
-                    <span id="thickness-value" style="min-width:25px; text-align:center; font-weight:600;">4</span>
-                    </div>
+      <div style="display:flex; flex-direction:column; gap:16px; width:100%; align-items:center;">
 
-                    <button id="clear-signature" class="swal2-cancel swal2-styled" 
-                    style="margin-top:12px; background:#ef4444; border-radius:6px; padding:8px 16px; font-size:14px;">
-                    Clear Signature
-                    </button>
+        <label style="font-weight:600;">Choose how you want to sign:</label>
+        <div style="display:flex; gap:16px;">
+          <label><input type="radio" name="sigType" value="draw" checked /> Draw</label>
+          <label><input type="radio" name="sigType" value="upload" /> Upload</label>
+        </div>
 
-                    <div style="text-align:left; width:100%; max-width:700px; margin-top:16px;">
-                    <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
-                        <input type="checkbox" id="agree-terms">
-                        <span>I have read and agree to the <span style="color:#3b82f6; text-decoration:underline; cursor:pointer;">Terms and Conditions</span></span>
-                    </label>
-                    </div>
-                </div>
+        <!-- DRAW SIGNATURE -->
+        <div id="draw-wrapper" style="width:100%; text-align:center;">
+          <label style="font-weight:600;">Please sign below:</label>
+          <canvas id="signature-pad" width="700" height="250"
+            style="border:2px dashed #9ca3af; border-radius:12px; background:#f9fafb; width:100%; max-width:700px;">
+          </canvas>
+
+          <div style="display:flex; align-items:center; gap:10px; max-width:700px; margin:12px auto 0;">
+            <label>Stroke:</label>
+            <input id="thickness-slider" type="range" min="1" max="10" value="4" style="flex:1;">
+            <span id="thickness-value">4</span>
+          </div>
+
+          <button id="clear-signature" class="swal2-cancel swal2-styled"
+            style="margin-top:12px; background:#ef4444;">
+            Clear Signature
+          </button>
+        </div>
+
+        <!-- UPLOAD SIGNATURE -->
+        <div id="upload-wrapper"
+          style="display:none; width:100%; max-width:700px; text-align:center;">
+          <label style="font-weight:600;">Upload signature (PNG/JPG):</label>
+          <input type="file" id="signature-upload"
+            accept="image/png,image/jpeg"
+            style="display:block; margin:8px auto;" />
+
+          <img id="upload-preview"
+            style="
+              display:none;
+              margin:12px auto 0;
+              max-height:150px;
+              border:1px solid #e5e7eb;
+              border-radius:8px;
+            " />
+        </div>
+
+        <!-- TERMS -->
+        <div style="width:100%; max-width:700px; text-align:left;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
+            <input type="checkbox" id="agree-terms" />
+            <span>
+              I have read and agree to the
+              <span id="open-terms"
+                style="color:#3b82f6; text-decoration:underline; cursor:pointer;">
+                Terms and Conditions
+              </span>
+            </span>
+          </label>
+        </div>
+
+      </div>
     `,
         width: 800,
-        focusConfirm: false,
         showCancelButton: true,
         confirmButtonText: "Confirm Signature",
         cancelButtonText: "Cancel",
+        focusConfirm: false,
+
         didOpen: () => {
             const canvas = document.getElementById("signature-pad");
             const thicknessSlider = document.getElementById("thickness-slider");
             const thicknessValue = document.getElementById("thickness-value");
+            const uploadInput = document.getElementById("signature-upload");
+            const uploadPreview = document.getElementById("upload-preview");
             const agreeCheckbox = document.getElementById("agree-terms");
+            const openTerms = document.getElementById("open-terms");
+
+            const drawWrapper = document.getElementById("draw-wrapper");
+            const uploadWrapper = document.getElementById("upload-wrapper");
+
+            const radios = document.querySelectorAll('input[name="sigType"]');
 
             const signaturePad = new SignaturePad(canvas, {
-                backgroundColor: "rgba(255,255,255,0)",
                 penColor: "black",
                 minWidth: 2,
                 maxWidth: 5,
             });
 
-            // Stroke slider
-            thicknessSlider.addEventListener("input", (e) => {
-                const value = parseInt(e.target.value);
-                thicknessValue.textContent = value;
-                signaturePad.minWidth = Math.max(1, value - 1);
-                signaturePad.maxWidth = value;
-            });
+            // ================= TERMS MODAL =================
+            const showTermsModal = () => {
+                if (document.getElementById("terms-popup")) return;
 
-            // Clear signature
-            document
-                .getElementById("clear-signature")
-                ?.addEventListener("click", () => signaturePad.clear());
-
-            // Show Terms popup automatically when checkbox is checked
-            agreeCheckbox.addEventListener("change", (e) => {
-                if (e.target.checked) {
-                    const termsHtml = `
+                const termsHtml = `
                         <div id="terms-popup" 
                         style="
                             position: fixed; 
@@ -238,49 +308,109 @@ const createSignature = async (text) => {
                         </div>
                     `;
 
-                    document.body.insertAdjacentHTML("beforeend", termsHtml);
+                document.body.insertAdjacentHTML("beforeend", termsHtml);
 
-                    document
-                        .getElementById("close-terms")
-                        .addEventListener("click", () => {
-                            document.getElementById("terms-popup")?.remove();
-                            agreeCheckbox.checked = true; // keep it checked after reading
-                        });
-                }
+                document.getElementById("close-terms").addEventListener("click", () => {
+                    document.getElementById("terms-popup")?.remove();
+                    agreeCheckbox.checked = true;
+                });
+            };
+
+            agreeCheckbox.addEventListener("change", (e) => {
+                if (e.target.checked) showTermsModal();
+            });
+
+            openTerms.addEventListener("click", showTermsModal);
+
+            // Toggle draw / upload
+            radios.forEach((radio) => {
+                radio.addEventListener("change", () => {
+                    if (radio.value === "draw" && radio.checked) {
+                        drawWrapper.style.display = "block";
+                        uploadWrapper.style.display = "none";
+                    } else {
+                        drawWrapper.style.display = "none";
+                        uploadWrapper.style.display = "block";
+                        signaturePad.clear();
+                    }
+                });
+            });
+
+            // Stroke thickness
+            thicknessSlider.addEventListener("input", (e) => {
+                const value = parseInt(e.target.value);
+                thicknessValue.textContent = value;
+                signaturePad.minWidth = Math.max(1, value - 1);
+                signaturePad.maxWidth = value;
+            });
+
+            // Clear canvas
+            document
+                .getElementById("clear-signature")
+                .addEventListener("click", () => signaturePad.clear());
+
+            // Upload preview
+            uploadInput.addEventListener("change", (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => {
+                    uploadPreview.src = reader.result;
+                    uploadPreview.style.display = "block";
+                };
+                reader.readAsDataURL(file);
             });
 
             window.signaturePadInstance = signaturePad;
         },
+
         preConfirm: () => {
             const signaturePad = window.signaturePadInstance;
-            const agreeCheckbox = document.getElementById("agree-terms");
+            const agree = document.getElementById("agree-terms");
+            const uploadInput = document.getElementById("signature-upload");
+            const sigType = document.querySelector(
+                'input[name="sigType"]:checked'
+            )?.value;
 
-            if (!signaturePad || signaturePad.isEmpty()) {
+            if (!agree.checked) {
                 $swal.showValidationMessage(
-                    "✍️ Please provide a signature before confirming."
+                    "Please agree to the Terms and Conditions."
                 );
                 return false;
             }
 
-            if (!agreeCheckbox.checked) {
-                $swal.showValidationMessage(
-                    "✅ Please read and agree to the Terms and Conditions before proceeding."
-                );
+            if (sigType === "draw") {
+                if (!signaturePad || signaturePad.isEmpty()) {
+                    $swal.showValidationMessage("Please draw your signature.");
+                    return false;
+                }
+                return { type: "draw", data: signaturePad.toDataURL("image/png") };
+            }
+
+            if (!uploadInput.files.length) {
+                $swal.showValidationMessage("Please upload a signature image.");
                 return false;
             }
 
-            return signaturePad.toDataURL("image/png");
+            return { type: "upload", file: uploadInput.files[0] };
         },
     });
 
-    if (isConfirmed && signature) {
-        const byteString = atob(signature.split(",")[1]);
-        const mimeString = signature.split(",")[0].split(":")[1].split(";")[0];
-        const ab = new ArrayBuffer(byteString.length);
-        const ia = new Uint8Array(ab);
-        for (let i = 0; i < byteString.length; i++)
-            ia[i] = byteString.charCodeAt(i);
-        const blob = new Blob([ab], { type: mimeString });
+    // ================= SAVE SIGNATURE =================
+    if (isConfirmed && result) {
+        let blob;
+
+        if (result.type === "draw") {
+            const byteString = atob(result.data.split(",")[1]);
+            const mimeString = result.data.split(",")[0].split(":")[1].split(";")[0];
+            const ab = new ArrayBuffer(byteString.length);
+            const ia = new Uint8Array(ab);
+            for (let i = 0; i < byteString.length; i++)
+                ia[i] = byteString.charCodeAt(i);
+            blob = new Blob([ab], { type: mimeString });
+        } else {
+            blob = await removeWhiteBackground(result.file);
+        }
 
         const formData = new FormData();
         formData.append("signaturefile", blob, "signature.png");
@@ -492,126 +622,126 @@ const saveFinalPdf = async () => {
             const scaleX = pageWidth / canvasWidth;
             const scaleY = pageHeight / canvasHeight;
 
-            if (sig.showName && sig.signedBy){
+            if (sig.showName && sig.signedBy) {
                 // Embed signature image
-            const imgResp = await fetch(sig.imageSrc);
-            const imgBytes = await imgResp.arrayBuffer();
-            let embeddedImage;
-            try {
-                embeddedImage = await pdfDoc.embedPng(imgBytes);
-            } catch {
-                embeddedImage = await pdfDoc.embedJpg(imgBytes);
-            }
+                const imgResp = await fetch(sig.imageSrc);
+                const imgBytes = await imgResp.arrayBuffer();
+                let embeddedImage;
+                try {
+                    embeddedImage = await pdfDoc.embedPng(imgBytes);
+                } catch {
+                    embeddedImage = await pdfDoc.embedJpg(imgBytes);
+                }
 
-            // Adjust signature width for name like UI
-            const maxImgWidth = sig.showName && sig.signedBy
-                ? Math.max(sig.width - 16, sig.signedBy.length * 8) * scaleX
-                : sig.width * scaleX;
+                // Adjust signature width for name like UI
+                const maxImgWidth = sig.showName && sig.signedBy
+                    ? Math.max(sig.width - 16, sig.signedBy.length * 8) * scaleX
+                    : sig.width * scaleX;
 
-            const maxImgHeight = sig.height * scaleY;
+                const maxImgHeight = sig.height * scaleY;
 
-            const imgAspect = embeddedImage.width / embeddedImage.height;
-            let drawWidth = maxImgWidth;
-            let drawHeight = drawWidth / imgAspect;
-            if (drawHeight > maxImgHeight) {
-                drawHeight = maxImgHeight;
-                drawWidth = drawHeight * imgAspect;
-            }
+                const imgAspect = embeddedImage.width / embeddedImage.height;
+                let drawWidth = maxImgWidth;
+                let drawHeight = drawWidth / imgAspect;
+                if (drawHeight > maxImgHeight) {
+                    drawHeight = maxImgHeight;
+                    drawWidth = drawHeight * imgAspect;
+                }
 
-            // Signature coordinates (flip Y axis) – exact match to UI
-            const xOnPdf = sig.x * scaleX + (sig.width * scaleX - drawWidth) / 2;
-            let yOnPdf = pageHeight - (sig.y + drawHeight) * scaleY;
+                // Signature coordinates (flip Y axis) – exact match to UI
+                const xOnPdf = sig.x * scaleX + (sig.width * scaleX - drawWidth) / 2;
+                let yOnPdf = pageHeight - (sig.y + drawHeight) * scaleY;
 
-// Adjust y slightly if showing name
+                // Adjust y slightly if showing name
                 if (sig.showName && sig.signedBy) {
                     yOnPdf -= 5; // reduces vertical position by 1px
                 }
 
-            // Draw signature
-            page.drawImage(embeddedImage, {
-                x: xOnPdf,
-                y: yOnPdf,
-                width: drawWidth,
-                height: drawHeight,
-            });
-
-            // Draw name slightly overlapping signature
-            if (sig.showName && sig.signedBy) {
-                const fontSize = Math.max(8, drawHeight * 0.18);
-                const textWidth = Math.min(helveticaFont.widthOfTextAtSize(sig.signedBy, fontSize), drawWidth);
-                const textX = xOnPdf + (drawWidth - textWidth) / 2;
-
-                // Small overlap with signature
-                const textY = yOnPdf - fontSize / 3;
-
-                page.drawText(sig.signedBy, {
-                    x: textX,
-                    y: textY,
-                    size: fontSize,
-                    font: helveticaFont,
-                    color: rgb(0, 0, 0),
+                // Draw signature
+                page.drawImage(embeddedImage, {
+                    x: xOnPdf,
+                    y: yOnPdf,
+                    width: drawWidth,
+                    height: drawHeight,
                 });
-            }
 
-            // Draw date exactly at its canvas position
-            if (sig.hasDate && sig.datePosition) {
-                const dp = toRaw(sig.datePosition);
-                const dateX = dp.x * scaleX;
-                 let dateY = pageHeight - (dp.y + dp.height) * scaleY;
-                const fontSize = (dp.fontSize || 14) * scaleY;
-                const dateText = dp.dateText || sig.signedDate || "";
-                dateY -= 5;
-                page.drawText(dateText, {
-                    x: dateX,
-                    y: dateY + (dp.height * scaleY - fontSize) / 2, // vertical center
-                    size: fontSize,
-                    font: helveticaFont,
-                    color: rgb(0, 0, 0),
+                // Draw name slightly overlapping signature
+                if (sig.showName && sig.signedBy) {
+                    const fontSize = Math.max(8, drawHeight * 0.18);
+                    const textWidth = Math.min(helveticaFont.widthOfTextAtSize(sig.signedBy, fontSize), drawWidth);
+                    const textX = xOnPdf + (drawWidth - textWidth) / 2;
+
+                    // Small overlap with signature
+                    const textY = yOnPdf - fontSize / 3;
+
+                    page.drawText(sig.signedBy, {
+                        x: textX,
+                        y: textY,
+                        size: fontSize,
+                        font: helveticaFont,
+                        color: rgb(0, 0, 0),
+                    });
+                }
+
+                // Draw date exactly at its canvas position
+                if (sig.hasDate && sig.datePosition) {
+                    const dp = toRaw(sig.datePosition);
+                    const dateX = dp.x * scaleX;
+                    let dateY = pageHeight - (dp.y + dp.height) * scaleY;
+                    const fontSize = (dp.fontSize || 14) * scaleY;
+                    const dateText = dp.dateText || sig.signedDate || "";
+                    dateY -= 5;
+                    page.drawText(dateText, {
+                        x: dateX,
+                        y: dateY + (dp.height * scaleY - fontSize) / 2, // vertical center
+                        size: fontSize,
+                        font: helveticaFont,
+                        color: rgb(0, 0, 0),
+                    });
+                }
+            }
+            else {
+                const xOnPdf = sig.x * scaleX;
+                const yOnPdf = pageHeight - sig.y * scaleY - sig.height * scaleY;
+                const widthOnPdf = sig.width * scaleX;
+                const heightOnPdf = sig.height * scaleY;
+
+                // Embed signature image
+                const imgResp = await fetch(sig.imageSrc);
+                const imgBytes = await imgResp.arrayBuffer();
+                let embeddedImage;
+                try {
+                    embeddedImage = await pdfDoc.embedPng(imgBytes);
+                } catch {
+                    embeddedImage = await pdfDoc.embedJpg(imgBytes);
+                }
+
+                page.drawImage(embeddedImage, {
+                    x: xOnPdf,
+                    y: yOnPdf,
+                    width: widthOnPdf,
+                    height: heightOnPdf,
                 });
+
+                // Draw date if exists (no background)
+                if (sig.hasDate && sig.datePosition) {
+                    const dp = toRaw(sig.datePosition);
+
+                    const dateX = dp.x * scaleX;
+                    const dateY = pageHeight - dp.y * scaleY - dp.height * scaleY;
+                    const fontSize = (dp.fontSize || 14) * scaleY;
+                    const dateText = dp.dateText || sig.signedDate || "";
+
+                    // Draw only the text
+                    page.drawText(dateText, {
+                        x: dateX + 2, // optional padding
+                        y: dateY + (dp.height * scaleY - fontSize) / 2,
+                        size: fontSize,
+                        font: helveticaFont,
+                        color: rgb(0, 0, 0),
+                    });
+                }
             }
-            }
-            else{
-            const xOnPdf = sig.x * scaleX;
-            const yOnPdf = pageHeight - sig.y * scaleY - sig.height * scaleY;
-            const widthOnPdf = sig.width * scaleX;
-            const heightOnPdf = sig.height * scaleY;
-
-            // Embed signature image
-            const imgResp = await fetch(sig.imageSrc);
-            const imgBytes = await imgResp.arrayBuffer();
-            let embeddedImage;
-            try {
-                embeddedImage = await pdfDoc.embedPng(imgBytes);
-            } catch {
-                embeddedImage = await pdfDoc.embedJpg(imgBytes);
-            }
-
-            page.drawImage(embeddedImage, {
-                x: xOnPdf,
-                y: yOnPdf,
-                width: widthOnPdf,
-                height: heightOnPdf,
-            });
-
-            // Draw date if exists (no background)
-            if (sig.hasDate && sig.datePosition) {
-                const dp = toRaw(sig.datePosition);
-
-                const dateX = dp.x * scaleX;
-                const dateY = pageHeight - dp.y * scaleY - dp.height * scaleY;
-                const fontSize = (dp.fontSize || 14) * scaleY;
-                const dateText = dp.dateText || sig.signedDate || "";
-
-                // Draw only the text
-                page.drawText(dateText, {
-                    x: dateX + 2, // optional padding
-                    y: dateY + (dp.height * scaleY - fontSize) / 2,
-                    size: fontSize,
-                    font: helveticaFont,
-                    color: rgb(0, 0, 0),
-                });
-            }
-        }
         }
 
         // Save PDF and trigger download
@@ -864,7 +994,8 @@ onMounted(async () => {
                                             <span v-else class="text-gray-500 text-xs">⏳ Waiting</span>
                                         </div>
 
-                                        <button v-if="sig.approvalStatus === 'pending'" @click="resendEmail(sig.assignedEmplId)" class="mt-2 flex items-center gap-2 px-3 py-1.5
+                                        <button v-if="sig.approvalStatus === 'pending'"
+                                            @click="resendEmail(sig.assignedEmplId)" class="mt-2 flex items-center gap-2 px-3 py-1.5
                                             bg-blue-600 text-white text-sm font-medium
                                             rounded-lg shadow hover:bg-blue-700
                                             transition-all duration-200">

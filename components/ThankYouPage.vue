@@ -32,7 +32,7 @@
             <span class="font-semibold">Form:</span> {{ transactionName }}
           </p>
           <p class="text-sm text-green-800">
-            <span class="font-semibold">Transaction ID:</span> #{{ confirmationId }}
+            <span class="font-semibold">{{ typeName }} ID:</span> {{ confirmationId }}
           </p>
           <p class="text-xs text-green-600 mt-2">
             {{ currentDate }}
@@ -79,6 +79,10 @@ const props = defineProps({
   transactionName: {
     type: String,
     default: 'Transaction'
+  },
+   typeName: {
+    type: String,
+    default: ''
   }
 })
 
