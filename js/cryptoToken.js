@@ -46,3 +46,18 @@ export const getSignDocumentId = () => {
   return encryptedToken ? decryptData(encryptedToken) : null;
 };
 
+export const clearAsoStorage = () => {
+  const keys = [
+    "user_token_aso",
+    "formId",
+    "transactionId",
+    "documentId",
+    "aso_urltransactionId",
+    "documenturlid",
+    "signDocumentId",
+    "user_token_aso"
+  ];
+
+  keys.forEach(key => localStorage.removeItem(key));
+};
+

@@ -1,5 +1,5 @@
 import { API_BASE_URL } from "~/config";
-import { getToken } from "./cryptoToken";
+import { clearAsoStorage, getToken } from "./cryptoToken";
 
 export const nenunames = ref([]);
 export const menuList = ref([]);
@@ -38,10 +38,9 @@ export const fetchUserMenu = async () => {
       sidemenuspinner.value = true;
     }
   } catch (error) {
-    if (confirm("Unauthorized")) {
-      localStorage.clear();
+   
+      clearAsoStorage();
       return navigateTo("/"); 
-    }
   } finally{
     loading.value = false;
   }
@@ -70,10 +69,8 @@ export const fetchCanAccess = async (menucode) => {
       nenunames.value = data.nenunames.split("->");
     }
   } catch (error) {
-    if (confirm("Unauthorized")) {
-      localStorage.clear();
+      clearAsoStorage();
       return navigateTo("/"); 
-    }
   }
 };
 

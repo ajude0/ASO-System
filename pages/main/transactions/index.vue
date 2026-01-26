@@ -1,7 +1,7 @@
 <template>
   <div v-if="showThankUPage">
-    <ThankYouPage :key="thankYouKey" :transaction-id="urltransactionId" :transaction-name="formTitle" type-name="Transaction"
-      @refresh="refreshThankYou" />
+    <ThankYouPage :key="thankYouKey" :transaction-id="urltransactionId" :transaction-name="formTitle"
+      type-name="Transaction" @refresh="refreshThankYou" />
   </div>
   <div v-else class="w-full bg-white shadow-lg rounded-lg p-6 relative max-h-[90vh]">
     <div class="flex items-center pb-3 border-b border-gray-300">
@@ -52,68 +52,72 @@
             </span>
           </div>
           <div v-else-if="item.objectType === 'DYNAMICSIGNATORY'">
-            <div v-for="(group, groupIndex) in item?.dynamicsignatoriesvalues" :key="groupIndex">
-              <div v-for="(dynamic, index) in group.value" :key="index" class="mb-6">
-                <div class="flex items-center justify-between p-4 border rounded-lg bg-gray-50 shadow-sm mb-4">
-                  <!-- Left: Name / Value -->
-                  <div class="text-gray-800 font-medium flex items-center gap-2">
-                    {{ dynamic.value }}
-                    <span v-if="dynamic.currentuser"
-                      class="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
-                      YOU
-                    </span>
-                  </div>
+            <div v-for="(dynamic, index) in sortAllSignatories(item.dynamicsignatoriesvalues)" :key="index"
+              class="mb-4">
 
-                  <!-- Right: Status / Button -->
-                  <div>
-                    <!-- If current user and response is 0, show approve button -->
-                    <button v-if="dynamic.currentuser && dynamic.response === 0"
-                      class="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-800" @click="postSigned()">
-                      SIGN
-                    </button>
+              <div 
+                class="flex items-center justify-between p-4 border rounded-lg bg-gray-50 shadow-sm mb-4 transition-all duration-300"  
+                :class="{ 'highlight-pulse': isHighlighted && dynamic.currentuser }"
+              >
+                <!-- Left: Name / Value -->
+                <div class="text-gray-800 font-medium flex items-center gap-2">
+                  {{ dynamic.value }}
+                  <span v-if="dynamic.currentuser" :id="dynamic.currentuser ? 'currentUserCard' : null"
+                    class="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
+                    YOU
+                  </span>
+                </div>
 
-                    <!-- If current user and response is 1, show approved text -->
-                    <span v-else-if="dynamic.currentuser && dynamic.response === 1"
-                      class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full">
-                      SIGNED -
-                      {{
-                        new Date(dynamic.responsedate).toLocaleString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "numeric",
-                          hour12: true, // optional, for 12-hour format with AM/PM
-                        })
-                      }}
-                    </span>
+                <!-- Right: Status / Button -->
+                <div>
+                  <!-- If current user and response is 0, show approve button -->
+                  <button v-if="dynamic.currentuser && dynamic.response === 0"
+                    class="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-800" @click="postSigned()">
+                    SIGN
+                  </button>
 
-                    <!-- Other statuses for non-current users -->
-                    <span v-else-if="dynamic.response === 1"
-                      class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full">
-                      SIGNED -
-                      {{
-                        new Date(dynamic.responsedate).toLocaleString("en-US", {
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                          hour: "numeric",
-                          minute: "numeric",
-                          hour12: true, // optional, for 12-hour format with AM/PM
-                        })
-                      }}
-                    </span>
-                    <span v-else-if="dynamic.response === 0"
-                      class="inline-block px-3 py-1 text-sm font-semibold text-yellow-800 bg-yellow-100 rounded-full">
-                      PENDING
-                    </span>
-                    <span v-else
-                      class="inline-block px-3 py-1 text-sm font-semibold text-gray-600 bg-gray-200 rounded-full">
-                      UNKNOWN
-                    </span>
-                  </div>
+                  <!-- If current user and response is 1, show approved text -->
+                  <span v-else-if="dynamic.currentuser && dynamic.response === 1"
+                    class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full">
+                    SIGNED -
+                    {{
+                      new Date(dynamic.responsedate).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "numeric",
+                        hour12: true, // optional, for 12-hour format with AM/PM
+                      })
+                    }}
+                  </span>
+
+                  <!-- Other statuses for non-current users -->
+                  <span v-else-if="dynamic.response === 1"
+                    class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full">
+                    SIGNED -
+                    {{
+                      new Date(dynamic.responsedate).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "numeric",
+                        hour12: true, // optional, for 12-hour format with AM/PM
+                      })
+                    }}
+                  </span>
+                  <span v-else-if="dynamic.response === 0"
+                    class="inline-block px-3 py-1 text-sm font-semibold text-yellow-800 bg-yellow-100 rounded-full">
+                    PENDING
+                  </span>
+                  <span v-else
+                    class="inline-block px-3 py-1 text-sm font-semibold text-gray-600 bg-gray-200 rounded-full">
+                    UNKNOWN
+                  </span>
                 </div>
               </div>
+
             </div>
           </div>
         </div>
@@ -176,7 +180,7 @@
                     {{ approver.mainapprover ? "Main" : "Proxy" }}
                   </h2>
                 </div>
-                <div v-if="approver.isCurrentApprover">
+                <div v-if="approver.isCurrentApprover" :id="approver.isCurrentApprover ? 'currentApproverCard' : null">
                   <span class="bg-white text-black text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
                     You</span>
                 </div>
@@ -238,6 +242,7 @@
       </div>
     </div>
     <div v-if="!transactions.hasResponse" class="flex gap-1 items-center justify-end mb-0 mr-4 mt-3">
+       
       <button @click="postApprove()" v-if="transactions.hasCurrentApprover"
         class="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-800">
         Approve
@@ -248,6 +253,10 @@
       </button>
     </div>
     <div class="flex gap-1 items-center justify-end mb-0 mr-4 mt-3">
+      <button v-if="hasCurrentUserRef || transactions.hasResponse" type="button" @click="scrollToCurrentUser"
+        class="px-4 py-2 rounded-lg text-white text-sm font-semibold tracking-wide bg-blue-500 hover:bg-blue-600 active:bg-blue-700 shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 transition-colors duration-200">
+        Find My Name
+      </button>
       <button type="button" @click="moveToTransactions"
         class="px-4 py-2 rounded-lg text-gray-800 text-sm border-none outline-none tracking-wide bg-gray-200 hover:bg-gray-300 active:bg-gray-200">
         Close
@@ -280,9 +289,71 @@ const readyToRender = ref(false); // Flag to control rendering
 const signatureFile = ref();
 const formTitle = ref();
 const router = useRouter();
+const hasCurrentUserRef = ref(false);
+const isHighlighted = ref(false);
+const scrollToCurrentUser = () => {
+  // First try to find in signatures
+  let element = document.getElementById('currentUserCard');
 
+  // If not found, try to find in approvers
+  if (!element) {
+    element = document.getElementById('currentApproverCard');
+  }
 
-const refreshThankYou = async() => {
+  if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+   if (element) {
+    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // Trigger highlight animation
+    isHighlighted.value = true;
+    
+    // Remove highlight after animation completes
+    setTimeout(() => {
+      isHighlighted.value = false;
+    }, 2000);
+  }
+};
+const sortAllSignatories = (groups) => {
+    console.log("herere",hasCurrentUserRef.value);
+  // if (!groups || !Array.isArray(groups)) return [];
+
+  // // Flatten all groups into one array
+  // const allSignatories = groups.flatMap(group => group.value || []);
+
+   if (!groups || !Array.isArray(groups)) {
+    if (hasCurrentUserRef) hasCurrentUserRef.value = false;
+    return [];
+  }
+
+  // Flatten all groups into one array
+  const allSignatories = groups.flatMap(group => group.value || []);
+
+  // Check if current user exists
+  if (hasCurrentUserRef) {
+    hasCurrentUserRef.value = allSignatories.some(
+      s => s.currentuser === true
+    );
+  }
+  console.log(hasCurrentUserRef.value);
+
+  // Sort: current user first, then pending, then alphabetical
+  return allSignatories.sort((a, b) => {
+    // Current user always comes first
+    if (a.currentuser && !b.currentuser) return -1;
+    if (!a.currentuser && b.currentuser) return 1;
+
+    // After current user, pending (response === 0) comes next
+    if (a.response === 0 && b.response !== 0) return -1;
+    if (a.response !== 0 && b.response === 0) return 1;
+
+    // If both have same status, sort alphabetically by value
+    return (a.value || '').localeCompare(b.value || '');
+  });
+};
+
+const refreshThankYou = async () => {
   showThankUPage.value = false;
   await checkusersignature($swal);
   await getTransaction(urltransactionId.value);
@@ -799,9 +870,6 @@ const createSignature = async (text) => {
   }
 };
 
-
-
-
 const postDisapprove = async () => {
   const { value: remarks } = await $swal.fire({
     title: "Are you sure?",
@@ -869,3 +937,17 @@ onMounted(async () => {
   readyToRender.value = true; // Set only if access is granted
 });
 </script>
+<style>
+@keyframes highlight-pulse {
+  0%, 100% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgb(254 240 138); /* yellow-200 */
+  }
+}
+
+.highlight-pulse {
+  animation: highlight-pulse 0.6s ease-in-out 3;
+ 
+}</style>

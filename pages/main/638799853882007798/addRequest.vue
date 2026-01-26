@@ -114,9 +114,24 @@
 
       <div v-for="(formObject, index) in formDetails.formObjects" :key="formObject.id" class="mb-6">
         <div>
-          <div v-if="formObject.objecttype !== 'LABEL'" class="flex justify-between">
+          <div v-if="formObject.objecttype !== 'LABEL' && formObject.objecttype !== 'DYNAMICSIGNATORY'"
+            class="flex justify-between">
             <label class="text-gray-700 font-semibold mb-2 break-all block">
               {{ formObject.label }}
+              <span v-if="formObject.isrequired === 1" class="text-red-500 text-sm">
+                *
+              </span>
+            </label>
+          </div>
+          <div v-if="formObject.objecttype == 'DYNAMICSIGNATORY'" class="flex justify-between">
+            <label class="text-gray-700 font-semibold mb-2 break-all block flex items-center gap-2">
+              {{ formObject.label }}
+
+              <!-- Count Badge -->
+              <span class="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                {{ (formAnswers[formObject.id] || []).length }}
+              </span>
+
               <span v-if="formObject.isrequired === 1" class="text-red-500 text-sm">
                 *
               </span>
@@ -129,17 +144,14 @@
             </h3>
           </div>
           <div v-else-if="formObject.objecttype === 'TEXT'">
-            <input type="text" v-model="formAnswers[formObject.id]" 
-            :style="{
+            <input type="text" v-model="formAnswers[formObject.id]" :style="{
               textTransform:
                 formObject.charactercase === 'upper'
                   ? 'uppercase'
                   : formObject.charactercase === 'lower'
                     ? 'lowercase'
                     : 'none'
-            }" 
-            maxlength="55" 
-            :class="[
+            }" maxlength="55" :class="[
               'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
               formErrors[formObject.id]
                 ? 'border-red-500 focus:ring-red-500'
@@ -166,16 +178,14 @@
             ]" />
 
           <div v-else-if="formObject.objecttype === 'TEXTAREA'">
-            <textarea v-model="formAnswers[formObject.id]"
-             :style="{
+            <textarea v-model="formAnswers[formObject.id]" :style="{
               textTransform:
                 formObject.charactercase === 'upper'
                   ? 'uppercase'
                   : formObject.charactercase === 'lower'
                     ? 'lowercase'
                     : 'none'
-            }" 
-             maxlength="250" :class="[
+            }" maxlength="250" :class="[
               'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
               formErrors[formObject.id]
                 ? 'border-red-500 focus:ring-red-500'
@@ -241,22 +251,19 @@
                 formObject.autoFillUser == 0
                   ? openModal(formObject.id, 'textfromsource')
                   : null
-                " readonly type="text"
-                 v-model="formDisplays[formObject.id]"
-                  :style="{
-              textTransform:
-                formObject.charactercase === 'upper'
-                  ? 'uppercase'
-                  : formObject.charactercase === 'lower'
-                    ? 'lowercase'
-                    : 'none'
-                    }" 
-                maxlength="55" :class="[
-                  'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-                  formErrors[formObject.id]
-                    ? 'border-red-500 focus:ring-red-500'
-                    : 'border-gray-300 focus:ring-blue-500',
-                ]" />
+                " readonly type="text" v-model="formDisplays[formObject.id]" :style="{
+                  textTransform:
+                    formObject.charactercase === 'upper'
+                      ? 'uppercase'
+                      : formObject.charactercase === 'lower'
+                        ? 'lowercase'
+                        : 'none'
+                }" maxlength="55" :class="[
+                      'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+                      formErrors[formObject.id]
+                        ? 'border-red-500 focus:ring-red-500'
+                        : 'border-gray-300 focus:ring-blue-500',
+                    ]" />
               <button v-if="formObject.autoFillUser == 0" @click="openModal(formObject.id, 'textfromsource')"
                 class="ml-2 px-4 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg">
                 <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -267,7 +274,7 @@
               </button>
 
             </div>
-           
+
           </div>
 
           <div v-else-if="formObject.objecttype === 'DYNAMICSIGNATORY'">
@@ -300,17 +307,14 @@
             </div>
           </div>
           <div v-else-if="formObject.objecttype === 'LINKTOOBJECT'">
-            <input disabled type="text"
-             v-model="formAnswers[formObject.id]"
-              :style="{
+            <input disabled type="text" v-model="formAnswers[formObject.id]" :style="{
               textTransform:
                 formObject.charactercase === 'upper'
                   ? 'uppercase'
                   : formObject.charactercase === 'lower'
                     ? 'lowercase'
                     : 'none'
-            }"  
-             :class="[
+            }" :class="[
               'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
               formErrors[formObject.id]
                 ? 'border-red-500 focus:ring-red-500'
@@ -739,21 +743,21 @@ const submitAnswers = async () => {
     }
   });
 
- Object.entries(formAnswers.value).forEach(([id, val]) => {
-  const obj = formDetails.value.formObjects.find(f => f.id == id);
-  if (!obj) return;
+  Object.entries(formAnswers.value).forEach(([id, val]) => {
+    const obj = formDetails.value.formObjects.find(f => f.id == id);
+    if (!obj) return;
 
-  // Apply case transform ONLY for specific object types
-  const allowedTypes = ["TEXT", "TEXTAREA", "TEXTFROMSOURCE", "LINKTOOBJECT"];
+    // Apply case transform ONLY for specific object types
+    const allowedTypes = ["TEXT", "TEXTAREA", "TEXTFROMSOURCE", "LINKTOOBJECT"];
 
-  if (!allowedTypes.includes(obj.objecttype)) return;
+    if (!allowedTypes.includes(obj.objecttype)) return;
 
-  if (obj.charactercase === "upper" && val) {
-    formAnswers.value[id] = val.toUpperCase();
-  } else if (obj.charactercase === "lower" && val) {
-    formAnswers.value[id] = val.toLowerCase();
-  }
-});
+    if (obj.charactercase === "upper" && val) {
+      formAnswers.value[id] = val.toUpperCase();
+    } else if (obj.charactercase === "lower" && val) {
+      formAnswers.value[id] = val.toLowerCase();
+    }
+  });
 
   if (Object.keys(formErrors.value).length > 0) {
     isSubmitting.value = false;

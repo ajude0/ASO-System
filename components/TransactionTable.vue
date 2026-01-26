@@ -316,12 +316,12 @@
                           transaction.title
                         )
                         " class="hover:bg-blue-100 rounded-full p-2" title="Download Transaction" :disabled="!transaction.templatepath ||
-                            !!isDownloading?.[transaction.id]
-                            " :class="{
-                            'opacity-50 cursor-not-allowed':
-                              !!isDownloading?.[transaction.id] ||
-                              !transaction.templatepath,
-                          }">
+                          !!isDownloading?.[transaction.id]
+                          " :class="{
+                              'opacity-50 cursor-not-allowed':
+                                !!isDownloading?.[transaction.id] ||
+                                !transaction.templatepath,
+                            }">
                         <template v-if="isDownloading?.[transaction.id]">
                           <!-- Spinner -->
                           <svg class="animate-spin w-5 h-5 text-blue-800" viewBox="0 0 24 24">
@@ -508,8 +508,8 @@
               </span>
             </div>
             <div v-else-if="item.objectType === 'DYNAMICSIGNATORY'">
-              <div v-for="(group, groupIndex) in item?.dynamicsignatoriesvalues" :key="groupIndex">
-                <div v-for="(dynamic, index) in group.value" :key="index" class="mb-6">
+             <div v-for="(dynamic, index) in sortAllSignatories(item.dynamicsignatoriesvalues)" :key="index"
+              class="mb-4">
                   <div class="flex items-center justify-between p-4 border rounded-lg bg-gray-50 shadow-sm mb-4">
                     <!-- Left: Name / Value -->
                     <div class="text-gray-800 font-medium">
@@ -547,7 +547,6 @@
                   </div>
                 </div>
               </div>
-            </div>
           </div>
           <div v-for="(approverGroup, approverNumber) in transactions.approvers" :key="approverNumber"
             class="mt-2 p-4 bg-gray-50 rounded-lg">
@@ -706,6 +705,27 @@ const router = useRouter();
 const showAllApprovers = ref({});
 const id = ref();
 
+const sortAllSignatories = (groups) => {
+  if (!groups || !Array.isArray(groups)) return [];
+
+  // Flatten all groups into one array
+  const allSignatories = groups.flatMap(group => group.value || []);
+
+  // Sort: current user first, then pending, then alphabetical
+  return allSignatories.sort((a, b) => {
+    // Current user always comes first
+    if (a.currentuser && !b.currentuser) return -1;
+    if (!a.currentuser && b.currentuser) return 1;
+
+    // After current user, pending (response === 0) comes next
+    if (a.response === 0 && b.response !== 0) return -1;
+    if (a.response !== 0 && b.response === 0) return 1;
+
+    // If both have same status, sort alphabetically by value
+    return (a.value || '').localeCompare(b.value || '');
+  });
+};
+
 function goToCreateRequest() {
   router.push("/main/638799853882007798/addRequest");
 }
@@ -808,53 +828,226 @@ const email = async () => {
 }
 
 // 🔹 Function just for creating a new signature
-const createSignature = async (id, title) => {
-  const { value: signature, isConfirmed } = await $swal.fire({
-    title: `Create your own signature`,
+const removeWhiteBackground = (file) => {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = () => (img.src = reader.result);
+    reader.readAsDataURL(file);
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0);
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+
+      // Remove white / near-white pixels
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+
+        if (r > 245 && g > 245 && b > 245) {
+          data[i + 3] = 0; // transparent
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+
+      canvas.toBlob((blob) => resolve(blob), "image/png", 1);
+    };
+  });
+};
+
+const createSignature = async (text) => {
+  const { value: result, isConfirmed } = await $swal.fire({
+    title: "Create your own signature",
     html: `
-      <div style="display:flex; flex-direction:column; align-items:center; gap:1rem; width:100%;">
-        <label style="font-weight:600; font-size:16px;">Please sign below:</label>
-        <canvas id="signature-pad" width="700" height="250" 
-          style="border:2px dashed #9ca3af; border-radius:12px; background:#f9fafb; width:100%; max-width:700px; height:250px;"></canvas>
-        
-        <div style="display:flex; align-items:center; gap:10px; width:100%; max-width:700px; margin-top:12px;">
-          <label style="font-size:14px; font-weight:600;">Stroke:</label>
-          <input id="thickness-slider" type="range" min="1" max="10" value="4" style="flex:1; cursor:pointer;">
-          <span id="thickness-value" style="min-width:25px; text-align:center; font-weight:600;">4</span>
+      <div style="display:flex; flex-direction:column; gap:16px; width:100%; align-items:center;">
+
+        <label style="font-weight:600;">Choose how you want to sign:</label>
+        <div style="display:flex; gap:16px;">
+          <label><input type="radio" name="sigType" value="draw" checked /> Draw</label>
+          <label><input type="radio" name="sigType" value="upload" /> Upload</label>
         </div>
 
-        <button id="clear-signature" class="swal2-cancel swal2-styled" 
-          style="margin-top:12px; background:#ef4444; border-radius:6px; padding:8px 16px; font-size:14px;">
-          Clear Signature
-        </button>
+        <!-- DRAW SIGNATURE -->
+        <div id="draw-wrapper" style="width:100%; text-align:center;">
+          <label style="font-weight:600;">Please sign below:</label>
+          <canvas id="signature-pad" width="700" height="250"
+            style="border:2px dashed #9ca3af; border-radius:12px; background:#f9fafb; width:100%; max-width:700px;">
+          </canvas>
 
-        <div style="text-align:left; width:100%; max-width:700px; margin-top:16px;">
+          <div style="display:flex; align-items:center; gap:10px; max-width:700px; margin:12px auto 0;">
+            <label>Stroke:</label>
+            <input id="thickness-slider" type="range" min="1" max="10" value="4" style="flex:1;">
+            <span id="thickness-value">4</span>
+          </div>
+
+          <button id="clear-signature" class="swal2-cancel swal2-styled"
+            style="margin-top:12px; background:#ef4444;">
+            Clear Signature
+          </button>
+        </div>
+
+        <!-- UPLOAD SIGNATURE -->
+        <div id="upload-wrapper"
+          style="display:none; width:100%; max-width:700px; text-align:center;">
+          <label style="font-weight:600;">Upload signature (PNG/JPG):</label>
+          <input type="file" id="signature-upload"
+            accept="image/png,image/jpeg"
+            style="display:block; margin:8px auto;" />
+
+          <img id="upload-preview"
+            style="
+              display:none;
+              margin:12px auto 0;
+              max-height:150px;
+              border:1px solid #e5e7eb;
+              border-radius:8px;
+            " />
+        </div>
+
+        <!-- TERMS -->
+        <div style="width:100%; max-width:700px; text-align:left;">
           <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
-            <input type="checkbox" id="agree-terms">
-            <span>I have read and agree to the <span style="color:#3b82f6; text-decoration:underline; cursor:pointer;">Terms and Conditions</span></span>
+            <input type="checkbox" id="agree-terms" />
+            <span>
+              I have read and agree to the
+              <span id="open-terms"
+                style="color:#3b82f6; text-decoration:underline; cursor:pointer;">
+                Terms and Conditions
+              </span>
+            </span>
           </label>
         </div>
+
       </div>
     `,
     width: 800,
-    focusConfirm: false,
     showCancelButton: true,
     confirmButtonText: "Confirm Signature",
     cancelButtonText: "Cancel",
+    focusConfirm: false,
+
     didOpen: () => {
       const canvas = document.getElementById("signature-pad");
       const thicknessSlider = document.getElementById("thickness-slider");
       const thicknessValue = document.getElementById("thickness-value");
+      const uploadInput = document.getElementById("signature-upload");
+      const uploadPreview = document.getElementById("upload-preview");
       const agreeCheckbox = document.getElementById("agree-terms");
+      const openTerms = document.getElementById("open-terms");
+
+      const drawWrapper = document.getElementById("draw-wrapper");
+      const uploadWrapper = document.getElementById("upload-wrapper");
+
+      const radios = document.querySelectorAll('input[name="sigType"]');
 
       const signaturePad = new SignaturePad(canvas, {
-        backgroundColor: "rgba(255,255,255,0)",
         penColor: "black",
         minWidth: 2,
         maxWidth: 5,
       });
 
-      // Stroke slider
+      // ================= TERMS MODAL =================
+      const showTermsModal = () => {
+        if (document.getElementById("terms-popup")) return;
+
+        const termsHtml = `
+          <div id="terms-popup"
+            style="
+              position:fixed;
+              inset:0;
+              background:rgba(0,0,0,0.5);
+              display:flex;
+              align-items:center;
+              justify-content:center;
+              z-index:99999;
+            ">
+            <div style="
+              background:white;
+              width:90%;
+              max-width:600px;
+              border-radius:12px;
+              padding:20px;
+              box-shadow:0 10px 20px rgba(0,0,0,0.2);
+            ">
+              <h2 style="font-weight:600; font-size:18px; margin-bottom:10px;">
+                Terms and Conditions
+              </h2>
+
+              <div style="
+                max-height:300px;
+                overflow-y:auto;
+                border:1px solid #e5e7eb;
+                padding:10px;
+                border-radius:8px;
+                font-size:14px;
+                line-height:1.6;
+                margin-bottom:16px;
+              ">
+                <ol style="padding-left:1.2rem;">
+                  <li>The signature provided is legally binding.</li>
+                  <li>The signature belongs to the account holder.</li>
+                  <li>Falsification may result in disciplinary action.</li>
+                  <li>The organization may verify authenticity.</li>
+                  <li>Data is handled per data protection policies.</li>
+                </ol>
+              </div>
+
+              <div style="text-align:right;">
+                <button id="close-terms"
+                  style="
+                    background:#3b82f6;
+                    color:white;
+                    padding:8px 16px;
+                    border:none;
+                    border-radius:6px;
+                    cursor:pointer;
+                  ">
+                  I Understand
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+
+        document.body.insertAdjacentHTML("beforeend", termsHtml);
+
+        document.getElementById("close-terms").addEventListener("click", () => {
+          document.getElementById("terms-popup")?.remove();
+          agreeCheckbox.checked = true;
+        });
+      };
+
+      agreeCheckbox.addEventListener("change", (e) => {
+        if (e.target.checked) showTermsModal();
+      });
+
+      openTerms.addEventListener("click", showTermsModal);
+
+      // Toggle draw / upload
+      radios.forEach((radio) => {
+        radio.addEventListener("change", () => {
+          if (radio.value === "draw" && radio.checked) {
+            drawWrapper.style.display = "block";
+            uploadWrapper.style.display = "none";
+          } else {
+            drawWrapper.style.display = "none";
+            uploadWrapper.style.display = "block";
+            signaturePad.clear();
+          }
+        });
+      });
+
+      // Stroke thickness
       thicknessSlider.addEventListener("input", (e) => {
         const value = parseInt(e.target.value);
         thicknessValue.textContent = value;
@@ -862,99 +1055,73 @@ const createSignature = async (id, title) => {
         signaturePad.maxWidth = value;
       });
 
-      // Clear signature
+      // Clear canvas
       document
         .getElementById("clear-signature")
-        ?.addEventListener("click", () => signaturePad.clear());
+        .addEventListener("click", () => signaturePad.clear());
 
-      // Show Terms popup automatically when checkbox is checked
-      agreeCheckbox.addEventListener("change", (e) => {
-        if (e.target.checked) {
-          const termsHtml = `
-            <div id="terms-popup" 
-              style="
-                position: fixed; 
-                top: 0; left: 0; 
-                width: 100vw; height: 100vh; 
-                background: rgba(0,0,0,0.5);
-                display: flex; align-items: center; justify-content: center;
-                z-index: 99999;
-              ">
-              <div style="
-                background: white; 
-                width: 90%; max-width: 600px; 
-                border-radius: 12px; 
-                padding: 20px; 
-                box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-              ">
-                <h2 style="font-weight:600; font-size:18px; margin-bottom:10px;">Terms and Conditions</h2>
-                <div style="max-height:300px; overflow-y:auto; border:1px solid #e5e7eb; padding:10px; border-radius:8px; font-size:14px; line-height:1.6; margin-bottom:16px;">
-  <ul style="padding-left:1.2rem; list-style-type: disc;">
-    <li>By signing digitally, you confirm that all information provided is true, accurate, and complete to the best of your knowledge.</li>
-    <li>Your electronic signature is legally binding and holds the same validity as a handwritten signature under applicable laws.</li>
-    <li>Any falsification, misrepresentation, or misuse of another person’s signature may result in disciplinary and legal action.</li>
-    <li>The organization may verify, audit, and validate submitted data, approvals, and documents for authenticity and compliance.</li>
-    <li>All submissions and approvals are electronically recorded, timestamped, and traceable for accountability.</li>
-    <li>Personal and signature data are processed and retained in accordance with data privacy laws and company policy.</li>
-    <li>By proceeding, you authorize the organization to recognize your electronic signature for all official system transactions.</li>
-    <li>You are responsible for safeguarding your account credentials. The organization is not liable for unauthorized use due to negligence.</li>
-    <li>The organization may update these Terms and Conditions without prior notice. Continued use signifies acceptance of any changes.</li>
-  </ul>
-</div>
-                <div style="text-align:right;">
-                  <button id="close-terms" 
-                    style="background:#3b82f6; color:white; padding:8px 16px; border:none; border-radius:6px; cursor:pointer;">
-                    I Understand
-                  </button>
-                </div>
-              </div>
-            </div>
-          `;
-
-          document.body.insertAdjacentHTML("beforeend", termsHtml);
-
-          document
-            .getElementById("close-terms")
-            .addEventListener("click", () => {
-              document.getElementById("terms-popup")?.remove();
-              agreeCheckbox.checked = true; // keep it checked after reading
-            });
-        }
+      // Upload preview
+      uploadInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          uploadPreview.src = reader.result;
+          uploadPreview.style.display = "block";
+        };
+        reader.readAsDataURL(file);
       });
 
       window.signaturePadInstance = signaturePad;
     },
+
     preConfirm: () => {
       const signaturePad = window.signaturePadInstance;
-      const agreeCheckbox = document.getElementById("agree-terms");
+      const agree = document.getElementById("agree-terms");
+      const uploadInput = document.getElementById("signature-upload");
+      const sigType = document.querySelector(
+        'input[name="sigType"]:checked'
+      )?.value;
 
-      if (!signaturePad || signaturePad.isEmpty()) {
+      if (!agree.checked) {
         $swal.showValidationMessage(
-          "✍️ Please provide a signature before confirming."
+          "Please agree to the Terms and Conditions."
         );
         return false;
       }
 
-      if (!agreeCheckbox.checked) {
-        $swal.showValidationMessage(
-          "You must agree to the Terms and Conditions to create a signature."
-        );
+      if (sigType === "draw") {
+        if (!signaturePad || signaturePad.isEmpty()) {
+          $swal.showValidationMessage("Please draw your signature.");
+          return false;
+        }
+        return { type: "draw", data: signaturePad.toDataURL("image/png") };
+      }
+
+      if (!uploadInput.files.length) {
+        $swal.showValidationMessage("Please upload a signature image.");
         return false;
       }
 
-      return signaturePad.toDataURL("image/png");
+      return { type: "upload", file: uploadInput.files[0] };
     },
   });
 
-  if (isConfirmed && signature) {
-    loading.value = true;
-    const byteString = atob(signature.split(",")[1]);
-    const mimeString = signature.split(",")[0].split(":")[1].split(";")[0];
-    const ab = new ArrayBuffer(byteString.length);
-    const ia = new Uint8Array(ab);
-    for (let i = 0; i < byteString.length; i++)
-      ia[i] = byteString.charCodeAt(i);
-    const blob = new Blob([ab], { type: mimeString });
+  // ================= SAVE SIGNATURE =================
+  if (isConfirmed && result) {
+    let blob;
+
+    if (result.type === "draw") {
+      const byteString = atob(result.data.split(",")[1]);
+      const mimeString = result.data.split(",")[0].split(":")[1].split(";")[0];
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++)
+        ia[i] = byteString.charCodeAt(i);
+      blob = new Blob([ab], { type: mimeString });
+    } else {
+      blob = await removeWhiteBackground(result.file);
+    }
 
     const formData = new FormData();
     formData.append("signaturefile", blob, "signature.png");
@@ -965,6 +1132,7 @@ const createSignature = async (id, title) => {
     loading.value = false;
   }
 };
+
 
 const getApprovalStatus = (approverGroup) => {
   if (!Array.isArray(approverGroup)) return "pending"; // fallback

@@ -11,7 +11,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   const pageName = to.name as string;
 
   if (!allPages.includes(pageName)) {
-    alert('Unauthorized!');
+    alert('Unauthorized Access!');
     return navigateTo("/main/dashboard");
   }
 });

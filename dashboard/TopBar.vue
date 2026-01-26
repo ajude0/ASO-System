@@ -101,7 +101,7 @@ import { ref } from 'vue';
 import { toggleSidebar } from "./store";
 import { getProfile, user } from "~/js/fetchUserProfile";
 import { getKey, encryptData } from '~/encrpyt';
-import { getToken } from '~/js/cryptoToken';
+import { clearAsoStorage, getToken } from '~/js/cryptoToken';
 import { fetchSysDescription, sysdescription} from '~/js/fetchMenu';
 const router = useRouter();
 const userImage = ref("")
@@ -159,9 +159,7 @@ function toggleDropdown() {
 
 
 function Logout() {
-  localStorage.removeItem('user_token_aso');
-  localStorage.removeItem('aso_urltransactionId');
-  localStorage.removeItem('documenturlid');
+  clearAsoStorage();
   router.push('/')
 }
 

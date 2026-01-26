@@ -26,7 +26,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   }
 
   if (!token && to.path !== "/") {
-    alert('Unauthorized! Please log in first.');
+    alert("Unauthorized access. Your session has expired. Please log in again.");
     return navigateTo("/"); 
   }
 });

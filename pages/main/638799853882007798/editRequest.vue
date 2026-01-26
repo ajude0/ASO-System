@@ -61,7 +61,7 @@
       :key="index"
       class="mb-6"
     >
-      <div v-if="item.objecttype !== 'LABEL'" class="flex justify-between">
+      <div v-if="item.objecttype !== 'LABEL' && item.objecttype != 'DYNAMICSIGNATORY'" class="flex justify-between">
         <label class="text-gray-700 font-semibold mb-2">
           {{ item.label }}
           <span v-if="item.isRequired === 1" class="text-red-500 text-sm">
@@ -69,6 +69,20 @@
           >
         </label>
       </div>
+        <div v-if="item.objecttype == 'DYNAMICSIGNATORY'" class="flex justify-between">
+            <label class="text-gray-700 font-semibold mb-2 break-all block flex items-center gap-2">
+              {{ item.label }}
+
+              <!-- Count Badge -->
+              <span class="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                 {{ (item?.values || []).filter(v => v.formobjecttype === 'DYNAMICSIGNATORY').length }}
+              </span>
+
+              <span v-if="item.isRequired === 1" class="text-red-500 text-sm">
+                *
+              </span>
+            </label>
+          </div>
 
       <div v-if="item.objecttype === 'LABEL'">
         <hr class="my-4 border-gray-400" />
