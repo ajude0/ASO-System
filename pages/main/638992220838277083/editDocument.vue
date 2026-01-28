@@ -13,6 +13,8 @@ import { fetchDocumentPdf, pdfFile } from "~/js/fetchDocumentPdf";
 import { fetchDocumentTitle, title } from "~/js/fetchDocumentTitle";
 import { checkDocumentSignature } from "~/js/checkdocumentsignature";
 import { emailsignaturereminder } from "~/js/emailsignaturereminder";
+import LoadingModal from "~/components/modal/LoadingModal.vue";
+
 // State
 const { $swal } = useNuxtApp();
 const isSigningModalOpen = ref(false);
@@ -21,6 +23,7 @@ const signatureFile = ref(null);
 const currentUserName = ref();
 const currentEmplId = ref();
 const pdfTitle = ref();
+const loading = ref(true);
 
 const formatDateToISO = (d) => {
     const [month, day, year] = d.split('-')
@@ -763,6 +766,7 @@ const saveFinalPdf = async () => {
     }
 };
 onMounted(async () => {
+    loading.value = true;
     await getProfile();
     signatureFile.value = await getusersignature($swal);
     currentEmplId.value = user.value.empid;
@@ -772,12 +776,15 @@ onMounted(async () => {
     await fetchDocumentPdf(documentid);
     await fetchDocumentTitle(documentid);
     pdfTitle.value = title.value;
-    console.log(prePlacedSignatures.value);
+    loading.value = false;
 });
 </script>
 
 <template>
-    <div class="min-h-screen bg-gray-50 p-8">
+    <div v-if="loading">
+        <LoadingModal />
+    </div>
+    <div v-else class="min-h-screen bg-gray-50 p-8">
         <div class="mx-auto">
             <div class="mb-8">
                 <h1 class="text-3xl font-bold text-gray-900 mb-2">

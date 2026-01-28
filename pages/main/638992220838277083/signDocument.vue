@@ -74,6 +74,7 @@ import { getusersignature } from "~/js/checkusersignature";
 import { checkDocumentSignature } from '~/js/checkdocumentsignature';
 import ViewSignatureBoxPlacement from '~/components/ViewSignatureBoxPlacement.vue';
 import ThankYouPage from '~/components/ThankYouPage.vue';
+import LoadingModal from '~/components/modal/LoadingModal.vue';
 
 const { $swal } = useNuxtApp();
 const documentId = ref();
@@ -85,6 +86,7 @@ const signatureFile = ref(null);
 const isViewingModalopen = ref(false);
 const canViewPage = ref(false);
 const showThankYouPage = ref(false);
+const loading = ref(true);
 
 
 const getUserStats = (userName) => {
@@ -526,6 +528,7 @@ definePageMeta({
 });
 
 onMounted(async () => {
+    loading.value = true;
     await getProfile();
     currentEmplId.value = user.value.empid;
     currentUserName.value = user.value.requestorname;
@@ -535,7 +538,7 @@ onMounted(async () => {
     await fetchDocumentTitle(documentId.value);
     pdfTitle.value = title.value;
     signatureFile.value = await getusersignature($swal);
-
+    loading.value = false;
 });
 
 </script>
