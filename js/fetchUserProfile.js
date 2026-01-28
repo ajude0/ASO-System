@@ -1,8 +1,9 @@
 import { getToken } from "./cryptoToken";
 import { API_BASE_URL } from "~/config";
-export const user = ref();
+export const user = ref({});
 
 export const getProfile = async () => {
+  
   const token = getToken();
   try {
     const response = await $fetch(`${API_BASE_URL}/api/account/get-profile`, {
@@ -11,7 +12,7 @@ export const getProfile = async () => {
       },
     });
     user.value = response;
-    console.log(user.value);
+   
   } catch (error) {
     console.error("Error fetching menus:", error);
   }

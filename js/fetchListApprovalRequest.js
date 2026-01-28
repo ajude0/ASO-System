@@ -5,6 +5,8 @@ export const query = ref({
   Search: "",
   Status:"",
   IsApproved: "",
+  SortBy: 'Createddate',  // default sort (backend fallback also handles this)
+  IsDescending: true,
   PageNumber: 1,
   PageSize: 5,
 });
@@ -36,7 +38,6 @@ export const getListOfTransactions = async () => {
     listOfTransactions.value = response.transactions;
     totalEntries.value = response.totalCount;
     totalPages.value = Math.ceil(response.totalCount / query.value.PageSize);
-
   } catch (error) {
     console.error("Error fetching transactions:", error.message || error);
   } finally {
@@ -44,7 +45,24 @@ export const getListOfTransactions = async () => {
   }
 };
 
-export const confirmApproval = async (id,remarks) => {
+
+export const sortBy = (column) => {
+  if (query.value.SortBy === column) {
+    // reverse direction if same column clicked again
+    query.value.IsDescending = !query.value.IsDescending
+  } else {
+    query.value.SortBy = column
+    query.value.IsDescending = false
+  }
+  getListOfTransactions()
+}
+
+export const changePageSize = () => {
+  query.value.PageNumber = 1 // reset to first page
+  getListOfTransactions()
+}
+
+export const confirmApproval = async (id,formData) => {
   const token = getToken();
   try {
     await $fetch(`${API_BASE_URL}/api/Approver/approved/${id}`, {
@@ -52,7 +70,7 @@ export const confirmApproval = async (id,remarks) => {
       headers: {
         token: token,
       },
-      body: JSON.stringify({ remarks }),
+      body:formData ,
     });
     getListOfTransactions();
   } catch (error) {
@@ -60,19 +78,33 @@ export const confirmApproval = async (id,remarks) => {
   }
 };
 
-export const rejectApproval = async (id,remarks) => {
+export const disapproveApproval = async (id,remarks,$swal) => {
   const token = getToken();
   try {
-    await $fetch(`${API_BASE_URL}/api/Approver/rejected/${id}`, {
+    await $fetch(`${API_BASE_URL}/api/Approver/disapproved/${id}`, {
       method: "POST",
       headers: {
         token: token,
       },
       body: JSON.stringify({ remarks }),
     });
+    $swal.fire({
+      title: "Disapproved!",
+      text: "The request has been disapproved.",
+      icon: "success",
+      timer: 1000,
+      showConfirmButton: false,
+    });
     getListOfTransactions();
+    
   } catch (error) {
     console.error("Error fetching transactions:", error);
+    $swal.fire({
+      icon: "error",
+      title: "Error",
+      text:  "Failed to disapproved transaction.",
+    });
+    
   }
 };
 
