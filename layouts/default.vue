@@ -34,12 +34,17 @@ watch(route, () => {
   <div class="">
     <div class="flex items-start">
       <Overlay />
-      <Sidebar mobile-orientation="end" />
-      <div class="flex h-screen w-full flex-col pl-0 lg:space-y-4">
+     <Sidebar mobile-orientation="start" />
+      <div class="flex flex-col min-h-screen w-full overflow-x-auto">
         <TopBar />
-        <main class="h-screen overflow-auto px-2 pb-36 pt-4 md:pb-8 lg:px-4">
-          <slot />
-          <Footer />
+        <main class="flex-1 overflow-auto md:pb-8 lg:px-4 relative">
+          <!-- Added relative here -->
+          <div class="relative h-[85vh] overflow-auto shadow-md">
+            <!-- Wrapper div for slot content -->
+            <slot />
+            <!-- Moved inside the slot wrapper -->
+            <Footer />
+          </div>    
         </main>
       </div>
     </div>

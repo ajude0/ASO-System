@@ -280,20 +280,46 @@
           <div v-else-if="formObject.objecttype === 'DYNAMICSIGNATORY'">
             <!-- Render each name as its own input -->
             <div v-for="(name, index) in formAnswers[formObject.id] || []" :key="index"
-              class="mb-2 flex items-center gap-2">
-              <input readonly type="text" v-model="getDisplayBinding(formObject.id, index).value" maxlength="55" :class="[
-                'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-                formErrors[formObject.id]
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-gray-300 focus:ring-blue-500',
-              ]" />
+  class="mb-3">
+  
+  <div class="group flex items-center gap-4 p-3 rounded-lg border border-gray-200 bg-white hover:shadow-sm transition-all">
+    <!-- Colored Bar Indicator -->
+    <div class="w-1 h-12 rounded-full bg-gradient-to-b from-blue-500 to-blue-600">
+    </div>
+    
+    <!-- Content -->
+    <div class="flex-1 min-w-0">
+      <!-- Name Row -->
+      <div class="flex items-baseline gap-2 mb-0.5">
+        <span class="text-gray-900 font-medium text-lg truncate">
+          {{ getDisplayBinding(formObject.id, index).value }}
+        </span>
+      </div>
+      
+      <!-- Meta Info -->
+      <div class="flex items-center gap-2 text-sm text-gray-500 font-medium">
+        <span v-if="getPositionName(formObject.id, index)" class="hover:text-gray-700 transition-colors">
+          {{ getPositionName(formObject.id, index) }}
+        </span>
+        <span v-if="getPositionName(formObject.id, index) && getBranchName(formObject.id, index)" class="w-1 h-1 rounded-full bg-gray-300"></span>
+        <span v-if="getBranchName(formObject.id, index)" class="hover:text-gray-700 transition-colors">
+          {{ getBranchName(formObject.id, index) }}
+        </span>
+      </div>
+    </div>
 
-              <!-- Remove Button -->
-              <button type="button" @click="removeAnswer(formObject.id, index)" class="text-red-600 hover:text-red-800"
-                title="Remove">
-                ✕
-              </button>
-            </div>
+    <!-- Remove Button -->
+    <button 
+      type="button" 
+      @click="removeAnswer(formObject.id, index)" 
+      class="w-8 h-8 flex items-center justify-center text-red-600 bg-red-50 rounded-full transition-all group-hover:opacity-100"
+      title="Remove">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+</div>
 
             <!-- Button to add new name (via modal) -->
             <div class="flex justify-center mt-2">
@@ -363,22 +389,63 @@
     </div>
   </div>
 
-  <div v-if="showModal" @click.self="showModal = false" @keydown.esc="showModal = false"
-    class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]">
+  <!-- Modal -->
+   <div v-if="showModal" 
+       @click.self="showModal = false" 
+       @keydown.esc="showModal = false"
+       class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]">
     <div class="w-full max-w-6xl bg-white shadow-lg rounded-lg p-6 relative">
+      
+      <!-- Show tagged users inside modal for dynamic signatory -->
+      <div v-if="objecttype === 'dynamicsignatory' && getTaggedUsers(storeId).length > 0" 
+           class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-semibold text-gray-700">
+            Currently Tagged: 
+            <span class="text-blue-600">({{ getTaggedUsers(storeId).length }})</span>
+          </h3>
+          
+          <!-- See More / See Less Button -->
+          
+        </div>
+        
+        <div class="flex flex-wrap gap-2">
+          <div v-for="(user, idx) in getDisplayedTaggedUsers(storeId)" 
+               :key="idx"
+               class="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+            <span>{{ user.value }}</span>
+            <button @click.stop="removeTaggedUser(storeId, getTaggedUsers(storeId).findIndex(u => u.display === user.display))"
+                    class="text-blue-600 hover:text-blue-800 font-bold text-lg leading-none">
+              ×
+            </button>
+          </div>
+               <button 
+            v-if="getTaggedUsers(storeId).length > 3"
+            @click="showAllTaggedUsers = !showAllTaggedUsers"
+            class="text-xs text-blue-600 hover:text-blue-800 font-medium underline">
+            {{ showAllTaggedUsers ? 'See Less' : `See More (${getTaggedUsers(storeId).length - 3})` }}
+          </button>
+        </div>
+      </div>
+
       <!-- Search Input -->
       <div class="flex gap-1 mb-1">
-        <input type="text" v-model="searchQuery" @keydown.enter="debouncedSearch(storeId)" placeholder="Enter to search"
-          ref="inputRef" class="w-full p-4 h-11 rounded border border-gray-600 focus:outline-none" />
+        <input type="text" 
+               v-model="searchQuery" 
+               @keydown.enter="debouncedSearch(storeId)" 
+               placeholder="Enter to search"
+               ref="inputRef" 
+               class="w-full p-4 h-11 rounded border border-gray-600 focus:outline-none" />
         <button @click="debouncedSearch(storeId)"
-          class="py-3 px-4 h-11 bg-blue-500 text-white rounded-md hover:bg-blue-700">
+                class="py-3 px-4 h-11 bg-blue-500 text-white rounded-md hover:bg-blue-700">
           <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-            width="24" height="24" fill="none" viewBox="0 0 24 24">
+               width="24" height="24" fill="none" viewBox="0 0 24 24">
             <path stroke="currentColor" stroke-linecap="round" stroke-width="2"
-              d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+                  d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
           </svg>
         </button>
       </div>
+      
       <!-- Dynamic Table -->
       <div class="bg-white max-h-96 overflow-auto flex flex-col rounded">
         <div class="flex flex-col">
@@ -389,21 +456,54 @@
                 <table v-if="!loading && justifications.length" class="table-auto min-w-full rounded-xl">
                   <thead>
                     <tr class="bg-gray-50 sticky top-0">
-                      <!-- Dynamically generate headers based on data -->
-                      <th v-for="header in Object.keys(
-                        justifications[0]?.all || {}
-                      )" :key="header" scope="col"
-                        class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize">
+                      <!-- Add checkbox column for dynamic signatory -->
+                      <th v-if="objecttype === 'dynamicsignatory'" 
+                          scope="col"
+                          class="p-5 text-center whitespace-nowrap text-sm leading-6 font-semibold text-gray-900">
+                        Tagged
+                      </th>
+                      <th v-for="header in Object.keys(justifications[0]?.all || {})" 
+                          :key="header" 
+                          scope="col"
+                          class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize">
                         {{ header }}
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(justification, index) in justifications" :key="index"
-                      @click="selectEmployee(storeId, justification)" class="hover:bg-gray-200 cursor-pointer">
-                      <!-- Dynamically populate rows -->
-                      <td v-for="header in Object.keys(justification.all)" :key="header"
-                        class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
+                    <tr v-for="(justification, index) in justifications" 
+                        :key="index"
+                        @click="selectEmployee(storeId, justification)" 
+                        :class="[
+                          'cursor-pointer transition-colors',
+                          isUserTagged(storeId, justification.display) 
+                            ? 'bg-blue-50 hover:bg-blue-100' 
+                            : 'hover:bg-gray-200'
+                        ]">
+                      <!-- Checkbox column for dynamic signatory -->
+                      <td v-if="objecttype === 'dynamicsignatory'" 
+                          class="p-5 text-center">
+                        <div class="flex items-center justify-center">
+                          <svg v-if="isUserTagged(storeId, justification.display)"
+                               class="w-6 h-6 text-blue-600" 
+                               aria-hidden="true" 
+                               xmlns="http://www.w3.org/2000/svg" 
+                               width="24" 
+                               height="24" 
+                               fill="currentColor" 
+                               viewBox="0 0 24 24">
+                            <path fill-rule="evenodd" 
+                                  d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm13.707-1.293a1 1 0 0 0-1.414-1.414L11 12.586l-1.293-1.293a1 1 0 0 0-1.414 1.414l2 2a1 1 0 0 0 1.414 0l4-4Z" 
+                                  clip-rule="evenodd"/>
+                          </svg>
+                          <div v-else 
+                               class="w-6 h-6 border-2 border-gray-300 rounded-full">
+                          </div>
+                        </div>
+                      </td>
+                      <td v-for="header in Object.keys(justification.all)" 
+                          :key="header"
+                          class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
                         {{ justification.all[header] }}
                       </td>
                     </tr>
@@ -425,10 +525,12 @@
           </div>
         </div>
       </div>
+      
       <!-- Buttons -->
       <div class="mt-4 flex justify-end gap-2">
-        <button @click="showModal = false" class="px-4 py-2 bg-red-500 text-white rounded-lg">
-          Cancel
+        <button @click="showModal = false" 
+                class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
+          {{ objecttype === 'dynamicsignatory' ? 'Done' : 'Cancel' }}
         </button>
       </div>
     </div>
@@ -558,8 +660,49 @@ function clearFormId() {
   selectedTitle.value = "";
 }
 
+// Add ref for showing all tagged users
+const showAllTaggedUsers = ref(false);
+
+// Add a function to check if a user is already tagged
+const isUserTagged = (fieldId, displayValue) => {
+  if (!formAnswers.value[fieldId] || !Array.isArray(formAnswers.value[fieldId])) {
+    return false;
+  }
+  
+  return formAnswers.value[fieldId].some(
+    item => item.type === "dynammicsignatory" && item.value === displayValue
+  );
+};
+
+const getTaggedUsers = (id) => {
+  if (!formAnswers.value[id] || !Array.isArray(formAnswers.value[id])) {
+    return [];
+  }
+  
+  return formAnswers.value[id].filter(
+    item => item.type === "dynammicsignatory"
+  );
+};
+
+// Get limited tagged users for display
+const getDisplayedTaggedUsers = (id, limit = 3) => {
+  const taggedUsers = getTaggedUsers(id);
+  if (showAllTaggedUsers.value) {
+    return taggedUsers;
+  }
+  return taggedUsers.slice(0, limit);
+};
+
+const removeTaggedUser = (fieldId, tagIndex) => {
+  if (formAnswers.value[fieldId] && Array.isArray(formAnswers.value[fieldId])) {
+    formAnswers.value[fieldId].splice(tagIndex, 1);
+  }
+};
+
+// Modified selectEmployee to handle both select and deselect
 const selectEmployee = (id, justification) => {
   console.log(id, justification);
+
   // Save hidden and visible data
   if (objecttype.value == "textfromsource") {
     formAnswers.value[id] = justification.display;
@@ -579,34 +722,62 @@ const selectEmployee = (id, justification) => {
         formAnswers.value[labelId] = value;
       }
     });
-  } else {
+    
+    showModal.value = false;
+  } else if (objecttype.value == "dynamicsignatory") {
+    // Handle dynamic signatory with select/deselect
     if (!Array.isArray(formAnswers.value[id])) {
       formAnswers.value[id] = [];
     }
 
     if (justification.display) {
-      if (typeof index.value === "number" && index.value >= 0) {
-        // ✅ Edit existing value
-        formAnswers.value[id][index.value] = justification.data;
-      } else if (
-        !formAnswers.value[id].some(
-          (item) =>
-            typeof item === "object" &&
-            item.type === "dynammicsignatory" &&
-            item.value === justification.display
-        )
-      ) {
-        // ✅ Push new value with type = "dynammicsignatory" (if not duplicate)
-        formAnswers.value[id].push({
-          type: "dynammicsignatory",
-          value: justification.display, // 🔒 save this as actual value
-          display: justification.data, // 👁️ used only for displaying in input
-        });
+      // Check if user is already tagged
+      const existingIndex = formAnswers.value[id].findIndex(
+        (item) =>
+          typeof item === "object" &&
+          item.type === "dynammicsignatory" &&
+          item.value === justification.display,
+          
+      );
+
+      if (existingIndex !== -1) {
+        // ❌ User is already tagged - DESELECT (remove)
+        formAnswers.value[id].splice(existingIndex, 1);
+        console.log('Deselected user:', justification.display);
+      } else {
+        // ✅ User is not tagged - SELECT (add)
+        if (typeof index.value === "number" && index.value >= 0) {
+          // Edit existing value at specific index
+          formAnswers.value[id][index.value] = {
+            type: "dynammicsignatory",
+            value: justification.display,
+            display: justification.data,
+            positionname: justification.all?.positionname || '',
+            branchname: justification.all?.branchname || '',
+          };
+        } else {
+          // Push new value
+          formAnswers.value[id].push({
+            type: "dynammicsignatory",
+            value: justification.display,
+            display: justification.data,
+            positionname: justification.all?.positionname || '',
+            branchname: justification.all?.branchname || '',
+          });
+        }
+        console.log('Selected user:', justification);
       }
     }
+    // Don't close modal for dynamic signatory to allow multiple selections
+  } else {
+    // Handle other types
+    if (justification.display) {
+      formAnswers.value[id] = justification.display;
+    }
+    showModal.value = false;
   }
+  
   index.value = "";
-  showModal.value = false;
 };
 
 const handleTextFromSource = (id) => {
@@ -648,6 +819,18 @@ const getDisplayBinding = (formId, index) =>
       }
     },
   });
+
+  // New helper to get position name
+const getPositionName = (formId, index) => {
+  const item = formAnswers.value[formId]?.[index];
+  return typeof item === "object" ? item.positionname || '' : '';
+};
+
+// New helper to get branch name
+const getBranchName = (formId, index) => {
+  const item = formAnswers.value[formId]?.[index];
+  return typeof item === "object" ? item.branchname || '' : '';
+};
 
 function removeAnswer(formId, index) {
   if (formAnswers.value[formId]) {

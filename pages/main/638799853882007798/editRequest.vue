@@ -1,26 +1,11 @@
 <template>
   <BreadCrumbs :nenunames="nenunames" />
-  <button
-    @click="backButton"
-    type="button"
-    class="flex items-center ms-6 mt-8 text-gray-700 hover:text-blue-600 transition-colors duration-200"
-  >
-    <svg
-      class="w-9 h-9"
-      aria-hidden="true"
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <path
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        stroke-width="2"
-        d="M5 12h14M5 12l4-4m-4 4 4 4"
-      />
+  <button @click="backButton" type="button"
+    class="flex items-center ms-6 mt-8 text-gray-700 hover:text-blue-600 transition-colors duration-200">
+    <svg class="w-9 h-9" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
+      viewBox="0 0 24 24">
+      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M5 12h14M5 12l4-4m-4 4 4 4" />
     </svg>
     <span class="text-lg font-bold">Back</span>
   </button>
@@ -56,33 +41,28 @@
         {{ transactions.description }}
       </h1>
     </div>
-    <div
-      v-for="(item, index) in transactions.formObjects"
-      :key="index"
-      class="mb-6"
-    >
+    <div v-for="(item, index) in transactions.formObjects" :key="index" class="mb-6">
       <div v-if="item.objecttype !== 'LABEL' && item.objecttype != 'DYNAMICSIGNATORY'" class="flex justify-between">
         <label class="text-gray-700 font-semibold mb-2">
           {{ item.label }}
           <span v-if="item.isRequired === 1" class="text-red-500 text-sm">
-            *</span
-          >
+            *</span>
         </label>
       </div>
-        <div v-if="item.objecttype == 'DYNAMICSIGNATORY'" class="flex justify-between">
-            <label class="text-gray-700 font-semibold mb-2 break-all block flex items-center gap-2">
-              {{ item.label }}
+      <div v-if="item.objecttype == 'DYNAMICSIGNATORY'" class="flex justify-between">
+        <label class="text-gray-700 font-semibold mb-2 break-all block flex items-center gap-2">
+          {{ item.label }}
 
-              <!-- Count Badge -->
-              <span class="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                 {{ (item?.values || []).filter(v => v.formobjecttype === 'DYNAMICSIGNATORY').length }}
-              </span>
+          <!-- Count Badge -->
+          <span class="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            {{(item?.values || []).filter(v => v.formobjecttype === 'DYNAMICSIGNATORY').length}}
+          </span>
 
-              <span v-if="item.isRequired === 1" class="text-red-500 text-sm">
-                *
-              </span>
-            </label>
-          </div>
+          <span v-if="item.isRequired === 1" class="text-red-500 text-sm">
+            *
+          </span>
+        </label>
+      </div>
 
       <div v-if="item.objecttype === 'LABEL'">
         <hr class="my-4 border-gray-400" />
@@ -94,107 +74,68 @@
       <div v-else class="rounded-md w-full text-gray-800">
         <div class="mb-2">
           <!-- LIST -->
-          <select
-            v-if="item.objecttype === 'LIST'"
-            :class="[
-              'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-              formErrors[index]
-                ? 'border-red-500 focus:ring-red-500'
-                : 'border-gray-300 focus:ring-blue-500',
-            ]"
-            v-model="item.value"
-          >
+          <select v-if="item.objecttype === 'LIST'" :class="[
+            'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+            formErrors[index]
+              ? 'border-red-500 focus:ring-red-500'
+              : 'border-gray-300 focus:ring-blue-500',
+          ]" v-model="item.value">
             <option hidden>Select {{ item.label }}</option>
-            <option
-              v-for="(option, optIndex) in item.options"
-              :key="optIndex"
-              :value="option"
-            >
+            <option v-for="(option, optIndex) in item.options" :key="optIndex" :value="option">
               {{ option }}
             </option>
           </select>
 
           <div v-else-if="item.objecttype === 'OPTION'">
-            <div
-              v-for="(option, optIndex) in item.options"
-              :key="optIndex"
-              class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition"
-            >
-              <input
-                type="radio"
-                :id="'radio-' + optIndex"
-                :value="option"
-                v-model="item.value"
-                class="w-6 h-6 text-blue-600 border-gray-300 focus:ring focus:ring-blue-400"
-              />
-              <label
-                :for="'radio-' + optIndex"
-                class="text-gray-700 font-medium cursor-pointer hover:text-blue-600 transition"
-              >
+            <div v-for="(option, optIndex) in item.options" :key="optIndex"
+              class="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition">
+              <input type="radio" :id="'radio-' + optIndex" :value="option" v-model="item.value"
+                class="w-6 h-6 text-blue-600 border-gray-300 focus:ring focus:ring-blue-400" />
+              <label :for="'radio-' + optIndex"
+                class="text-gray-700 font-medium cursor-pointer hover:text-blue-600 transition">
                 {{ option }}
               </label>
             </div>
           </div>
-          <input
-            v-else-if="item.objecttype === 'DATE'"
-            type="date"
-            :value="item.value || ''"
-            @input="item.value = $event.target.value.toString()"
-            :class="[
+          <input v-else-if="item.objecttype === 'DATE'" type="date" :value="item.value || ''"
+            @input="item.value = $event.target.value.toString()" :class="[
               'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
               formErrors[index]
                 ? 'border-red-500 w-full focus:ring-red-500'
                 : 'border-gray-300 focus:ring-blue-500',
-            ]"
-          />
+            ]" />
 
           <div v-else-if="item.objecttype === 'CHOICES'">
-            <div
-              v-for="(option, optIndex) in item.options"
-              :key="optIndex"
-              :class="[
-                'flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition',
-                formErrors[index]
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-gray-300 focus:ring-blue-500',
-              ]"
-            >
-              <input
-                type="checkbox"
-                :id="'chk-' + item.id + '-' + optIndex"
-                :value="option"
-                :checked="item.values.map((v) => v.value).includes(option)"
-                @change="toggleChecklist(item, option)"
-                class="w-6 h-6 text-blue-600 border-gray-300 rounded focus:ring focus:ring-blue-400"
-              />
-              <label
-                :for="'chk-' + item.id + '-' + optIndex"
-                class="text-gray-700 font-medium cursor-pointer hover:text-blue-600 transition"
-              >
+            <div v-for="(option, optIndex) in item.options" :key="optIndex" :class="[
+              'flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition',
+              formErrors[index]
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-blue-500',
+            ]">
+              <input type="checkbox" :id="'chk-' + item.id + '-' + optIndex" :value="option"
+                :checked="item.values.map((v) => v.value).includes(option)" @change="toggleChecklist(item, option)"
+                class="w-6 h-6 text-blue-600 border-gray-300 rounded focus:ring focus:ring-blue-400" />
+              <label :for="'chk-' + item.id + '-' + optIndex"
+                class="text-gray-700 font-medium cursor-pointer hover:text-blue-600 transition">
                 {{ option }}
               </label>
             </div>
           </div>
           <!-- TEXTAREA -->
           <div v-else-if="item.objecttype === 'TEXTAREA'">
-            <textarea
-              v-model="item.value"
-              maxlength="250"
-               :style="{
+            <textarea v-model="item.value" maxlength="250" :style="{
               textTransform:
                 item.charactercase === 'upper'
                   ? 'uppercase'
                   : item.charactercase === 'lower'
                     ? 'lowercase'
                     : 'none'
-            }" 
-              :class="[
-                'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-                formErrors[index]
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-gray-300 focus:ring-blue-500',
-              ]"
-            ></textarea>
+            }" :class="[
+              'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+              formErrors[index]
+                ? 'border-red-500 focus:ring-red-500'
+                : 'border-gray-300 focus:ring-blue-500',
+            ]"></textarea>
           </div>
 
           <div v-else-if="item.objecttype === 'TIME'">
@@ -206,178 +147,139 @@
           <div v-else-if="item.objecttype === 'TEXTFROMSOURCE'">
             <div class="flex justify-between items-center">
               <!-- Flex container -->
-              <input
-                @focus="
-                  item.autofilluser == 0
-                    ? openModal(index, item.formObjectId, 'textfromsource')
-                    : null
-                "
-                readonly  
-                type="text"
-                v-model="item.value"
-                :style="{
-              textTransform:
-                item.charactercase === 'upper'
-                  ? 'uppercase'
-                  : item.charactercase === 'lower'
-                    ? 'lowercase'
-                    : 'none'
-            }" 
-                maxlength="55"
-                :class="[
+              <input @focus="
+                item.autofilluser == 0
+                  ? openModal(index, item.formObjectId, 'textfromsource')
+                  : null
+                " readonly type="text" v-model="item.value" :style="{
+                  textTransform:
+                    item.charactercase === 'upper'
+                      ? 'uppercase'
+                      : item.charactercase === 'lower'
+                        ? 'lowercase'
+                        : 'none'
+                }" maxlength="55" :class="[
                   'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
                   formErrors[index]
                     ? 'border-red-500 focus:ring-red-500'
                     : 'border-gray-300 focus:ring-blue-500',
-                ]"
-              />
-              <button
-                v-if="item.autofilluser == 0"
-                @click="openModal(index, item.formObjectId, 'textfromsource')"
-                class="ml-2 px-4 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg"
-              >
-                <svg
-                  class="w-6 h-6 text-gray-800 dark:text-white"
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-width="2"
-                    d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"
-                  />
+                ]" />
+              <button v-if="item.autofilluser == 0" @click="openModal(index, item.formObjectId, 'textfromsource')"
+                class="ml-2 px-4 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg">
+                <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+                  width="24" height="24" fill="none" viewBox="0 0 24 24">
+                  <path stroke="currentColor" stroke-linecap="round" stroke-width="2"
+                    d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
                 </svg>
               </button>
             </div>
-          
+
           </div>
 
           <!-- NUMBER -->
-          <input
-            v-else-if="item.objecttype === 'NUMBER'"
-            type="number"
-            v-model="item.value"
-            @keypress="
-              (e) =>
-                (e.charCode >= 48 && e.charCode <= 57) || e.preventDefault()
-            "
-            :class="[
-              'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+          <input v-else-if="item.objecttype === 'NUMBER'" type="number" v-model="item.value" @keypress="
+            (e) =>
+              (e.charCode >= 48 && e.charCode <= 57) || e.preventDefault()
+          " :class="[
+            'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+            formErrors[index]
+              ? 'border-red-500 focus:ring-red-500'
+              : 'border-gray-300 focus:ring-blue-500',
+          ]" />
+
+          <div v-else-if="item.objecttype === 'DYNAMICSIGNATORY'">
+            <div v-for="(dynamicValue, valueIndex) in item?.values" :key="dynamicValue.id ?? valueIndex" :class="[
+              'mb-2 flex items-center gap-2',
               formErrors[index]
                 ? 'border-red-500 focus:ring-red-500'
                 : 'border-gray-300 focus:ring-blue-500',
-            ]"
-          />
+            ]">
+              <div v-if="dynamicValue.formobjecttype === 'DYNAMICSIGNATORY'"
+                class="group flex items-center gap-4 p-3 rounded-lg border border-gray-200 bg-white hover:shadow-sm transition-all w-full">
+                <!-- Colored Bar Indicator -->
+                <div class="w-1 h-12 rounded-full bg-gradient-to-b from-blue-500 to-blue-600">
+                </div>
 
-          <div v-else-if="item.objecttype === 'DYNAMICSIGNATORY'">
-            <div
-              v-for="(dynamicValue, valueIndex) in item?.values"
-              :key="dynamicValue.id ?? valueIndex"
-              :class="[
-                'mb-2 flex items-center gap-2',
-                formErrors[index]
-                  ? 'border-red-500 focus:ring-red-500'
-                  : 'border-gray-300 focus:ring-blue-500',
-              ]"
-            >
-              <div
-                v-if="dynamicValue.formobjecttype === 'DYNAMICSIGNATORY'"
-                class="flex justify-between w-full"
-              >
-                <input
-                  readonly
-                  type="text"
-                  class="border p-3 rounded-md w-full focus:outline-none focus:ring-2"
-                  v-model="dynamicValue.value"
-                />
-                <button
-                  type="button"
-                  @click="removeAnswer(index, valueIndex)"
-                  class="text-red-600 hover:text-red-800 ml-4"
-                  title="Remove"
-                >
-                  ✕
+                <!-- Content -->
+                <div class="flex-1 min-w-0">
+                  <!-- Name Row -->
+                  <div class="flex items-baseline gap-2 mb-0.5">
+                    <span class="text-gray-900 font-medium text-lg truncate">
+                      {{ dynamicValue.value }}
+                    </span>
+                  </div>
+
+                  <!-- Meta Info -->
+                  <div class="flex items-center gap-2 text-sm text-gray-500 font-medium">
+                    <span v-if="dynamicValue.positionname" class="hover:text-gray-700 transition-colors">
+                      {{ dynamicValue.positionname }}
+                    </span>
+                    <span v-if="dynamicValue.branchname && dynamicValue.positionname"
+                      class="w-1 h-1 rounded-full bg-gray-300"></span>
+                    <span v-if="dynamicValue.branchname" class="hover:text-gray-700 transition-colors">
+                      {{ dynamicValue.branchname }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Remove Button -->
+                <button type="button" @click="removeAnswer(index, valueIndex)"
+                  class="w-8 h-8 flex items-center justify-center text-red-600 bg-red-50 rounded-full transition-all group-hover:opacity-100"
+                  title="Remove">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
                 </button>
               </div>
             </div>
 
             <!-- Add button placed outside loop, using last index -->
             <div class="flex justify-center mt-2">
-              <button
-                @click="
-                  openModal(
-                    item?.values?.length ?? 0,
-                    item.formObjectId,
-                    'dynamicsignatory'
-                  )
+              <button @click="
+                openModal(
+                  item?.values?.length ?? 0,
+                  item.formObjectId,
+                  'dynamicsignatory'
+                )
                 "
-                class="w-full flex items-center justify-center px-4 py-3 bg-gray-400 hover:bg-gray-500 text-white rounded-lg"
-              >
-                <svg
-                  class="w-6 h-6 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke="currentColor"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M5 12h14m-7 7V5"
-                  />
+                class="w-full flex items-center justify-center px-4 py-3 bg-gray-400 hover:bg-gray-500 text-white rounded-lg">
+                <svg class="w-6 h-6 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M5 12h14m-7 7V5" />
                 </svg>
               </button>
             </div>
           </div>
 
           <div v-else-if="item.objecttype === 'LINKTOOBJECT'">
-          <input
-            v-model="item.value"
-            type="text"
-            :style="{
+            <input v-model="item.value" type="text" :style="{
               textTransform:
                 item.charactercase === 'upper'
                   ? 'uppercase'
                   : item.charactercase === 'lower'
                     ? 'lowercase'
                     : 'none'
-            }" 
-            disabled
-            :class="[
+            }" disabled :class="[
               'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
               formErrors[index]
                 ? 'border-red-500 focus:ring-red-500'
                 : 'border-gray-300 focus:ring-blue-500',
-            ]"
-          />
+            ]" />
           </div>
 
-          <input
-            v-else
-            v-model="item.value"
-             :style="{
-              textTransform:
-                item.charactercase === 'upper'
-                  ? 'uppercase'
-                  : item.charactercase === 'lower'
-                    ? 'lowercase'
-                    : 'none'
-            }" 
-            type="text"
-            maxlength="55"
-            :class="[
-              'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-              formErrors[index]
-                ? 'border-red-500 focus:ring-red-500'
-                : 'border-gray-300 focus:ring-blue-500',
-            ]"
-          />
+          <input v-else v-model="item.value" :style="{
+            textTransform:
+              item.charactercase === 'upper'
+                ? 'uppercase'
+                : item.charactercase === 'lower'
+                  ? 'lowercase'
+                  : 'none'
+          }" type="text" maxlength="55" :class="[
+            'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+            formErrors[index]
+              ? 'border-red-500 focus:ring-red-500'
+              : 'border-gray-300 focus:ring-blue-500',
+          ]" />
 
           <p v-if="formErrors[index]" class="text-red-500 text-sm">
             {{ item.label }} is {{ formErrors[index] }}
@@ -386,21 +288,14 @@
       </div>
     </div>
 
-    <div
-      v-for="(approverGroup, approverNumber) in transactions.approvers"
-      :key="approverNumber"
-      class="mt-2 p-4 bg-gray-50 rounded-lg"
-    >
+    <div v-for="(approverGroup, approverNumber) in transactions.approvers" :key="approverNumber"
+      class="mt-2 p-4 bg-gray-50 rounded-lg">
       <div>
         <h2 class="text-md font-semibold text-gray-800 mb-2">
           Approver {{ approverNumber }}
         </h2>
 
-        <div
-          v-for="approver in approverGroup"
-          :key="approver.id"
-          class="p-2 bg-white rounded-md shadow-sm mb-2"
-        >
+        <div v-for="approver in approverGroup" :key="approver.id" class="p-2 bg-white rounded-md shadow-sm mb-2">
           <h2 class="text-sm font-bold text-gray-800 mb-2">
             {{ approver.mainapprover ? "Main" : "Proxy" }}
           </h2>
@@ -419,89 +314,114 @@
     </div>
 
     <div class="flex justify-end">
-      <button
-        @click="saveForm"
-        :disabled="isSubmitting"
-        class="px-6 py-2 bg-blue-600 hover:bg-blue-900 text-white rounded-lg mt-4 flex items-center"
-      >
-        <svg
-          v-if="isSubmitting"
-          class="animate-spin h-5 w-5 mr-2 text-white"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            class="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            stroke-width="4"
-          ></circle>
-          <path
-            class="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8v8H4z"
-          ></path>
+      <button @click="saveForm" :disabled="isSubmitting"
+        class="px-6 py-2 bg-blue-600 hover:bg-blue-900 text-white rounded-lg mt-4 flex items-center">
+        <svg v-if="isSubmitting" class="animate-spin h-5 w-5 mr-2 text-white" xmlns="http://www.w3.org/2000/svg"
+          fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
         </svg>
         {{ isSubmitting ? "Submitting..." : "Save" }}
       </button>
     </div>
   </div>
-  <div
-    v-if="showModal"
-    @click.self="showModal = false"
-    @keydown.esc="showModal = false"
-    class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]"
-  >
+  <div v-if="showModal" @click.self="showModal = false" @keydown.esc="showModal = false"
+    class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]">
     <div class="w-full max-w-6xl bg-white shadow-lg rounded-lg p-6 relative">
-      <input
-        type="text"
-        v-model="searchQuery"
-        @keydown.enter="debouncedSearch(storeId)"
-        placeholder="Enter to search"
-        class="w-full p-4 rounded border border-gray-600 focus:outline-none"
-      />
 
-      <div class="bg-white max-h-96 overflow-x-auto flex flex-col rounded">
+      <!-- Show tagged users inside modal for dynamic signatory -->
+      <div v-if="objecttype === 'dynamicsignatory' && getTaggedUsers(storeId).length > 0"
+        class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-semibold text-gray-700">
+            Currently Tagged:
+            <span class="text-blue-600">({{ getTaggedUsers(storeId).length }})</span>
+          </h3>
+
+
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <div v-for="(user, idx) in getDisplayedTaggedUsers(storeId)" :key="idx"
+            class="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+            <span>{{ user.value }}</span>
+            <button @click.stop="removeTaggedUser(storeId, user)"
+              class="text-blue-600 hover:text-blue-800 font-bold text-lg leading-none">
+              ×
+            </button>
+          </div>
+          <!-- See More / See Less Button -->
+          <button v-if="getTaggedUsers(storeId).length > 3" @click="showAllTaggedUsers = !showAllTaggedUsers"
+            class="text-xs text-blue-600 hover:text-blue-800 font-medium underline">
+            {{ showAllTaggedUsers ? 'See Less' : `See More (${getTaggedUsers(storeId).length - 3})` }}
+          </button>
+        </div>
+      </div>
+
+      <!-- Search Input -->
+      <div class="flex gap-1 mb-1">
+        <input type="text" v-model="searchQuery" @keydown.enter="debouncedSearch(storeId)" placeholder="Enter to search"
+          class="w-full p-4 h-11 rounded border border-gray-600 focus:outline-none" />
+        <button @click="debouncedSearch(storeId)"
+          class="py-3 px-4 h-11 bg-blue-500 text-white rounded-md hover:bg-blue-700">
+          <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+            width="24" height="24" fill="none" viewBox="0 0 24 24">
+            <path stroke="currentColor" stroke-linecap="round" stroke-width="2"
+              d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="bg-white max-h-96 overflow-auto flex flex-col rounded">
         <div class="flex flex-col">
           <div class="pb-4">
             <div class="min-w-full inline-block align-middle">
               <div class="border rounded-md border-gray-300">
                 <!-- Table for Dynamic Columns -->
-                <table
-                  v-if="!loading && justifications.length"
-                  class="table-auto min-w-full rounded-xl"
-                >
+                <table v-if="!loading && justifications.length" class="table-auto min-w-full rounded-xl">
                   <thead>
                     <tr class="bg-gray-50 sticky top-0">
+                      <!-- Add checkbox column for dynamic signatory -->
+                      <th v-if="objecttype === 'dynamicsignatory'" scope="col"
+                        class="p-5 text-center whitespace-nowrap text-sm leading-6 font-semibold text-gray-900">
+                        Tagged
+                      </th>
                       <!-- Dynamically generate headers based on data -->
-                      <th
-                        v-for="header in Object.keys(
-                          justifications[0]?.all || {}
-                        )"
-                        :key="header"
-                        scope="col"
-                        class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize"
-                      >
+                      <th v-for="header in Object.keys(
+                        justifications[0]?.all || {}
+                      )" :key="header" scope="col"
+                        class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize">
                         {{ header }}
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr
-                      v-for="(justification, index) in justifications"
-                      :key="index"
-                      @click="selectEmployee(storeIndex, justification)"
-                      class="hover:bg-gray-200 cursor-pointer"
-                    >
+                    <tr v-for="(justification, index) in justifications" :key="index"
+                      @click="selectEmployee(storeIndex, justification)" :class="[
+                        'cursor-pointer transition-colors',
+                        isUserTagged(storeId, justification.display)
+                          ? 'bg-blue-50 hover:bg-blue-100'
+                          : 'hover:bg-gray-200'
+                      ]">
+                      <!-- Checkbox column for dynamic signatory -->
+                      <td v-if="objecttype === 'dynamicsignatory'" class="p-5 text-center">
+                        <div class="flex items-center justify-center">
+                          <!-- Checked Icon -->
+                          <svg v-if="isUserTagged(storeId, justification.display)" class="w-6 h-6 text-blue-600"
+                            aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                            fill="currentColor" viewBox="0 0 24 24">
+                            <path fill-rule="evenodd"
+                              d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm13.707-1.293a1 1 0 0 0-1.414-1.414L11 12.586l-1.293-1.293a1 1 0 0 0-1.414 1.414l2 2a1 1 0 0 0 1.414 0l4-4Z"
+                              clip-rule="evenodd" />
+                          </svg>
+                          <!-- Unchecked Icon -->
+                          <div v-else class="w-6 h-6 border-2 border-gray-300 rounded-full">
+                          </div>
+                        </div>
+                      </td>
                       <!-- Dynamically populate rows -->
-                      <td
-                        v-for="header in Object.keys(justification.all)"
-                        :key="header"
-                        class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900"
-                      >
+                      <td v-for="header in Object.keys(justification.all)" :key="header"
+                        class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
                         {{ justification.all[header] }}
                       </td>
                     </tr>
@@ -509,10 +429,7 @@
                 </table>
 
                 <!-- No Results Found -->
-                <div
-                  v-else-if="searchQuery && !loading"
-                  class="p-2 text-gray-400 text-center"
-                >
+                <div v-else-if="searchQuery && !loading" class="p-2 text-gray-400 text-center">
                   No results found.
                 </div>
                 <div v-else-if="loading" class="p-2 text-gray-400 text-center">
@@ -528,11 +445,8 @@
       </div>
 
       <div class="mt-4 flex justify-end gap-2">
-        <button
-          @click="showModal = false"
-          class="px-4 py-2 bg-red-500 text-white rounded-lg"
-        >
-          Cancel
+        <button @click="showModal = false" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
+          {{ objecttype === 'dynamicsignatory' ? 'Done' : 'Cancel' }}
         </button>
       </div>
     </div>
@@ -607,6 +521,68 @@ const openModal = (index, id, type) => {
   objecttype.value = type;
 };
 
+const showAllTaggedUsers = ref(false);
+
+// Add a function to check if a user is already tagged
+const isUserTagged = (formObjectId, displayValue) => {
+  const formObject = transactions.value.formObjects.find(
+    (f) => f.formObjectId === formObjectId
+  );
+
+  if (!formObject || !Array.isArray(formObject.values)) {
+    return false;
+  }
+
+  return formObject.values.some(
+    (v) =>
+      v.formobjecttype === "DYNAMICSIGNATORY" &&
+      v.value?.toLowerCase() === displayValue?.toLowerCase()
+  );
+};
+
+// Get tagged users for a specific form object
+const getTaggedUsers = (formObjectId) => {
+  const formObject = transactions.value.formObjects.find(
+    (f) => f.formObjectId === formObjectId
+  );
+
+  if (!formObject || !Array.isArray(formObject.values)) {
+    return [];
+  }
+
+  return formObject.values.filter(
+    (v) => v.formobjecttype === "DYNAMICSIGNATORY"
+  );
+};
+
+// Get limited tagged users for display
+const getDisplayedTaggedUsers = (formObjectId, limit = 3) => {
+  const taggedUsers = getTaggedUsers(formObjectId);
+  if (showAllTaggedUsers.value) {
+    return taggedUsers;
+  }
+  return taggedUsers.slice(0, limit);
+};
+
+const removeTaggedUser = (formObjectId, userToRemove) => {
+  const formObject = transactions.value.formObjects.find(
+    (f) => f.formObjectId === formObjectId
+  );
+
+  if (formObject && Array.isArray(formObject.values)) {
+    const indexToRemove = formObject.values.findIndex(
+      (v) =>
+        v.formobjecttype === "DYNAMICSIGNATORY" &&
+        v.value === userToRemove.value &&
+        v.display === userToRemove.display
+    );
+
+    if (indexToRemove !== -1) {
+      formObject.values.splice(indexToRemove, 1);
+    }
+  }
+};
+
 const selectEmployee = (id, justification) => {
   // Set initial value and display for selected formObject
   if (objecttype.value == "textfromsource") {
@@ -635,7 +611,50 @@ const selectEmployee = (id, justification) => {
         transactions.value.formObjects[originalIndex].value = value;
       }
     });
+  } else if (objecttype.value == "dynamicsignatory") {
+    // Handle dynamic signatory with select/deselect
+    const formObject = transactions.value.formObjects.find(
+      (f) => f.formObjectId === storeId.value
+    );
+
+    if (!formObject) {
+      console.warn("Form object not found");
+      return;
+    }
+
+    // Ensure `values` array exists
+    if (!Array.isArray(formObject.values)) {
+      formObject.values = [];
+    }
+
+    // Check if user is already tagged
+    const existingIndex = formObject.values.findIndex(
+      (v) =>
+        v.formobjecttype === "DYNAMICSIGNATORY" &&
+        v.value?.toLowerCase() === justification.display?.toLowerCase()
+    );
+
+    if (existingIndex !== -1) {
+      // ❌ User is already tagged - DESELECT (remove)
+      formObject.values.splice(existingIndex, 1);
+      console.log("Deselected user:", justification.display);
+    } else {
+      // ✅ User is not tagged - SELECT (add)
+      const newEntry = {
+        id: 0, // Temp unique ID until saved
+        formobjectId: formObject.formObjectId,
+        formobjecttype: "DYNAMICSIGNATORY",
+        value: justification.display,
+        display: justification.data,
+        positionname: justification.all?.positionname || '',
+        branchname: justification.all?.branchname || '',
+      };
+      formObject.values.push(newEntry);
+      console.log("Selected user:", justification.display);
+    }
+    // Don't close modal for dynamic signatory
   } else {
+    // Handle other types
     const formObject = transactions.value.formObjects.find(
       (f) => f.formObjectId === storeId.value
     );
@@ -652,7 +671,7 @@ const selectEmployee = (id, justification) => {
 
     // Construct new value entry
     const newEntry = {
-      id: 0, // Temp unique ID until saved
+      id: 0,
       formobjectId: formObject.formObjectId,
       formobjecttype: "DYNAMICSIGNATORY",
       value: justification.display,
@@ -670,8 +689,12 @@ const selectEmployee = (id, justification) => {
     } else {
       console.warn("Duplicate entry prevented");
     }
+    showModal.value = false;
   }
-  showModal.value = false;
+
+  if (objecttype.value !== "dynamicsignatory") {
+    showModal.value = false;
+  }
 };
 
 function removeAnswer(itemIndex, valueIndex) {
@@ -731,21 +754,21 @@ const saveForm = async () => {
     isRequired: item.isRequired ?? 0,
     isDelete: item.isDelete ?? 0,
     value: allowedTypes.includes(item.objecttype)
-    ? item.charactercase === "upper"
-      ? (item.value ?? "").toUpperCase()
-      : item.charactercase === "lower"
-        ? (item.value ?? "").toLowerCase()
-        : item.value ?? ""
-    : item.value ?? "",
+      ? item.charactercase === "upper"
+        ? (item.value ?? "").toUpperCase()
+        : item.charactercase === "lower"
+          ? (item.value ?? "").toLowerCase()
+          : item.value ?? ""
+      : item.value ?? "",
     values: Array.isArray(item.values)
       ? item.values.map((val) => ({
-          id: val.id ?? 0, // Default to 0 if val.id is undefined
-          value: val.value ?? "", // Default to empty string if val.value is undefined
-          display: val.display ?? "",
-        }))
+        id: val.id ?? 0, // Default to 0 if val.id is undefined
+        value: val.value ?? "", // Default to empty string if val.value is undefined
+        display: val.display ?? "",
+      }))
       : [],
   }));
-  
+
   try {
     await $fetch(`${API_BASE_URL}/api/Transaction/update-transaction`, {
       method: "POST",

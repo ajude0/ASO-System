@@ -547,7 +547,6 @@ onMounted(async () => {
     }
     pdfTitle.value = title.value;
     signatureFile.value = await getusersignature($swal);
-
 });
 
 </script>

@@ -186,7 +186,7 @@ const onSignersDragEnd = () => {
 const showAddForm = ref(false);
 const newBoxForm = ref({
     assignedTo: '',
-    hasDate: true,
+    hasDate: false,
     dateOffset: 5,
     assignedEmplId: "",
     assignedColor: undefined,

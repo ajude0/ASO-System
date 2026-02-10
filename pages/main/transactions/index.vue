@@ -34,9 +34,20 @@
         </h1>
 
         <div v-for="(item, index) in transactions?.formObjects" :key="index" class="mb-6">
-          <div v-if="item.objectType !== 'LABEL'" class="flex justify-between">
+          <div v-if="item.objectType !== 'LABEL' && item.objectType !== 'DYNAMICSIGNATORY'"
+            class="flex justify-between">
             <label class="text-gray-700 font-semibold mb-2">
               {{ item.label }}
+            </label>
+          </div>
+          <div v-if="item.objectType == 'DYNAMICSIGNATORY'" class="flex justify-between">
+            <label class="text-gray-700 font-semibold mb-2 break-all block flex items-center gap-2">
+              {{ item.label }}
+
+              <!-- Count Badge -->
+              <span class="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                {{ item.dynamicsignatoriesvalues.length }}
+              </span>
             </label>
           </div>
           <div v-if="item.objectType === 'LABEL'">
@@ -55,17 +66,43 @@
             <div v-for="(dynamic, index) in sortAllSignatories(item.dynamicsignatoriesvalues)" :key="index"
               class="mb-4">
 
-              <div 
-                class="flex items-center justify-between p-4 border rounded-lg bg-gray-50 shadow-sm mb-4 transition-all duration-300"  
-                :class="{ 'highlight-pulse': isHighlighted && dynamic.currentuser }"
-              >
+              <div
+                class="flex items-center justify-between p-4 border rounded-lg bg-gray-50 shadow-sm mb-4 transition-all duration-300"
+                :class="{ 'highlight-pulse': isHighlighted && dynamic.currentuser }">
                 <!-- Left: Name / Value -->
-                <div class="text-gray-800 font-medium flex items-center gap-2">
-                  {{ dynamic.value }}
-                  <span v-if="dynamic.currentuser" :id="dynamic.currentuser ? 'currentUserCard' : null"
-                    class="text-xs font-semibold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">
-                    YOU
-                  </span>
+                <div class="group flex items-center gap-4">
+                  <!-- Colored Bar Indicator -->
+                  <div class="w-1 h-12 rounded-full bg-gradient-to-b"
+                    :class="dynamic.currentuser ? 'from-blue-500 to-blue-600' : 'from-gray-300 to-gray-400'">
+                  </div>
+
+                  <!-- Content -->
+                  <div class="flex-1">
+                    <!-- Name Row -->
+                    <div class="flex items-baseline gap-2 mb-0.5">
+                      <span class="text-gray-900 font-medium text-lg">
+                        {{ dynamic.value }}
+                      </span>
+
+                      <span v-if="dynamic.currentuser" :id="dynamic.currentuser ? 'currentUserCard' : null"
+                        class="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-extrabold text-blue-600 bg-blue-50 border border-blue-300 rounded uppercase tracking-wider">
+                        <span class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping absolute"></span>
+                        <span class="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                        You
+                      </span>
+                    </div>
+
+                    <!-- Meta Info -->
+                    <div class="flex items-center gap-2 text-sm text-gray-500 ">
+                      <span v-if="dynamic.position" class="hover:text-gray-700 transition-colors">
+                        {{ dynamic.position }}
+                      </span>
+                      <span v-if="dynamic.position && dynamic.branch" class="w-1 h-1 rounded-full bg-gray-300"></span>
+                      <span v-if="dynamic.branch" class="hover:text-gray-700 transition-colors">
+                        {{ dynamic.branch }}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Right: Status / Button -->
@@ -242,7 +279,7 @@
       </div>
     </div>
     <div v-if="!transactions.hasResponse" class="flex gap-1 items-center justify-end mb-0 mr-4 mt-3">
-       
+
       <button @click="postApprove()" v-if="transactions.hasCurrentApprover"
         class="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-800">
         Approve
@@ -303,12 +340,12 @@ const scrollToCurrentUser = () => {
   if (element) {
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
-   if (element) {
+  if (element) {
     element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    
+
     // Trigger highlight animation
     isHighlighted.value = true;
-    
+
     // Remove highlight after animation completes
     setTimeout(() => {
       isHighlighted.value = false;
@@ -316,13 +353,13 @@ const scrollToCurrentUser = () => {
   }
 };
 const sortAllSignatories = (groups) => {
-    console.log("herere",hasCurrentUserRef.value);
+  console.log("herere", hasCurrentUserRef.value);
   // if (!groups || !Array.isArray(groups)) return [];
 
   // // Flatten all groups into one array
   // const allSignatories = groups.flatMap(group => group.value || []);
 
-   if (!groups || !Array.isArray(groups)) {
+  if (!groups || !Array.isArray(groups)) {
     if (hasCurrentUserRef) hasCurrentUserRef.value = false;
     return [];
   }
@@ -939,15 +976,20 @@ onMounted(async () => {
 </script>
 <style>
 @keyframes highlight-pulse {
-  0%, 100% {
+
+  0%,
+  100% {
     background-color: transparent;
   }
+
   50% {
-    background-color: rgb(254 240 138); /* yellow-200 */
+    background-color: rgb(254 240 138);
+    /* yellow-200 */
   }
 }
 
 .highlight-pulse {
   animation: highlight-pulse 0.6s ease-in-out 3;
- 
-}</style>
+
+}
+</style>

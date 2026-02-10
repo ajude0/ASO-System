@@ -1,5 +1,6 @@
 <template>
-    <div>
+    <div v-if="loading"><LoadingModal/></div>
+    <div v v-else>
         <button @click="backButton" type="button"
             class="flex items-center ms-6 mt-8 text-gray-700 hover:text-blue-600 transition-colors duration-200">
             <svg class="w-9 h-9" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
@@ -97,6 +98,7 @@ const getUserStats = (userName) => {
     const pending = userSigs.length - signed;
     return { total: userSigs.length, signed, pending };
 };
+
 const userSignatures = computed(() =>
     prePlacedSignatures.value.filter(
         s =>
@@ -487,8 +489,7 @@ const handleSaveAllSignatures = async (updatedSignatures) => {
             showConfirmButton: false,
         });
         await checkDocumentSignature(documentId.value);
-
-
+        await getsignaturepositons(documentId.value);
     } catch (error) {
         let errorMessage = "Something went wrong. Please try again later.";
 
@@ -538,6 +539,7 @@ onMounted(async () => {
     await fetchDocumentTitle(documentId.value);
     pdfTitle.value = title.value;
     signatureFile.value = await getusersignature($swal);
+    console.log(signatureFile.value);
     loading.value = false;
 });
 

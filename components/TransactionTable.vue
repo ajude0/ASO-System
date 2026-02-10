@@ -318,10 +318,10 @@
                         " class="hover:bg-blue-100 rounded-full p-2" title="Download Transaction" :disabled="!transaction.templatepath ||
                           !!isDownloading?.[transaction.id]
                           " :class="{
-                              'opacity-50 cursor-not-allowed':
-                                !!isDownloading?.[transaction.id] ||
-                                !transaction.templatepath,
-                            }">
+                            'opacity-50 cursor-not-allowed':
+                              !!isDownloading?.[transaction.id] ||
+                              !transaction.templatepath,
+                          }">
                         <template v-if="isDownloading?.[transaction.id]">
                           <!-- Spinner -->
                           <svg class="animate-spin w-5 h-5 text-blue-800" viewBox="0 0 24 24">
@@ -473,12 +473,24 @@
           </h1>
 
           <div v-for="(item, index) in transactions?.formObjects" :key="index" class="mb-6">
-            <div v-if="item.objectType !== 'LABEL'" class="flex items-center justify-between gap-4 mb-2">
+            <div v-if="item.objectType !== 'LABEL' && item.objectType !== 'DYNAMICSIGNATORY'"
+              class="flex items-center justify-between gap-4 mb-2">
               <label class="text-gray-700 font-semibold">
                 {{ item.label }}
               </label>
+            </div>
+            <div v-if="item.objectType == 'DYNAMICSIGNATORY'" class="flex justify-between">
+              <label class="text-gray-700 font-semibold mb-2 break-all block flex items-center gap-2">
+                {{ item.label }}
 
-              <button v-if="item.objectType === 'DYNAMICSIGNATORY'" @click="email()" class="flex items-center gap-2 px-3 py-2
+                <!-- Count Badge -->
+                <span class="bg-blue-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  {{ item.dynamicsignatoriesvalues.length }}
+                </span>
+
+
+              </label>
+              <button v-if="item.objectType === 'DYNAMICSIGNATORY'" @click="email()" class="flex items-center gap-2 px-3 py-2 mb-2
            bg-blue-600 text-white text-sm font-medium
            rounded-lg shadow hover:bg-blue-700
            transition-all duration-200">
@@ -508,45 +520,100 @@
               </span>
             </div>
             <div v-else-if="item.objectType === 'DYNAMICSIGNATORY'">
-             <div v-for="(dynamic, index) in sortAllSignatories(item.dynamicsignatoriesvalues)" :key="index"
+               <div v-for="(dynamic, index) in sortAllSignatories(item.dynamicsignatoriesvalues)" :key="index"
               class="mb-4">
-                  <div class="flex items-center justify-between p-4 border rounded-lg bg-gray-50 shadow-sm mb-4">
-                    <!-- Left: Name / Value -->
-                    <div class="text-gray-800 font-medium">
-                      {{ dynamic.value }}
+
+              <div
+                class="flex items-center justify-between p-4 border rounded-lg bg-gray-50 shadow-sm mb-4 transition-all duration-300"
+                :class="{ 'highlight-pulse': isHighlighted && dynamic.currentuser }">
+                <!-- Left: Name / Value -->
+                <div class="group flex items-center gap-4">
+                  <!-- Colored Bar Indicator -->
+                  <div class="w-1 h-12 rounded-full bg-gradient-to-b"
+                    :class="dynamic.currentuser ? 'from-blue-500 to-blue-600' : 'from-gray-300 to-gray-400'">
+                  </div>
+
+                  <!-- Content -->
+                  <div class="flex-1">
+                    <!-- Name Row -->
+                    <div class="flex items-baseline gap-2 mb-0.5">
+                      <span class="text-gray-900 font-medium text-lg">
+                        {{ dynamic.value }}
+                      </span>
+
+                      <span v-if="dynamic.currentuser" :id="dynamic.currentuser ? 'currentUserCard' : null"
+                        class="inline-flex items-center gap-1 px-2 py-0.5 text-[9px] font-extrabold text-blue-600 bg-blue-50 border border-blue-300 rounded uppercase tracking-wider">
+                        <span class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-ping absolute"></span>
+                        <span class="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                        You
+                      </span>
                     </div>
 
-                    <!-- Right: Status -->
-                    <div>
-                      <span v-if="dynamic.response == 1"
-                        class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full">
-                        SIGNED -
-                        {{
-                          new Date(dynamic.responsedate).toLocaleString(
-                            "en-US",
-                            {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                              hour: "numeric",
-                              minute: "numeric",
-                              hour12: true, // optional, for 12-hour format with AM/PM
-                            }
-                          )
-                        }}
+                    <!-- Meta Info -->
+                    <div class="flex items-center gap-2 text-sm text-gray-500 ">
+                      <span v-if="dynamic.position" class="hover:text-gray-700 transition-colors">
+                        {{ dynamic.position }}
                       </span>
-                      <span v-else-if="dynamic.response == 0"
-                        class="inline-block px-3 py-1 text-sm font-semibold text-yellow-800 bg-yellow-100 rounded-full">
-                        PENDING
-                      </span>
-                      <span v-else
-                        class="inline-block px-3 py-1 text-sm font-semibold text-gray-600 bg-gray-200 rounded-full">
-                        UNKNOWN
+                      <span v-if="dynamic.position && dynamic.branch" class="w-1 h-1 rounded-full bg-gray-300"></span>
+                      <span v-if="dynamic.branch" class="hover:text-gray-700 transition-colors">
+                        {{ dynamic.branch }}
                       </span>
                     </div>
                   </div>
                 </div>
+
+                <!-- Right: Status / Button -->
+                <div>
+                  <!-- If current user and response is 0, show approve button
+                  <button v-if="dynamic.currentuser && dynamic.response === 0"
+                    class="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-800" @click="postSigned()">
+                    SIGN
+                  </button> -->
+
+                  <!-- If current user and response is 1, show approved text -->
+                  <span v-if="dynamic.currentuser && dynamic.response === 1"
+                    class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full">
+                    SIGNED -
+                    {{
+                      new Date(dynamic.responsedate).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "numeric",
+                        hour12: true, // optional, for 12-hour format with AM/PM
+                      })
+                    }}
+                  </span>
+
+                  <!-- Other statuses for non-current users -->
+                  <span v-else-if="dynamic.response === 1"
+                    class="inline-block px-3 py-1 text-sm font-semibold text-green-700 bg-green-100 rounded-full">
+                    SIGNED -
+                    {{
+                      new Date(dynamic.responsedate).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                        day: "numeric",
+                        hour: "numeric",
+                        minute: "numeric",
+                        hour12: true, // optional, for 12-hour format with AM/PM
+                      })
+                    }}
+                  </span>
+                  <span v-else-if="dynamic.response === 0"
+                    class="inline-block px-3 py-1 text-sm font-semibold text-yellow-800 bg-yellow-100 rounded-full">
+                    PENDING
+                  </span>
+                  <span v-else
+                    class="inline-block px-3 py-1 text-sm font-semibold text-gray-600 bg-gray-200 rounded-full">
+                    UNKNOWN
+                  </span>
+                </div>
               </div>
+
+            </div>
+            </div>
           </div>
           <div v-for="(approverGroup, approverNumber) in transactions.approvers" :key="approverNumber"
             class="mt-2 p-4 bg-gray-50 rounded-lg">
