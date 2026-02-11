@@ -259,11 +259,11 @@
                         ? 'lowercase'
                         : 'none'
                 }" maxlength="55" :class="[
-                      'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
-                      formErrors[formObject.id]
-                        ? 'border-red-500 focus:ring-red-500'
-                        : 'border-gray-300 focus:ring-blue-500',
-                    ]" />
+                  'border p-3 rounded-md w-full focus:outline-none focus:ring-2',
+                  formErrors[formObject.id]
+                    ? 'border-red-500 focus:ring-red-500'
+                    : 'border-gray-300 focus:ring-blue-500',
+                ]" />
               <button v-if="formObject.autoFillUser == 0" @click="openModal(formObject.id, 'textfromsource')"
                 class="ml-2 px-4 py-3 bg-blue-600 hover:bg-blue-900 text-white rounded-lg">
                 <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
@@ -279,47 +279,46 @@
 
           <div v-else-if="formObject.objecttype === 'DYNAMICSIGNATORY'">
             <!-- Render each name as its own input -->
-            <div v-for="(name, index) in formAnswers[formObject.id] || []" :key="index"
-  class="mb-3">
-  
-  <div class="group flex items-center gap-4 p-3 rounded-lg border border-gray-200 bg-white hover:shadow-sm transition-all">
-    <!-- Colored Bar Indicator -->
-    <div class="w-1 h-12 rounded-full bg-gradient-to-b from-blue-500 to-blue-600">
-    </div>
-    
-    <!-- Content -->
-    <div class="flex-1 min-w-0">
-      <!-- Name Row -->
-      <div class="flex items-baseline gap-2 mb-0.5">
-        <span class="text-gray-900 font-medium text-lg truncate">
-          {{ getDisplayBinding(formObject.id, index).value }}
-        </span>
-      </div>
-      
-      <!-- Meta Info -->
-      <div class="flex items-center gap-2 text-sm text-gray-500 font-medium">
-        <span v-if="getPositionName(formObject.id, index)" class="hover:text-gray-700 transition-colors">
-          {{ getPositionName(formObject.id, index) }}
-        </span>
-        <span v-if="getPositionName(formObject.id, index) && getBranchName(formObject.id, index)" class="w-1 h-1 rounded-full bg-gray-300"></span>
-        <span v-if="getBranchName(formObject.id, index)" class="hover:text-gray-700 transition-colors">
-          {{ getBranchName(formObject.id, index) }}
-        </span>
-      </div>
-    </div>
+            <div v-for="(name, index) in formAnswers[formObject.id] || []" :key="index" class="mb-3">
 
-    <!-- Remove Button -->
-    <button 
-      type="button" 
-      @click="removeAnswer(formObject.id, index)" 
-      class="w-8 h-8 flex items-center justify-center text-red-600 bg-red-50 rounded-full transition-all group-hover:opacity-100"
-      title="Remove">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-      </svg>
-    </button>
-  </div>
-</div>
+              <div
+                class="group flex items-center gap-4 p-3 rounded-lg border border-gray-200 bg-white hover:shadow-sm transition-all">
+                <!-- Colored Bar Indicator -->
+                <div class="w-1 h-12 rounded-full bg-gradient-to-b from-blue-500 to-blue-600">
+                </div>
+
+                <!-- Content -->
+                <div class="flex-1 min-w-0">
+                  <!-- Name Row -->
+                  <div class="flex items-baseline gap-2 mb-0.5">
+                    <span class="text-gray-900 font-medium text-md truncate">
+                      {{ getDisplayBinding(formObject.id, index).value }}
+                    </span>
+                  </div>
+
+                  <!-- Meta Info -->
+                  <div class="flex items-center gap-2 text-xs text-gray-500 font-medium">
+                    <span v-if="getPositionName(formObject.id, index)" class="hover:text-gray-700 transition-colors">
+                      {{ getPositionName(formObject.id, index) }}
+                    </span>
+                    <span v-if="getPositionName(formObject.id, index) && getBranchName(formObject.id, index)"
+                      class="w-1 h-1 rounded-full bg-gray-300"></span>
+                    <span v-if="getBranchName(formObject.id, index)" class="hover:text-gray-700 transition-colors">
+                      {{ getBranchName(formObject.id, index) }}
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Remove Button -->
+                <button type="button" @click="removeAnswer(formObject.id, index)"
+                  class="w-8 h-8 flex items-center justify-center text-red-600 bg-red-50 rounded-full transition-all group-hover:opacity-100"
+                  title="Remove">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
 
             <!-- Button to add new name (via modal) -->
             <div class="flex justify-center mt-2">
@@ -390,38 +389,34 @@
   </div>
 
   <!-- Modal -->
-   <div v-if="showModal" 
-       @click.self="showModal = false" 
-       @keydown.esc="showModal = false"
-       class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]">
+  <div v-if="showModal" @click.self="showModal = false" @keydown.esc="showModal = false"
+    class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]">
     <div class="w-full max-w-6xl bg-white shadow-lg rounded-lg p-6 relative">
-      
+
       <!-- Show tagged users inside modal for dynamic signatory -->
-      <div v-if="objecttype === 'dynamicsignatory' && getTaggedUsers(storeId).length > 0" 
-           class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+      <div v-if="objecttype === 'dynamicsignatory' && getTaggedUsers(storeId).length > 0"
+        class="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
         <div class="flex items-center justify-between mb-2">
           <h3 class="text-sm font-semibold text-gray-700">
-            Currently Tagged: 
+            Currently Tagged:
             <span class="text-blue-600">({{ getTaggedUsers(storeId).length }})</span>
           </h3>
-          
+
           <!-- See More / See Less Button -->
-          
+
         </div>
-        
+
         <div class="flex flex-wrap gap-2">
-          <div v-for="(user, idx) in getDisplayedTaggedUsers(storeId)" 
-               :key="idx"
-               class="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
+          <div v-for="(user, idx) in getDisplayedTaggedUsers(storeId)" :key="idx"
+            class="flex items-center gap-2 bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm">
             <span>{{ user.value }}</span>
-            <button @click.stop="removeTaggedUser(storeId, getTaggedUsers(storeId).findIndex(u => u.display === user.display))"
-                    class="text-blue-600 hover:text-blue-800 font-bold text-lg leading-none">
+            <button
+              @click.stop="removeTaggedUser(storeId, getTaggedUsers(storeId).findIndex(u => u.display === user.display))"
+              class="text-blue-600 hover:text-blue-800 font-bold text-lg leading-none">
               ×
             </button>
           </div>
-               <button 
-            v-if="getTaggedUsers(storeId).length > 3"
-            @click="showAllTaggedUsers = !showAllTaggedUsers"
+          <button v-if="getTaggedUsers(storeId).length > 3" @click="showAllTaggedUsers = !showAllTaggedUsers"
             class="text-xs text-blue-600 hover:text-blue-800 font-medium underline">
             {{ showAllTaggedUsers ? 'See Less' : `See More (${getTaggedUsers(storeId).length - 3})` }}
           </button>
@@ -430,22 +425,18 @@
 
       <!-- Search Input -->
       <div class="flex gap-1 mb-1">
-        <input type="text" 
-               v-model="searchQuery" 
-               @keydown.enter="debouncedSearch(storeId)" 
-               placeholder="Enter to search"
-               ref="inputRef" 
-               class="w-full p-4 h-11 rounded border border-gray-600 focus:outline-none" />
+        <input type="text" v-model="searchQuery" @keydown.enter="debouncedSearch(storeId)" placeholder="Enter to search"
+          ref="inputRef" class="w-full p-4 h-11 rounded border border-gray-600 focus:outline-none" />
         <button @click="debouncedSearch(storeId)"
-                class="py-3 px-4 h-11 bg-blue-500 text-white rounded-md hover:bg-blue-700">
+          class="py-3 px-4 h-11 bg-blue-500 text-white rounded-md hover:bg-blue-700">
           <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-               width="24" height="24" fill="none" viewBox="0 0 24 24">
+            width="24" height="24" fill="none" viewBox="0 0 24 24">
             <path stroke="currentColor" stroke-linecap="round" stroke-width="2"
-                  d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+              d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
           </svg>
         </button>
       </div>
-      
+
       <!-- Dynamic Table -->
       <div class="bg-white max-h-96 overflow-auto flex flex-col rounded">
         <div class="flex flex-col">
@@ -457,53 +448,40 @@
                   <thead>
                     <tr class="bg-gray-50 sticky top-0">
                       <!-- Add checkbox column for dynamic signatory -->
-                      <th v-if="objecttype === 'dynamicsignatory'" 
-                          scope="col"
-                          class="p-5 text-center whitespace-nowrap text-sm leading-6 font-semibold text-gray-900">
+                      <th v-if="objecttype === 'dynamicsignatory'" scope="col"
+                        class="p-5 text-center whitespace-nowrap text-sm leading-6 font-semibold text-gray-900">
                         Tagged
                       </th>
-                      <th v-for="header in Object.keys(justifications[0]?.all || {})" 
-                          :key="header" 
-                          scope="col"
-                          class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize">
+                      <th v-for="header in Object.keys(justifications[0]?.all || {})" :key="header" scope="col"
+                        class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize">
                         {{ header }}
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    <tr v-for="(justification, index) in justifications" 
-                        :key="index"
-                        @click="selectEmployee(storeId, justification)" 
-                        :class="[
-                          'cursor-pointer transition-colors',
-                          isUserTagged(storeId, justification.display) 
-                            ? 'bg-blue-50 hover:bg-blue-100' 
-                            : 'hover:bg-gray-200'
-                        ]">
+                    <tr v-for="(justification, index) in justifications" :key="index"
+                      @click="selectEmployee(storeId, justification)" :class="[
+                        'cursor-pointer transition-colors',
+                        isUserTagged(storeId, justification.display)
+                          ? 'bg-blue-50 hover:bg-blue-100'
+                          : 'hover:bg-gray-200'
+                      ]">
                       <!-- Checkbox column for dynamic signatory -->
-                      <td v-if="objecttype === 'dynamicsignatory'" 
-                          class="p-5 text-center">
+                      <td v-if="objecttype === 'dynamicsignatory'" class="p-5 text-center">
                         <div class="flex items-center justify-center">
-                          <svg v-if="isUserTagged(storeId, justification.display)"
-                               class="w-6 h-6 text-blue-600" 
-                               aria-hidden="true" 
-                               xmlns="http://www.w3.org/2000/svg" 
-                               width="24" 
-                               height="24" 
-                               fill="currentColor" 
-                               viewBox="0 0 24 24">
-                            <path fill-rule="evenodd" 
-                                  d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm13.707-1.293a1 1 0 0 0-1.414-1.414L11 12.586l-1.293-1.293a1 1 0 0 0-1.414 1.414l2 2a1 1 0 0 0 1.414 0l4-4Z" 
-                                  clip-rule="evenodd"/>
+                          <svg v-if="isUserTagged(storeId, justification.display)" class="w-6 h-6 text-blue-600"
+                            aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+                            fill="currentColor" viewBox="0 0 24 24">
+                            <path fill-rule="evenodd"
+                              d="M2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10S2 17.523 2 12Zm13.707-1.293a1 1 0 0 0-1.414-1.414L11 12.586l-1.293-1.293a1 1 0 0 0-1.414 1.414l2 2a1 1 0 0 0 1.414 0l4-4Z"
+                              clip-rule="evenodd" />
                           </svg>
-                          <div v-else 
-                               class="w-6 h-6 border-2 border-gray-300 rounded-full">
+                          <div v-else class="w-6 h-6 border-2 border-gray-300 rounded-full">
                           </div>
                         </div>
                       </td>
-                      <td v-for="header in Object.keys(justification.all)" 
-                          :key="header"
-                          class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
+                      <td v-for="header in Object.keys(justification.all)" :key="header"
+                        class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
                         {{ justification.all[header] }}
                       </td>
                     </tr>
@@ -525,11 +503,10 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Buttons -->
       <div class="mt-4 flex justify-end gap-2">
-        <button @click="showModal = false" 
-                class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
+        <button @click="showModal = false" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">
           {{ objecttype === 'dynamicsignatory' ? 'Done' : 'Cancel' }}
         </button>
       </div>
@@ -668,7 +645,7 @@ const isUserTagged = (fieldId, displayValue) => {
   if (!formAnswers.value[fieldId] || !Array.isArray(formAnswers.value[fieldId])) {
     return false;
   }
-  
+
   return formAnswers.value[fieldId].some(
     item => item.type === "dynammicsignatory" && item.value === displayValue
   );
@@ -678,7 +655,7 @@ const getTaggedUsers = (id) => {
   if (!formAnswers.value[id] || !Array.isArray(formAnswers.value[id])) {
     return [];
   }
-  
+
   return formAnswers.value[id].filter(
     item => item.type === "dynammicsignatory"
   );
@@ -722,7 +699,7 @@ const selectEmployee = (id, justification) => {
         formAnswers.value[labelId] = value;
       }
     });
-    
+
     showModal.value = false;
   } else if (objecttype.value == "dynamicsignatory") {
     // Handle dynamic signatory with select/deselect
@@ -737,7 +714,7 @@ const selectEmployee = (id, justification) => {
           typeof item === "object" &&
           item.type === "dynammicsignatory" &&
           item.value === justification.display,
-          
+
       );
 
       if (existingIndex !== -1) {
@@ -776,7 +753,7 @@ const selectEmployee = (id, justification) => {
     }
     showModal.value = false;
   }
-  
+
   index.value = "";
 };
 
@@ -820,7 +797,7 @@ const getDisplayBinding = (formId, index) =>
     },
   });
 
-  // New helper to get position name
+// New helper to get position name
 const getPositionName = (formId, index) => {
   const item = formAnswers.value[formId]?.[index];
   return typeof item === "object" ? item.positionname || '' : '';

@@ -1,5 +1,5 @@
 <template>
-    <nav class="flex mb-5 h-13 bg-gray-100 rounded-lg" aria-label="Breadcrumb">
+    <nav class="flex mb-5 h-13 bg-gray-100 rounded-lg mt-3" aria-label="Breadcrumb">
     <ul class="p-4 flex flex-wrap space-x-3 text-sm font-medium">
       <li
         v-for="(item, index) in nenunames"

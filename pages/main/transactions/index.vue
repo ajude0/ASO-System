@@ -80,7 +80,7 @@
                   <div class="flex-1">
                     <!-- Name Row -->
                     <div class="flex items-baseline gap-2 mb-0.5">
-                      <span class="text-gray-900 font-medium text-lg">
+                      <span class="text-gray-900 font-medium text-md">
                         {{ dynamic.value }}
                       </span>
 
@@ -93,7 +93,7 @@
                     </div>
 
                     <!-- Meta Info -->
-                    <div class="flex items-center gap-2 text-sm text-gray-500 ">
+                    <div class="flex items-center gap-2 text-xs text-gray-500 ">
                       <span v-if="dynamic.position" class="hover:text-gray-700 transition-colors">
                         {{ dynamic.position }}
                       </span>

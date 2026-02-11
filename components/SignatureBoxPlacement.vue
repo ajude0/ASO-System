@@ -38,7 +38,7 @@ const signatureBoxes = ref([]);
 
 // Drag/Resize state
 const isDragging = ref(false);
-const showNameOnBox = ref(false);   // <-- NEW
+const showNameOnBox = ref(false);
 const isResizing = ref(false);
 const dragStart = ref({ x: 0, y: 0, boxX: 0, boxY: 0, boxWidth: 0, boxHeight: 0 });
 const dragOffset = ref({ x: 0, y: 0 });
@@ -57,7 +57,7 @@ const activeSignerKey = ref(null);
 // Sequential approval toggle
 const enforceSequentialOrder = ref(false);
 
-// Color management
+// Color management - Enhanced with more distinct colors
 const colorPalette = [
     '#3b82f6', // blue
     '#10b981', // green
@@ -431,7 +431,7 @@ const placeSignatureOnClick = (e) => {
         isEmpty: true,
         datePosition: null,
         color: signerColor,
-        showName: newBoxForm.value.showName,   // <-- NEW
+        showName: newBoxForm.value.showName,
         signatureLock: !!newBoxForm.value.signatureLock,
         dateLock: !!newBoxForm.value.dateLock,
         approvalOrder: Number(signer?.approvalOrder || 1),
@@ -645,34 +645,78 @@ const getDateStyle = (box) => {
     };
 };
 
-// Color-aware visual styles
+// ENHANCED: Color-aware visual styles with better differentiation
 const getBoxVisualStyle = (box) => {
     const base = getBoxStyle(box);
     const color = box.color || '#3b82f6';
     const selected = selectedBoxId.value === box.id;
-    const bgAlpha = box.isEmpty ? (selected ? 0.25 : 0.15) : 0;
+    const isBeingDragged = isDragging.value && selectedBoxId.value === box.id && dragTargetType.value === 'box';
+    const bgAlpha = box.isEmpty ? (selected ? 0.3 : 0.2) : 0;
+
+    // Extra prominent styling when actively dragging
+    if (isBeingDragged) {
+        return {
+            ...base,
+            borderColor: color,
+            borderWidth: '3px',
+            backgroundColor: hexToRgba(color, 0.35),
+            boxShadow: `0 0 0 5px ${hexToRgba(color, 0.4)}, 0 8px 16px ${hexToRgba(color, 0.6)}, 0 12px 24px rgba(0,0,0,0.3)`,
+            outline: `3px solid ${color}`,
+            outlineOffset: '3px',
+            transform: 'scale(1.02)',
+            zIndex: 100
+        };
+    }
+
     return {
         ...base,
         borderColor: color,
-        backgroundColor: bgAlpha ? hexToRgba(color, bgAlpha) : 'transparent'
+        borderWidth: selected ? '3px' : '2px',
+        backgroundColor: bgAlpha ? hexToRgba(color, bgAlpha) : 'transparent',
+        boxShadow: selected
+            ? `0 0 0 4px ${hexToRgba(color, 0.3)}, 0 4px 8px ${hexToRgba(color, 0.5)}`
+            : `0 2px 6px ${hexToRgba(color, 0.5)}`,
+        outline: selected ? `2px solid ${color}` : 'none',
+        outlineOffset: selected ? '2px' : '0'
     };
 };
 
 const getDateVisualStyle = (box) => {
     const base = getDateStyle(box);
     const color = box.color || '#3b82f6';
+    const selected = selectedBoxId.value === box.id;
+    const isBeingDragged = isDragging.value && selectedBoxId.value === box.id && dragTargetType.value === 'date';
 
     if (!box.signedDate && !box.signedBy) {
+        // Extra prominent styling when actively dragging
+        if (isBeingDragged) {
+            return {
+                ...base,
+                borderColor: color,
+                borderWidth: '2px',
+                color: color,
+                backgroundColor: hexToRgba(color, 0.25),
+                boxShadow: `0 0 0 4px ${hexToRgba(color, 0.3)}, 0 6px 12px ${hexToRgba(color, 0.5)}, 0 8px 16px rgba(0,0,0,0.2)`,
+                transform: 'scale(1.05)',
+                zIndex: 100
+            };
+        }
+
         return {
             ...base,
             borderColor: color,
+            borderWidth: selected ? '2px' : '1px',
             color: color,
-            backgroundColor: hexToRgba(color, 0.1),
+            backgroundColor: hexToRgba(color, 0.15),
+            boxShadow: selected
+                ? `0 0 0 3px ${hexToRgba(color, 0.2)}`
+                : `0 1px 3px ${hexToRgba(color, 0.3)}`,
         };
     } else {
         return {
             ...base,
             borderColor: '#36454F',
+            borderWidth: '1px',
             color: '#36454F',
         };
     }
@@ -791,7 +835,8 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
             <div class="flex items-center justify-between p-4 border-b">
                 <div>
                     <h2 class="text-xl font-semibold">Place Signature Boxes</h2>
-                    <p class="text-sm text-gray-600 mt-1">Click to place a fixed-size signature area. Drag to move.</p>
+                    <p class="text-sm text-gray-600 mt-1">Click to place a fixed-size signature area. Drag to move. Each
+                        signer has a unique color.</p>
                 </div>
                 <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -835,10 +880,15 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                         <draggable v-model="signers" item-key="emplId" @end="onSignersDragEnd"
                             handle=".signer-drag-handle" class="space-y-2">
                             <template #item="{ element: s, index }">
-                                <div class="w-full border rounded p-2 transition flex items-center justify-between gap-2"
-                                    :class="(newBoxForm.assignedEmplId === s.emplId || newBoxForm.assignedTo === s.name)
-                                        ? 'border-blue-500 bg-blue-50'
-                                        : 'border-gray-300'">
+                                <div class="w-full border-2 rounded p-2 transition flex items-center justify-between gap-2"
+                                    :style="{
+                                        borderColor: s.color,
+                                        backgroundColor: (newBoxForm.assignedEmplId === s.emplId || newBoxForm.assignedTo === s.name)
+                                            ? hexToRgba(s.color, 0.15)
+                                            : 'transparent'
+                                    }" :class="(newBoxForm.assignedEmplId === s.emplId || newBoxForm.assignedTo === s.name)
+                                        ? 'ring-2'
+                                        : ''">
                                     <!-- Left side: drag handle, number, color, name -->
                                     <div class="flex items-center gap-2 flex-1 min-w-0">
                                         <span class="signer-drag-handle cursor-move text-gray-400 hover:text-gray-600"
@@ -846,42 +896,20 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                             ⋮⋮
                                         </span>
                                         <span v-if="enforceSequentialOrder"
-                                            class="flex-shrink-0 w-6 h-6 rounded-full bg-gray-200 text-gray-700 text-xs font-bold flex items-center justify-center">
+                                            class="flex-shrink-0 w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center"
+                                            :style="{ backgroundColor: s.color }">
                                             {{ s.approvalOrder }}
                                         </span>
-                                        <span class="flex-shrink-0 inline-block w-3 h-3 rounded"
+                                        <span class="flex-shrink-0 inline-block w-4 h-4 rounded border border-gray-300"
                                             :style="{ backgroundColor: s.color }"></span>
                                         <span class="font-medium truncate">{{ s.name }}</span>
                                     </div>
 
                                     <!-- Right side: action buttons -->
                                     <div class="flex items-center gap-1 flex-shrink-0">
-                                        <!-- Up/Down (optional, you can remove them if dragging is enough) -->
-                                        <!-- <template v-if="enforceSequentialOrder">
-                                            <button
-                                                @click="moveSignerUp(index)"
-                                                :disabled="index === 0"
-                                                class="p-1 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                                                title="Move up"
-                                            >
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
-                                                </svg>
-                                            </button>
-                                            <button
-                                                @click="moveSignerDown(index)"
-                                                :disabled="index === signers.length - 1"
-                                                class="p-1 hover:bg-gray-200 rounded disabled:opacity-30 disabled:cursor-not-allowed"
-                                                title="Move down"
-                                            >
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                                                </svg>
-                                            </button>
-                                        </template> -->
-
                                         <button @click="setActiveSigner(s)"
-                                            class="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600">
+                                            class="px-2 py-1 text-xs text-white rounded hover:opacity-90 transition"
+                                            :style="{ backgroundColor: s.color }">
                                             Select
                                         </button>
 
@@ -917,8 +945,18 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                 </label>
 
                                 <div class="flex gap-2 items-center">
-                                    <input v-model="newBoxForm.assignedTo" type="text" placeholder="Enter user name..."
-                                        class="flex-1 border rounded px-3 py-2 text-sm" disabled />
+                                    <div class="flex-1 flex items-center gap-2 border rounded px-3 py-2 text-sm bg-gray-50"
+                                        :style="newBoxForm.assignedColor ? {
+                                            borderColor: newBoxForm.assignedColor,
+                                            borderWidth: '2px'
+                                        } : {}">
+                                        <span v-if="newBoxForm.assignedColor"
+                                            class="inline-block w-3 h-3 rounded flex-shrink-0"
+                                            :style="{ backgroundColor: newBoxForm.assignedColor }"></span>
+                                        <input v-model="newBoxForm.assignedTo" type="text"
+                                            placeholder="Enter user name..."
+                                            class="flex-1 bg-transparent border-none outline-none w-5" disabled />
+                                    </div>
 
                                     <button @click="handleAssignUser"
                                         class="px-2 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
@@ -934,7 +972,7 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                 <div class="flex items-center gap-2">
                                     <input type="checkbox" v-model="newBoxForm.signatureLock" id="signatureLock"
                                         class="rounded" />
-                                    <label for="signatureLock" class="text-sm font-medium text-gray-700">Sig
+                                    <label for="signatureLock" class="text-sm font-medium text-gray-700">Signature
                                         Lock</label>
                                 </div>
                                 <div class="flex items-center gap-2">
@@ -943,7 +981,8 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                     <label for="dateLock" class="text-sm font-medium text-gray-700">Date Lock</label>
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <input type="checkbox" v-model="newBoxForm.showName" id="showNameOnBox" class="rounded" />
+                                    <input type="checkbox" v-model="newBoxForm.showName" id="showNameOnBox"
+                                        class="rounded" />
                                     <label for="showNameOnBox" class="text-sm font-medium text-gray-700">Show name on
                                         box</label>
                                 </div>
@@ -956,16 +995,18 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                         <h3 class="font-semibold mb-3">Boxes ({{ signatureBoxes.length }})</h3>
                         <div class="space-y-2 max-h-96 overflow-y-auto">
                             <div v-for="(box, index) in signatureBoxes" :key="box.id"
-                                class="p-3 border rounded text-sm cursor-pointer transition-all"
-                                :class="selectedBoxId === box.id ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'"
+                                class="p-3 border-2 rounded text-sm cursor-pointer transition-all" :style="{
+                                    borderColor: box.color || '#3b82f6',
+                                    backgroundColor: selectedBoxId === box.id ? hexToRgba(box.color || '#3b82f6', 0.1) : 'transparent'
+                                }" :class="selectedBoxId === box.id ? 'ring-2' : ''"
                                 @click="selectAndScrollToBox(box)">
                                 <div class="flex items-start justify-between mb-1">
                                     <p class="font-semibold text-gray-900 flex items-center gap-2">
-                                        <span class="inline-block w-3 h-3 rounded"
+                                        <span class="inline-block w-4 h-4 rounded border border-gray-300"
                                             :style="{ backgroundColor: box.color || '#3b82f6' }"></span>
                                         {{ box.assignedTo }}
                                         <span v-if="enforceSequentialOrder"
-                                            class="text-xs px-1.5 py-0.5 rounded text-white"
+                                            class="text-xs px-1.5 py-0.5 rounded text-white font-bold"
                                             :style="{ backgroundColor: box.color || '#3b82f6' }">
                                             #{{ box.approvalOrder }}
                                         </span>
@@ -977,10 +1018,10 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                     Page {{ box.page }} <span v-if="box.hasDate"
                                         class="text-green-600 ml-1">(+Date)</span>
                                 </div>
-                                  <div class="text-xs text-gray-500">
+                                <div class="text-xs text-gray-500">
                                     Has Name =
-                                    <span v-if="box.showName == true"
-                                        class="text-white rounded-lg bg-green-600 px-2"> True</span>
+                                    <span v-if="box.showName == true" class="text-white rounded-lg bg-green-600 px-2">
+                                        True</span>
                                     <span v-else class="text-white rounded-lg bg-red-600 px-2"> False</span>
                                 </div>
                                 <div class="text-xs text-gray-500">
@@ -1056,15 +1097,19 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                         'border-2': !box.signedBy,
                                         'cursor-default': !box.isEmpty,
                                         'cursor-move': box.isEmpty && !(isDragging && selectedBoxId === box.id && dragTargetType === 'box'),
-                                        'cursor-grabbing': box.isEmpty && isDragging && selectedBoxId === box.id && dragTargetType === 'box'
+                                        'cursor-grabbing': box.isEmpty && isDragging && selectedBoxId === box.id && dragTargetType === 'box',
+                                        'z-50': selectedBoxId === box.id || (isDragging && selectedBoxId === box.id),
+                                        'z-10': selectedBoxId !== box.id && !(isDragging && selectedBoxId === box.id),
+                                        'active-drag-box': isDragging && selectedBoxId === box.id && dragTargetType === 'box',
+                                        'active-resize-box': isResizing && selectedBoxId === box.id
                                     }" @mousedown.stop="startDragging($event, box.id, 'box')">
 
                                     <div v-if="!box.signedBy"
-                                        class="absolute -top-6 left-0 text-white text-xs px-2 py-1 rounded font-semibold whitespace-nowrap flex items-center gap-1"
+                                        class="absolute -top-8 left-0 text-white text-xs px-3 py-1.5 rounded-md font-semibold whitespace-nowrap flex items-center gap-1.5 shadow-md"
                                         :style="{ backgroundColor: box.color || '#3b82f6' }">
                                         {{ box.assignedTo }}
                                         <span v-if="enforceSequentialOrder"
-                                            class="ml-1 px-1 py-0.5 bg-white bg-opacity-30 rounded">
+                                            class="ml-1 px-1.5 py-0.5 bg-white bg-opacity-30 rounded">
                                             #{{ box.approvalOrder }}
                                         </span>
                                         <span v-if="box.signatureLock">🔒</span>
@@ -1072,13 +1117,17 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
 
                                     <template v-if="box.isEmpty || box.isEmpty == null">
                                         <template v-if="!box.signatureLock">
-                                            <div class="absolute w-3 h-3 bg-blue-500 rounded-full -top-1 -left-1 cursor-nw-resize opacity-0 group-hover:opacity-100"
+                                            <div class="absolute w-3 h-3 bg-white border-2 rounded-full -top-1.5 -left-1.5 cursor-nw-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                                                :style="{ borderColor: box.color || '#3b82f6' }"
                                                 @mousedown.stop="startResizing($event, box.id, 'nw')"></div>
-                                            <div class="absolute w-3 h-3 bg-blue-500 rounded-full -top-1 -right-1 cursor-ne-resize opacity-0 group-hover:opacity-100"
+                                            <div class="absolute w-3 h-3 bg-white border-2 rounded-full -top-1.5 -right-1.5 cursor-ne-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                                                :style="{ borderColor: box.color || '#3b82f6' }"
                                                 @mousedown.stop="startResizing($event, box.id, 'ne')"></div>
-                                            <div class="absolute w-3 h-3 bg-blue-500 rounded-full -bottom-1 -left-1 cursor-sw-resize opacity-0 group-hover:opacity-100"
+                                            <div class="absolute w-3 h-3 bg-white border-2 rounded-full -bottom-1.5 -left-1.5 cursor-sw-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                                                :style="{ borderColor: box.color || '#3b82f6' }"
                                                 @mousedown.stop="startResizing($event, box.id, 'sw')"></div>
-                                            <div class="absolute w-3 h-3 bg-blue-500 rounded-full -bottom-1 -right-1 cursor-se-resize opacity-0 group-hover:opacity-100"
+                                            <div class="absolute w-3 h-3 bg-white border-2 rounded-full -bottom-1.5 -right-1.5 cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                                                :style="{ borderColor: box.color || '#3b82f6' }"
                                                 @mousedown.stop="startResizing($event, box.id, 'se')"></div>
                                         </template>
 
@@ -1117,13 +1166,13 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                             </span>
 
                                             <!-- Signature line -->
-                                            <div v-if="box.showName && box.isEmpty == true" class="absolute bottom-3 w-4/5 border-t border-gray-400 opacity-60">
+                                            <div v-if="box.showName && box.isEmpty == true"
+                                                class="absolute bottom-3 w-4/5 border-t border-gray-400 opacity-60">
                                             </div>
 
                                             <!-- Printed name BELOW the line -->
                                             <span v-if="box.showName"
-                                                class="absolute bottom-0 text-[10px] font-semibold tracking-wide text-center w-full"
-                                                >
+                                                class="absolute bottom-0 text-[10px] font-semibold tracking-wide text-center w-full">
                                                 {{ box.assignedTo }}
                                             </span>
                                         </div>
@@ -1136,10 +1185,12 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                     class="absolute px-2 py-1 text-xs font-semibold rounded draggable-item flex items-center justify-center hover:z-50"
                                     :class="{
                                         'border border-dashed': box.isEmpty || box.isEmpty == null,
-                                        'ring-2 ring-blue-300': selectedBoxId === box.id && !box.signedBy,
                                         'cursor-default': !box.isEmpty,
                                         'cursor-grabbing': box.isEmpty && isDragging && selectedBoxId === box.id && dragTargetType === 'date',
-                                        'cursor-move': box.isEmpty && !(isDragging && selectedBoxId === box.id && dragTargetType === 'date')
+                                        'cursor-move': box.isEmpty && !(isDragging && selectedBoxId === box.id && dragTargetType === 'date'),
+                                        'z-50': selectedBoxId === box.id || (isDragging && selectedBoxId === box.id && dragTargetType === 'date'),
+                                        'z-10': selectedBoxId !== box.id && !(isDragging && selectedBoxId === box.id && dragTargetType === 'date'),
+                                        'active-drag-date': isDragging && selectedBoxId === box.id && dragTargetType === 'date'
                                     }" :style="getDateVisualStyle(box)"
                                     @mousedown.stop="startDragging($event, box.id, 'date')">
 
@@ -1225,5 +1276,35 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
 
 .signer-drag-handle {
     user-select: none;
+}
+
+/* ENHANCED: Smooth transitions for signature boxes */
+.draggable-item {
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+/* ENHANCED: Active dragging state for signature boxes */
+.draggable-item.active-drag-box {
+    transform: scale(1.03);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 12px 24px rgba(0, 0, 0, 0.15);
+    z-index: 100 !important;
+}
+
+/* ENHANCED: Active resizing state for signature boxes */
+.draggable-item.active-resize-box {
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15), 0 8px 16px rgba(0, 0, 0, 0.1);
+    z-index: 100 !important;
+}
+
+/* ENHANCED: Active dragging state for date boxes */
+.draggable-item.active-drag-date {
+    transform: scale(1.05);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2), 0 8px 16px rgba(0, 0, 0, 0.12);
+    z-index: 100 !important;
+}
+
+/* Disable transitions while actively dragging/resizing */
+.draggable-item:active {
+    transition: none;
 }
 </style>

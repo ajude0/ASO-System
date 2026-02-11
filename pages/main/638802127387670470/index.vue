@@ -1,5 +1,6 @@
 <template>
   <BreadCrumbs :nenunames="nenunames" />
+  <div class="bg-white p-4 w-full shadow-md">
   <div class="flex mb-5 me-4">
     <button
       v-if="canAdd"
@@ -7,7 +8,7 @@
       class="flex px-3 py-3 bg-green-500 text-white rounded-lg hover:bg-green-700 place-items-center gap-1"
     >
       <svg
-        class="w-4 h-4 text-gray-800 dark:text-white"
+        class="w-4 h-4 text-gray-50 dark:text-white"
         aria-hidden="true"
         xmlns="http://www.w3.org/2000/svg"
         width="24"
@@ -85,7 +86,7 @@
         class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700"
       >
         <svg
-          class="w-6 h-6 text-gray-800 dark:text-white"
+          class="w-6 h-6 text-gray-50 dark:text-white"
           aria-hidden="true"
           xmlns="http://www.w3.org/2000/svg"
           width="24"
@@ -542,6 +543,7 @@
         </div>
       </div>
     </div>
+  </div>
   </div>
 </template>
 

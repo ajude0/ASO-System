@@ -26,7 +26,7 @@
           placeholder="Search" />
       </div>
       <button @click="getListOfTransactions" class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700">
-        <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
+        <svg class="w-6 h-6 text-gray-50 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
           width="24" height="24" fill="none" viewBox="0 0 24 24">
           <path stroke="currentColor" stroke-linecap="round" stroke-width="2"
             d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
@@ -472,7 +472,7 @@
                   <div class="flex-1">
                     <!-- Name Row -->
                     <div class="flex items-baseline gap-2 mb-0.5">
-                      <span class="text-gray-900 font-medium text-lg">
+                      <span class="text-gray-900 font-medium text-md">
                         {{ dynamic.value }}
                       </span>
 
@@ -485,7 +485,7 @@
                     </div>
 
                     <!-- Meta Info -->
-                    <div class="flex items-center gap-2 text-sm text-gray-500 ">
+                    <div class="flex items-center gap-2 text-xs text-gray-500 ">
                       <span v-if="dynamic.position" class="hover:text-gray-700 transition-colors">
                         {{ dynamic.position }}
                       </span>

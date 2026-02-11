@@ -204,13 +204,13 @@
                 <div class="flex-1 min-w-0">
                   <!-- Name Row -->
                   <div class="flex items-baseline gap-2 mb-0.5">
-                    <span class="text-gray-900 font-medium text-lg truncate">
+                    <span class="text-gray-900 font-medium text-md truncate">
                       {{ dynamicValue.value }}
                     </span>
                   </div>
 
                   <!-- Meta Info -->
-                  <div class="flex items-center gap-2 text-sm text-gray-500 font-medium">
+                  <div class="flex items-center gap-2 text-xs text-gray-500 font-medium">
                     <span v-if="dynamicValue.positionname" class="hover:text-gray-700 transition-colors">
                       {{ dynamicValue.positionname }}
                     </span>

@@ -879,7 +879,7 @@ onMounted(() => {
            <!-- Pre-placed Signature Boxes -->
             <div v-for="(sig, index) in localSignatures" :key="'preplaced-' + index"
               :ref="el => { if (el) prePlacedSigRefs[index] = el }" v-show="sig.page === currentViewPage"
-              class="absolute rounded transition-all group" :class="{
+              class="absolute rounded signature-box group" :class="{
                 'border-2 border-dashed border-green-500 bg-green-50 cursor-pointer hover:bg-green-100 hover:border-green-600': canUserSign(sig),
                 'border-2 border-dashed border-purple-400 bg-purple-50 cursor-not-allowed': isUserWaiting(sig),
                 'border-2 border-dashed border-gray-300 bg-gray-50 cursor-not-allowed': sig.isEmpty && sig.assignedEmplId !== currentEmplId && !isUserWaiting(sig),
@@ -891,7 +891,11 @@ onMounted(() => {
                 'border-2 border-gray-400 bg-gray-100': !sig.isEmpty && sig.signedBy !== currentUserName && !sig.imageSrc,
                 'border-2 border-gray-400': !sig.isEmpty && sig.signedBy !== currentUserName && sig.imageSrc,
                 'cursor-move': canUserEdit(sig),
-                'ring-4 ring-yellow-400 ring-offset-2 animate-pulse': highlightedSignatureIndex === index
+                'ring-4 ring-yellow-400 ring-offset-2 animate-pulse': highlightedSignatureIndex === index,
+                'z-50': editingSignatureIndex === index && (isDraggingSignature || isResizingSignature),
+                'z-10': editingSignatureIndex !== index || (!isDraggingSignature && !isResizingSignature),
+                'active-drag': editingSignatureIndex === index && isDraggingSignature,
+                'active-resize': editingSignatureIndex === index && isResizingSignature
               }" :style="{ width: sig.width + 'px', height: sig.height + 'px', left: sig.x + 'px', top: sig.y + 'px' }"
               @mouseup="handlePrePlacedClick(sig, index)"
               @mousedown="(!isSignatureLocked(sig) && canUserEdit(sig)) ? startDraggingSignature($event, index) : null"
@@ -1044,12 +1048,15 @@ onMounted(() => {
             <!-- Dates for signed signatures - NOW DRAGGABLE -->
             <div v-for="(sig, index) in localSignatures.filter(s => s.datePosition)" :key="'date-' + index"
               :ref="el => { if (el) prePlacedDateRefs[index] = el }" v-show="sig.page === currentViewPage"
-              class="absolute select-none text-sm font-semibold text-gray-700 rounded px-2 py-1 border border-gray-300 transition-all"
+              class="absolute select-none text-sm font-semibold text-gray-700 rounded px-2 py-1 border border-gray-300 date-box"
               :class="{
                 'cursor-move hover:bg-blue-400 hover:border-blue-500 bg-blue-200': currentUser(sig) && !sig.isEmpty,
                 'cursor-move hover:bg-green-400 hover:border-green-500 bg-green-200': currentUser(sig) && sig.isEmpty && !isUserWaiting(sig),
                 'cursor-default hover:bg-purple-300 hover:border-purple-400 bg-purple-100': isUserWaiting(sig),
                 'cursor-default hover:bg-gray-200 hover:border-gray-500 bg-gray-50': !currentUser(sig),
+                'z-50': currentDraggingDateIndex === index && isDraggingDate,
+                'z-10': currentDraggingDateIndex !== index || !isDraggingDate,
+                'active-drag-date': currentDraggingDateIndex === index && isDraggingDate
               }" :style="{ left: sig.datePosition.x + 'px', top: sig.datePosition.y + 'px' }"
               @mousedown="(!isDateLocked(sig) && canUserEdit(sig)) ? startDraggingDate($event, index) : null"
               :title="canUserEdit(sig) && sig.dateLock == false ? 'Drag to move date' : 'Locked'">
@@ -1098,5 +1105,41 @@ onMounted(() => {
 
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* ENHANCED: Smooth transitions for signature boxes */
+.signature-box {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+/* ENHANCED: Active dragging state for signature boxes */
+.signature-box.active-drag {
+  transform: scale(1.03);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 12px 24px rgba(0, 0, 0, 0.15);
+  z-index: 100 !important;
+}
+
+/* ENHANCED: Active resizing state for signature boxes */
+.signature-box.active-resize {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15), 0 8px 16px rgba(0, 0, 0, 0.1);
+  z-index: 100 !important;
+}
+
+/* ENHANCED: Smooth transitions for date boxes */
+.date-box {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+/* ENHANCED: Active dragging state for date boxes */
+.date-box.active-drag-date {
+  transform: scale(1.05);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2), 0 8px 16px rgba(0, 0, 0, 0.12);
+  z-index: 100 !important;
+}
+
+/* Disable transitions while actively dragging */
+.signature-box:active,
+.date-box:active {
+  transition: none;
 }
 </style>

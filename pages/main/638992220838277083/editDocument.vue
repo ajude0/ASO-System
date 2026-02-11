@@ -525,6 +525,62 @@ const sequential = computed(() => {
     return prePlacedSignatures.value.some(sig => sig.enforceSequentialOrder === true)
 })
 const signatureStatuses = computed(() => {
+  const grouped = {}
+
+  // Step 1: determine individual status first
+  let signatures = [...prePlacedSignatures.value]
+
+  if (sequential.value) {
+    signatures.sort((a, b) => a.approvalOrder - b.approvalOrder)
+    const firstUnsigned = signatures.find(sig => sig.isEmpty)
+
+    signatures = signatures.map(sig => {
+      let approvalStatus
+
+      if (!sig.isEmpty) {
+        approvalStatus = "signed"
+      } else if (firstUnsigned && sig.approvalOrder === firstUnsigned.approvalOrder) {
+        approvalStatus = "pending"
+      } else {
+        approvalStatus = "waiting"
+      }
+
+      return { ...sig, approvalStatus }
+    })
+  } else {
+    signatures = signatures.map(sig => ({
+      ...sig,
+      approvalStatus: sig.isEmpty ? "pending" : "signed"
+    }))
+  }
+
+  // Step 2: group by employee
+  signatures.forEach(sig => {
+    const key = sig.assignedEmplId
+
+    if (!grouped[key]) {
+      grouped[key] = {
+        assignedEmplId: key,
+        assignedTo: sig.assignedTo,
+        total: 0,
+        signed: 0,
+        pending: 0,
+        waiting: 0
+      }
+    }
+
+    grouped[key].total++
+
+    if (sig.approvalStatus === "signed") grouped[key].signed++
+    if (sig.approvalStatus === "pending") grouped[key].pending++
+    if (sig.approvalStatus === "waiting") grouped[key].waiting++
+  })
+
+  // Step 3: return unique employees only
+  return Object.values(grouped)
+})
+
+const signatureStatusestemp = computed(() => {
     if (!sequential.value) {
         return prePlacedSignatures.value.map(sig => ({
             ...sig,
@@ -553,8 +609,9 @@ const signatureStatuses = computed(() => {
     })
 })
 
+
 const getStats = () => {
-    const items = signatureStatuses.value;
+    const items = signatureStatusestemp.value;
 
     const total = items.length;
     const signed = items.filter(s => s.approvalStatus === "signed").length;
@@ -777,6 +834,7 @@ onMounted(async () => {
     await fetchDocumentTitle(documentid);
     pdfTitle.value = title.value;
     loading.value = false;
+    console.log(prePlacedSignatures.value);
 });
 </script>
 
@@ -973,60 +1031,71 @@ onMounted(async () => {
                             No signature boxes placed yet
                         </div>
 
-                        <div v-else class="space-y-2 max-h-96 overflow-y-auto">
-                            <div v-for="sig in signatureStatuses" :key="sig.id" class="p-3 border rounded text-sm"
-                                :class="{
-                                    'border-green-300 bg-green-50': sig.approvalStatus === 'signed',
-                                    'border-blue-300 bg-blue-50': sig.approvalStatus === 'pending',
-                                    'border-gray-300 bg-gray-50': sig.approvalStatus === 'waiting'
-                                }">
-                                <div class="flex justify-between items-start">
-                                    <div>
-                                        <p class="font-semibold">{{ sig.assignedTo }}</p>
-                                        <p class="text-xs text-gray-600">Page {{ sig.page }}</p>
-                                        <p class="text-xs text-gray-500">
-                                            {{ Math.round(sig.width) }}×{{ Math.round(sig.height) }}px
-                                        </p>
-                                    </div>
-                                    <div class="flex flex-col">
-                                        <div>
-                                            <span v-if="sig.approvalStatus === 'signed'"
-                                                class="text-green-600 text-xs font-bold">✓
-                                                Signed</span>
+                       <div v-else class="space-y-2 max-h-96 overflow-y-auto">
+  <div
+    v-for="sig in signatureStatuses"
+    :key="sig.assignedEmplId"
+    class="p-3 border rounded text-sm"
+    :class="{
+      'border-green-300 bg-green-50': sig.pending === 0 && sig.waiting === 0,
+      'border-blue-300 bg-blue-50': sig.pending > 0,
+      'border-gray-300 bg-gray-50': sig.pending === 0 && sig.waiting > 0
+    }"
+  >
+    <div class="flex justify-between items-start">
+      <div>
+        <p class="font-semibold">{{ sig.assignedTo }}</p>
 
-                                            <span v-else-if="sig.approvalStatus === 'pending'"
-                                                class="text-orange-500 text-xs font-bold">⏳
-                                                Pending</span>
+        <p class="text-xs text-gray-600">
+          Total signatures: {{ sig.total }}
+        </p>
 
-                                            <span v-else class="text-gray-500 text-xs">⏳ Waiting</span>
-                                        </div>
+        <p class="text-xs text-gray-500">
+          Signed: {{ sig.signed }} /
+          Pending: {{ sig.pending }}
+          <span v-if="sig.waiting > 0"> / Waiting: {{ sig.waiting }}</span>
+        </p>
+      </div>
 
-                                        <button v-if="sig.approvalStatus === 'pending'"
-                                            @click="resendEmail(sig.assignedEmplId)" class="mt-2 flex items-center gap-2 px-3 py-1.5
-                                            bg-blue-600 text-white text-sm font-medium
-                                            rounded-lg shadow hover:bg-blue-700
-                                            transition-all duration-200">
+      <div class="flex flex-col items-end">
+        <!-- STATUS LABEL -->
+        <span
+          v-if="sig.pending > 0"
+          class="text-orange-500 text-xs font-bold"
+        >
+          ⏳ Pending
+        </span>
 
-                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                                                stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
-                                                <path stroke-linecap="round" stroke-linejoin="round"
-                                                    d="M2.25 13.5h3.86a2.25 2.25 0 0 1 2.012 1.244l.256.512a2.25 2.25 0 0 0 2.013 1.244h3.218a2.25 2.25 0 0 0 2.013-1.244l.256-.512a2.25 2.25 0 0 1 2.013-1.244h3.859m-19.5.338V18a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18v-4.162c0-.224-.034-.447-.1-.661L19.24 5.338a2.25 2.25 0 0 0-2.15-1.588H6.911a2.25 2.25 0 0 0-2.15 1.588L2.35 13.177a2.25 2.25 0 0 0-.1.661Z" />
-                                            </svg>
+        <span
+          v-else-if="sig.waiting > 0"
+          class="text-gray-500 text-xs font-bold"
+        >
+          ⏳ Waiting
+        </span>
 
-                                            Email
-                                        </button>
+        <span
+          v-else
+          class="text-green-600 text-xs font-bold"
+        >
+          ✓ Completed
+        </span>
 
-                                    </div>
+        <!-- RESEND BUTTON -->
+        <button
+          v-if="sig.pending > 0"
+          @click="resendEmail(sig.assignedEmplId)"
+          class="mt-2 flex items-center gap-2 px-3 py-1.5
+                 bg-blue-600 text-white text-sm font-medium
+                 rounded-lg shadow hover:bg-blue-700
+                 transition-all duration-200"
+        >
+          Resend
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
-                                </div>
-
-                                <div v-if="sig.approvalStatus === 'signed'"
-                                    class="mt-2 pt-2 border-t text-xs text-gray-600">
-                                    <p>By: {{ sig.signedBy }}</p>
-                                    <p>Date: {{ sig.signedDate }}</p>
-                                </div>
-                            </div>
-                        </div>
 
                     </div>
                 </div>
