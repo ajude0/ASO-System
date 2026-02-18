@@ -835,8 +835,7 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
             <div class="flex items-center justify-between p-4 border-b">
                 <div>
                     <h2 class="text-xl font-semibold">Place Signature Boxes</h2>
-                    <p class="text-sm text-gray-600 mt-1">Click to place a fixed-size signature area. Drag to move. Each
-                        signer has a unique color.</p>
+                    <p class="text-sm text-gray-600 mt-1">Click to place a signature area. Hover over boxes to see assigned names. Each signer has a unique color.</p>
                 </div>
                 <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1101,11 +1100,17 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                         'z-50': selectedBoxId === box.id || (isDragging && selectedBoxId === box.id),
                                         'z-10': selectedBoxId !== box.id && !(isDragging && selectedBoxId === box.id),
                                         'active-drag-box': isDragging && selectedBoxId === box.id && dragTargetType === 'box',
-                                        'active-resize-box': isResizing && selectedBoxId === box.id
+                                        'active-resize-box': isResizing && selectedBoxId === box.id,
+                                        'dimmed-box': isDragging && selectedBoxId !== box.id
                                     }" @mousedown.stop="startDragging($event, box.id, 'box')">
 
+                                    <!-- Name label: only shows when THIS box is being dragged or hovered -->
                                     <div v-if="!box.signedBy"
-                                        class="absolute -top-8 left-0 text-white text-xs px-3 py-1.5 rounded-md font-semibold whitespace-nowrap flex items-center gap-1.5 shadow-md"
+                                        class="absolute -top-8 left-0 text-white text-xs px-3 py-1.5 rounded-md font-semibold whitespace-nowrap flex items-center gap-1.5 shadow-lg transition-all duration-200 pointer-events-none"
+                                        :class="{
+                                            'opacity-0 group-hover:opacity-100': !(isDragging && selectedBoxId === box.id),
+                                            'opacity-100 scale-105': isDragging && selectedBoxId === box.id
+                                        }"
                                         :style="{ backgroundColor: box.color || '#3b82f6' }">
                                         {{ box.assignedTo }}
                                         <span v-if="enforceSequentialOrder"
@@ -1113,6 +1118,17 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                             #{{ box.approvalOrder }}
                                         </span>
                                         <span v-if="box.signatureLock">🔒</span>
+                                    </div>
+                                    
+                                    <!-- Compact corner indicator (hidden when dragging THIS box, visible otherwise) -->
+                                    <div v-if="!box.signedBy && !(isDragging && selectedBoxId === box.id)"
+                                        class="absolute -top-2 -left-2 w-6 h-6 rounded-full text-white text-[10px] font-bold flex items-center justify-center shadow-md transition-all duration-200 pointer-events-none"
+                                        :class="{
+                                            'opacity-60': isDragging && selectedBoxId !== box.id,
+                                            'opacity-100 hover:scale-110': !isDragging
+                                        }"
+                                        :style="{ backgroundColor: box.color || '#3b82f6' }">
+                                        {{ enforceSequentialOrder ? box.approvalOrder : box.assignedTo.charAt(0).toUpperCase() }}
                                     </div>
 
                                     <template v-if="box.isEmpty || box.isEmpty == null">
@@ -1190,7 +1206,8 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                         'cursor-move': box.isEmpty && !(isDragging && selectedBoxId === box.id && dragTargetType === 'date'),
                                         'z-50': selectedBoxId === box.id || (isDragging && selectedBoxId === box.id && dragTargetType === 'date'),
                                         'z-10': selectedBoxId !== box.id && !(isDragging && selectedBoxId === box.id && dragTargetType === 'date'),
-                                        'active-drag-date': isDragging && selectedBoxId === box.id && dragTargetType === 'date'
+                                        'active-drag-date': isDragging && selectedBoxId === box.id && dragTargetType === 'date',
+                                        'dimmed-box': isDragging && selectedBoxId !== box.id
                                     }" :style="getDateVisualStyle(box)"
                                     @mousedown.stop="startDragging($event, box.id, 'date')">
 
@@ -1280,7 +1297,13 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
 
 /* ENHANCED: Smooth transitions for signature boxes */
 .draggable-item {
-    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+/* ENHANCED: Dimming effect for non-active boxes while dragging */
+.draggable-item.dimmed-box {
+    opacity: 0.35;
+    filter: blur(0.5px);
 }
 
 /* ENHANCED: Active dragging state for signature boxes */
@@ -1288,12 +1311,16 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
     transform: scale(1.03);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2), 0 12px 24px rgba(0, 0, 0, 0.15);
     z-index: 100 !important;
+    opacity: 1 !important;
+    filter: none !important;
 }
 
 /* ENHANCED: Active resizing state for signature boxes */
 .draggable-item.active-resize-box {
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15), 0 8px 16px rgba(0, 0, 0, 0.1);
     z-index: 100 !important;
+    opacity: 1 !important;
+    filter: none !important;
 }
 
 /* ENHANCED: Active dragging state for date boxes */
@@ -1301,6 +1328,8 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
     transform: scale(1.05);
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2), 0 8px 16px rgba(0, 0, 0, 0.12);
     z-index: 100 !important;
+    opacity: 1 !important;
+    filter: none !important;
 }
 
 /* Disable transitions while actively dragging/resizing */

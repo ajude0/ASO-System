@@ -1,5 +1,5 @@
 <template>
-  <BreadCrumbs :nenunames="nenunames" />
+  <BreadCrumbs class="m-4" :nenunames="nenunames" />
   <div class="bg-white p-4 w-full shadow-md">
     <div class="grid grid-cols-2 p-4 text-center">
       <button

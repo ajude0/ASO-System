@@ -35,11 +35,11 @@ watch(route, () => {
     <div class="flex items-start">
       <Overlay />
      <Sidebar mobile-orientation="start" />
-      <div class="flex flex-col min-h-screen w-full overflow-x-auto">
+      <div class="flex flex-col h-screen w-full overflow-x-auto">
         <TopBar />
         <main class="flex-1 overflow-auto md:pb-8 lg:px-4 relative">
           <!-- Added relative here -->
-          <div class="relative h-[85vh] overflow-auto shadow-md">
+          <div class="relative overflow-auto shadow-md">
             <!-- Wrapper div for slot content -->
             <slot />
             <!-- Moved inside the slot wrapper -->

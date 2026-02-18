@@ -1,11 +1,11 @@
 <template>
-  <BreadCrumbs :nenunames="nenunames" />
+  <BreadCrumbs class="m-4" :nenunames="nenunames" />
   <div class="bg-white p-4 w-full shadow-md">
   <div class="flex mb-5 me-4">
     <button
       v-if="canAdd"
       @click="goToCreateRequest"
-      class="flex px-3 py-3 bg-green-500 text-white rounded-lg hover:bg-green-700 place-items-center gap-1"
+      class="flex px-3 py-3 bg-green-500 text-white rounded-lg hover:bg-green-700 place-items-center gap-1 font-medium"
     >
       <svg
         class="w-4 h-4 text-gray-50 dark:text-white"
