@@ -47,7 +47,7 @@
               </svg>
               View profile
             </li> -->
-            <li @click="Dashboard()"
+            <!-- <li @click="Dashboard()"
               class='py-2.5 px-5 flex items-center hover:bg-gray-100 text-[#333] text-sm cursor-pointer'>
               <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="w-4 h-4 mr-3" viewBox="0 0 512 512">
                 <path
@@ -55,7 +55,7 @@
                   data-original="#000000"></path>
               </svg>
               Dashboard
-            </li>
+            </li> -->
             <li @click="storeEncryptedDataInCookie('https://apps.fastlogistics.com.ph/utility/#/Setting/Account')"
               class='py-2.5 px-5 flex items-center hover:bg-gray-100 text-[#333] text-sm cursor-pointer'>
               <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-3" viewBox="0 0 48 48">
@@ -160,6 +160,8 @@ function toggleDropdown() {
 
 function Logout() {
   clearAsoStorage();
+  // Delete cookie
+  document.cookie = "_sys_pref_cache=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
   router.push('/')
 }
 

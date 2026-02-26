@@ -84,15 +84,7 @@ const closeOtherSubMenus = (currentSubMenu, currentMenu) => {
 
 <template>
   <ul class="md:pl-3">
-    <li>
-      <button
-        class="my-2 flex w-full items-center text-black-950 justify-start p-4 font-thin uppercase transition-colors duration-50 lg:hover:text-black-950">
-        <span>
-          <DashboardIcon />
-        </span>
-        <label v-if="sidebarOpen" class="ml-2">Dashboard</label>
-      </button>
-    </li>
+   
     <!-- Parent Menu -->
     <li v-for="(item, index) in menulist" :key="index" class="relative">
       <button @click="toggleDropdown(item)"

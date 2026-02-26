@@ -2,7 +2,21 @@ import { getToken,encryptData } from "~/js/cryptoToken";
 
 export default defineNuxtRouteMiddleware(async (to, from) => {
   if (!process.client) return;
-  const token = getToken();
+   let token = getToken();
+
+  // ✅ Fallback: Get token from cookie if missing
+  if (!token) {
+    const cookieToken = useCookie("_sys_pref_cache");
+
+    if (cookieToken.value) {
+      localStorage.setItem(
+        "user_token_aso",
+        encryptData(cookieToken.value)
+      );
+
+      token = cookieToken.value;
+    }
+  }
 
   const fullUrl = window.location.href;
   const hashQuery = fullUrl.split("?")[1];
@@ -26,6 +40,7 @@ export default defineNuxtRouteMiddleware(async (to, from) => {
   }
 
   if (!token && to.path !== "/") {
+
     alert("Unauthorized access. Your session has expired. Please log in again.");
     return navigateTo("/"); 
   }

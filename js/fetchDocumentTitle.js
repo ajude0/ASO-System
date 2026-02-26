@@ -2,6 +2,7 @@ import { API_BASE_URL } from "~/config";
 import { getToken } from "./cryptoToken";
 
 export const title = ref();
+export const isLiveView = ref();
 
 export const fetchDocumentTitle = async (id) => {
       try {
@@ -14,7 +15,9 @@ export const fetchDocumentTitle = async (id) => {
             },
           }
         );
-        title.value = data;
+        title.value = data.title;
+        isLiveView.value = data.isLiveView;
+        console.log(data);
         
       } catch (error) {
         console.error("Error fetching form dropdown:", error);

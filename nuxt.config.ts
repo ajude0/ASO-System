@@ -30,6 +30,8 @@ export default defineNuxtConfig({
       localApi: process.env.LOCAL_API,
       liveApi: process.env.LIVE_API,
       secretKey: process.env.SECRET_KEY,
+      appConfigState: process.env.APP_CONFIG_STATE,
+      appPrefState: process.env.APP_PREF_STATE
     },
   },
 

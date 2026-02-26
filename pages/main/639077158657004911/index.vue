@@ -1,15 +1,5 @@
 <template>
-    <div class="flex mb-5 me-4">
-        <button v-if="canAdd" @click="goToCreateDocument"
-            class="flex px-3 py-3 bg-green-500 text-white rounded-lg hover:bg-green-700 place-items-center gap-1 font-medium">
-            <svg class="w-4 h-4 text-gray-50 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"
-                width="24" height="24" fill="none" viewBox="0 0 24 24">
-                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M5 12h14m-7 7V5" />
-            </svg>
-            Add Document
-        </button>
-    </div>
+   <div class="p-5 mt-5">
     <div class="flex flex-col md:flex-row justify-between">
         <div class="flex gap-2">
             <div class="relative text-gray-500 focus-within:text-gray-900 mb-4">
@@ -306,42 +296,19 @@
             </div>
         </div>
     </div>
+    </div>
 </template>
 
 <script setup>
 import {getListOfDocumentsLiveView , generatePagination, changePage, totalEntries, totalPages, query, loading, forms, sortBy, changePageSize } from "~/js/fetchDocumentLiveView";
-import {
-    fetchCanAccess,
-    nenunames,
-    canAdd,
-    canDelete,
-    canEdit,
-} from "~/js/fetchMenu";
+
 import { encryptData } from "~/js/cryptoToken";
-import { deleteDocumentUploadById } from "~/js/delete_documentUpload";
-import { getsignaturepositons, prePlacedSignatures } from "~/js/fetchsignatureposition";
-import { fetchDocumentPdf, pdfFile } from "~/js/fetchDocumentPdf";
-import { fetchDocumentTitle, title } from "~/js/fetchDocumentTitle";
 
 const router = useRouter();
-const paramid = ref();
-const { $swal } = useNuxtApp();
-const isViewModalOpen = ref(false);
-const showPdfModal = ref(false);
 
-function goToCreateDocument() {
-    router.push("/main/638992220838277083/addDocument");
-}
-function editDocumnet(id) {
-    localStorage.setItem("documentId", encryptData(id));
-    router.push("/main/638992220838277083/editDocument")
-
-}
 async function viewDocument(id){
-    await fetchDocumentTitle(id);
-    await getsignaturepositons(id);
-    await fetchDocumentPdf(id);
-    isViewModalOpen.value = true;
+    localStorage.setItem("documentId", encryptData(id));
+    router.push("/main/639077158657004911/view")
 }
 
 

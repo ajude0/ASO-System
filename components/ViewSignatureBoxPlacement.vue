@@ -25,6 +25,7 @@ const canvasRefs = ref([]);
 const totalPages = ref(0);
 const currentViewPage = ref(1);
 const goToPageNumber = ref(1);
+const SIGNATURE_MARGIN_BOTTOM = 10;
 
 // Color helper
 const hexToRgba = (hex, alpha = 0.2) => {
@@ -137,6 +138,7 @@ const downloadPdf = async () => {
         yOnPdf -= fontSize / 1; // shift up for name
       }
 
+      yOnPdf -= 4 * scaleY; //
       // Draw signature image
       page.drawImage(embeddedImage, {
         x: xOnPdf,
@@ -293,6 +295,7 @@ const getBoxVisualStyle = (signature) => {
     const base = getBoxStyle(signature);
     return {
         ...base,
+        top: signature.showName ? (signature.y - SIGNATURE_MARGIN_BOTTOM) + 'px' : signature.y + 'px', // 👈
         backgroundColor: 'transparent'
     };
 };

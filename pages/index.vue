@@ -1,20 +1,13 @@
 <template>
-  <div
-    class="min-h-screen bg-white flex items-center justify-center p-4 overflow-hidden relative"
-  >
+  <div class="min-h-screen bg-white flex items-center justify-center p-4 overflow-hidden relative">
     <!-- Animated background particles -->
     <div class="absolute inset-0 overflow-hidden">
-      <div
-        v-for="i in 50"
-        :key="i"
-        class="absolute animate-float"
-        :style="{
-          left: Math.random() * 100 + '%',
-          top: Math.random() * 100 + '%',
-          animationDelay: Math.random() * 20 + 's',
-          animationDuration: Math.random() * 10 + 10 + 's',
-        }"
-      >
+      <div v-for="i in 50" :key="i" class="absolute animate-float" :style="{
+        left: Math.random() * 100 + '%',
+        top: Math.random() * 100 + '%',
+        animationDelay: Math.random() * 20 + 's',
+        animationDuration: Math.random() * 10 + 10 + 's',
+      }">
         <div class="w-2 h-2 bg-white/10 rounded-full blur-sm"></div>
       </div>
     </div>
@@ -22,19 +15,13 @@
     <!-- Login Card -->
     <div class="w-full max-w-md relative">
       <!-- Glassmorphism backdrop -->
-      <div
-        class="absolute inset-0 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl"
-      ></div>
+      <div class="absolute inset-0 bg-white/5 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl"></div>
 
       <div class="relative p-8 z-10">
         <!-- Logo/Brand -->
         <div class="text-center">
           <div class="mx-auto mb-4 flex items-center justify-center">
-            <img
-              src="/static/images/logo.png"
-              class="h-32 w-auto"
-              alt="DatabridgeLogo"
-            />
+            <img src="/static/images/logo.png" class="h-32 w-auto" alt="DatabridgeLogo" />
           </div>
           <h1 class="text-2xl font-bold text-gray-800 mb-2">
             Sign in to your account
@@ -45,138 +32,62 @@
         <form @submit.prevent="handleLogin" class="space-y-4">
           <!-- Email Field -->
           <div class="relative">
-            <label class="block text-sm font-medium text-gray-800 mb-2"
-              >Email or Nickname</label
-            >
+            <label class="block text-sm font-medium text-gray-800 mb-2">Email or Nickname</label>
             <div class="relative">
-              <input
-                v-model="formData.loginname"
-                type="text"
-                required
+              <input v-model="formData.loginname" type="text" required
                 class="w-full px-4 py-3 pl-12 bg-white/10 border border-black/20 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
-                :class="{ 'border-red-500 focus:ring-red-500': emailError }"
-                placeholder="Enter your Email or Nickname"
-                @blur="validateEmail"
-                @input="emailError = ''"
-              />
-              <div
-                class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
-              >
-                <svg
-                  class="w-5 h-5 text-gray-800"
-                  aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke="currentColor"
-                    stroke-width="2"
-                    d="M7 17v1a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1a3 3 0 0 0-3-3h-4a3 3 0 0 0-3 3Zm8-9a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-                  />
+                :class="{ 'border-red-500 focus:ring-red-500': emailError }" placeholder="Enter your Email or Nickname"
+                @blur="validateEmail" @input="emailError = ''" />
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="w-5 h-5 text-gray-800" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24"
+                  height="24" fill="none" viewBox="0 0 24 24">
+                  <path stroke="currentColor" stroke-width="2"
+                    d="M7 17v1a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1a3 3 0 0 0-3-3h-4a3 3 0 0 0-3 3Zm8-9a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
                 </svg>
               </div>
             </div>
-            <p
-              v-if="emailError"
-              class="mt-1 text-sm text-red-400 animate-shake"
-            >
+            <p v-if="emailError" class="mt-1 text-sm text-red-400 animate-shake">
               {{ emailError }}
             </p>
           </div>
 
           <!-- Password Field -->
           <div class="relative">
-            <label class="block text-sm font-medium text-gray-700 mb-2"
-              >Password</label
-            >
+            <label class="block text-sm font-medium text-gray-700 mb-2">Password</label>
             <div class="relative">
-              <input
-                v-model="formData.password"
-                :type="showPassword ? 'text' : 'password'"
-                required
+              <input v-model="formData.password" :type="showPassword ? 'text' : 'password'" required
                 class="w-full px-4 py-3 pl-12 pr-12 bg-white/10 border border-black/20 rounded-lg text-black placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-300 backdrop-blur-sm"
-                :class="{ 'border-red-500 focus:ring-red-500': passwordError }"
-                placeholder="Enter your password"
-                @blur="validatePassword"
-                @input="passwordError = ''"
-              />
-              <div
-                class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
-              >
-                <svg
-                  class="w-5 h-5 text-gray-700"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-                  />
+                :class="{ 'border-red-500 focus:ring-red-500': passwordError }" placeholder="Enter your password"
+                @blur="validatePassword" @input="passwordError = ''" />
+              <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               </div>
-              <button
-                type="button"
-                @click="showPassword = !showPassword"
-                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-500 transition-colors duration-200"
-              >
-                <svg
-                  v-if="!showPassword"
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                  />
+              <button type="button" @click="showPassword = !showPassword"
+                class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-500 transition-colors duration-200">
+                <svg v-if="!showPassword" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                 </svg>
-                <svg
-                  v-else
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
-                  />
+                <svg v-else class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
                 </svg>
               </button>
             </div>
-            <p
-              v-if="passwordError"
-              class="mt-1 text-sm text-red-400 animate-shake"
-            >
+            <p v-if="passwordError" class="mt-1 text-sm text-red-400 animate-shake">
               {{ passwordError }}
             </p>
           </div>
-          
+
           <div class="flex items-center justify-end">
-              
-              <a
-                @click="forgot"
-                class="text-sm text-blue-600 hover:text-blue-500 cursor-pointer"
-                >Forgot password?</a
-              >
-            </div>
+
+            <a @click="forgot" class="text-sm text-blue-600 hover:text-blue-500 cursor-pointer">Forgot password?</a>
+          </div>
 
 
           <!-- Remember Me & Forgot Password -->
@@ -195,37 +106,21 @@
           </div> -->
 
           <!-- Login Button -->
-          <button
-            type="submit"
-            :disabled="isLoading"
-            class="w-full py-3 px-4 bg-gradient-to-r from-blue-700 to-blue-600 text-white font-medium rounded-lg shadow-lg hover:from-blue-500 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-transparent disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-200 relative overflow-hidden"
-          >
+          <button type="submit" :disabled="isLoading"
+            class="w-full py-3 px-4 bg-gradient-to-r from-blue-700 to-blue-600 text-white font-medium rounded-lg shadow-lg hover:from-blue-500 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-transparent disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-105 transition-all duration-200 relative overflow-hidden">
             <span v-if="!isLoading" class="relative z-10">Sign In</span>
             <span v-else class="relative z-10 flex items-center justify-center">
-              <svg
-                class="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  class="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  stroke-width="4"
-                ></circle>
-                <path
-                  class="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
+              <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+                </path>
               </svg>
               Signing in...
             </span>
             <div
-              class="absolute inset-0 bg-gradient-to-r from-purple-700 to-pink-700 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"
-            ></div>
+              class="absolute inset-0 bg-gradient-to-r from-purple-700 to-pink-700 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left">
+            </div>
           </button>
         </form>
 
@@ -236,31 +131,14 @@
     </div>
 
     <!-- Success Toast -->
-    <Transition
-      enter-active-class="transition ease-out duration-300"
-      enter-from-class="transform opacity-0 scale-95"
-      enter-to-class="transform opacity-100 scale-100"
-      leave-active-class="transition ease-in duration-200"
-      leave-from-class="transform opacity-100 scale-100"
-      leave-to-class="transform opacity-0 scale-95"
-    >
-      <div
-        v-if="showSuccessToast"
-        class="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50"
-      >
+    <Transition enter-active-class="transition ease-out duration-300" enter-from-class="transform opacity-0 scale-95"
+      enter-to-class="transform opacity-100 scale-100" leave-active-class="transition ease-in duration-200"
+      leave-from-class="transform opacity-100 scale-100" leave-to-class="transform opacity-0 scale-95">
+      <div v-if="showSuccessToast"
+        class="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
         <div class="flex items-center">
-          <svg
-            class="w-5 h-5 mr-2"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M5 13l4 4L19 7"
-            />
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
           </svg>
           Login successful!
         </div>
@@ -274,7 +152,7 @@ import { ref, onMounted } from "vue";
 import { API_BASE_URL } from "~/config";
 import { encryptData } from "~/js/cryptoToken";
 import { fetchSysDescription, sysdescription } from "~/js/fetchMenu";
-
+    const config = useRuntimeConfig()
 const { $swal } = useNuxtApp();
 const formData = ref({ loginname: "", password: "" });
 const showPassword = ref(false);
@@ -317,6 +195,9 @@ const handleLogin = async () => {
       method: "POST",
       body: JSON.stringify(formData.value),
     });
+  document.cookie = `user_token_aso=${response.stringParam1}; path=/; max-age=${60*60*24}; secure; samesite=strict`
+document.cookie = `app_config_state=${config.public.appConfigState}; path=/; max-age=${60*60*24}; secure; samesite=strict`
+document.cookie = `app_pref_state=${config.public.appPrefState}; path=/; max-age=${60*60*24}; secure; samesite=strict`
 
     localStorage.setItem("user_token_aso", encryptData(response.stringParam1));
     const transactionId = localStorage.getItem("aso_urltransactionId");
@@ -324,10 +205,9 @@ const handleLogin = async () => {
 
     if (transactionId) {
       router.push(`main/transactions`);
-    }else if (documentUrlId)
-    {
+    } else if (documentUrlId) {
       router.push(`main/document`);
-    } 
+    }
     else {
       router.push("main/dashboard");
     }
@@ -389,20 +269,24 @@ onMounted(async () => {
 
 <style scoped>
 @keyframes float {
+
   0%,
   100% {
     transform: translateY(0px) rotate(0deg);
   }
+
   50% {
     transform: translateY(-20px) rotate(180deg);
   }
 }
 
 @keyframes shake {
+
   0%,
   100% {
     transform: translateX(0);
   }
+
   10%,
   30%,
   50%,
@@ -410,6 +294,7 @@ onMounted(async () => {
   90% {
     transform: translateX(-5px);
   }
+
   20%,
   40%,
   60%,

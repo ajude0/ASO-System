@@ -54,7 +54,7 @@
             <SigntureModal :is-open="isSigningModalOpen" :pdf-file="pdfFile" :signature-file="signatureFile"
                 :current-user-name="currentUserName" :current-empl-id="currentEmplId"
                 :pre-placed-signatures="prePlacedSignatures" @close="closeSigningModal"
-                @save-all-signatures="handleSaveAllSignatures" />
+                @save-all-signatures="handleSaveAllSignatures" :documentId="strDocId" />
             <ViewSignatureBoxPlacement :isOpen="isViewingModalopen" :pdfFile="pdfFile" :signatures="prePlacedSignatures"
                 @close="isViewingModalopen = false" />
         </div>
@@ -85,10 +85,12 @@ const currentEmplId = ref();
 const pdfTitle = ref();
 const signatureFile = ref(null);
 const isViewingModalopen = ref(false);
-const canViewPage = ref(false);
-const showThankYouPage = ref(false);
+const strDocId = ref("");
 const loading = ref(true);
-
+const selectedDocument = ref({
+  id: "72", // ← this is your documentId
+  name: "Contract.pdf",
+});
 
 const getUserStats = (userName) => {
     const userSigs = prePlacedSignatures.value.filter(
@@ -534,6 +536,7 @@ onMounted(async () => {
     currentEmplId.value = user.value.empid;
     currentUserName.value = user.value.requestorname;
     documentId.value = await getSignDocumentId();
+    strDocId.value = documentId.value?.toString();
     await getsignaturepositons(documentId.value);
     await fetchDocumentPdf(documentId.value);
     await fetchDocumentTitle(documentId.value);
@@ -541,6 +544,7 @@ onMounted(async () => {
     signatureFile.value = await getusersignature($swal);
     console.log(signatureFile.value);
     loading.value = false;
+    console.log(prePlacedSignatures.value)
 });
 
 </script>

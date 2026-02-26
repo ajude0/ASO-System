@@ -13,6 +13,7 @@ const signatureFile = ref(null);
 const currentUserName = ref();
 const currentEmplId = ref();
 const pdfTitle = ref();
+const isLiveView = ref(false)
 
 // Pre-placed signature boxes with user assignments
 const prePlacedSignatures = ref([]);
@@ -41,7 +42,7 @@ const handleSaveSignatures = async (boxes) => {
     const form = new FormData()
 
     form.append("title", pdfTitle.value =="undefined" ? null : pdfTitle.value)
-
+    form.append("isliveview", isLiveView.value == true ? 1 : 0)
     form.append("file", pdfFile.value)
 
     // append array correctly
@@ -166,9 +167,14 @@ onMounted(async () => {
                         <p v-if="pdfFile" class="text-sm text-green-600 mt-2">
                             ✓ {{ pdfFile.name }}
                         </p>
+                        <div class="mt-6">
+                            <label class="flex items-center gap-2 text-sm text-gray-700">
+                                <input type="checkbox" v-model="isLiveView" class="w-4 h-4" />
+                                Is Live View
+                            </label>
+                        </div>
                     </div>
-
-
+                    
                     <!-- Step 2: Place Signature Boxes -->
                     <div class="bg-white rounded-lg shadow-md p-6">
                         <div class="flex items-center gap-2 mb-4">

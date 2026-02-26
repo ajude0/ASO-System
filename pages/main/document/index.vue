@@ -46,7 +46,7 @@
             </div>
             <SigntureModal :is-open="isSigningModalOpen" :pdf-file="pdfFile" :signature-file="signatureFile"
                 :current-user-name="currentUserName" :current-empl-id="currentEmplId"
-                :pre-placed-signatures="prePlacedSignatures" @close="closeSigningModal"
+                :pre-placed-signatures="prePlacedSignatures" @close="closeSigningModal" :documentId="strDocId"
                 @save-all-signatures="handleSaveAllSignatures" />
             <ViewSignatureBoxPlacement :isOpen="isViewingModalopen" :pdfFile="pdfFile" :signatures="prePlacedSignatures"
                 @close="isViewingModalopen = false" />
@@ -79,6 +79,7 @@ const signatureFile = ref(null);
 const isViewingModalopen = ref(false);
 const canViewPage = ref(false);
 const showThankYouPage = ref(false);
+const strDocId = ref("");
 
 const refreshThankYou = async() => {
     showThankYouPage.value = false;
@@ -519,7 +520,7 @@ onMounted(async () => {
     currentEmplId.value = user.value.empid;
     currentUserName.value = user.value.requestorname;
     documentId.value = await getUrlDocumentId();
-
+    strDocId.value = documentId.value?.toString();
     await getsignaturepositons(documentId.value);
     await fetchDocumentPdf(documentId.value);
     await fetchDocumentTitle(documentId.value);

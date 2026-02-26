@@ -70,6 +70,8 @@ const colorPalette = [
     '#a3e635', // lime
     '#14b8a6', // teal
 ];
+const MAX_SIG_WIDTH  = 250;
+const MAX_SIG_HEIGHT = 100;
 
 const hexToRgba = (hex, alpha = 0.2) => {
     const cleaned = hex.replace('#', '');
@@ -561,33 +563,29 @@ const resizeBox = (e) => {
 
     switch (resizeHandle.value) {
         case 'se':
-            box.width = Math.min(Math.max(50, dragStart.value.boxWidth + dx), canvas.width - box.x);
-            box.height = Math.min(Math.max(30, dragStart.value.boxHeight + dy), canvas.height - box.y);
+            box.width  = Math.min(MAX_SIG_WIDTH,  Math.min(Math.max(50, dragStart.value.boxWidth  + dx), canvas.width  - box.x));
+            box.height = Math.min(MAX_SIG_HEIGHT, Math.min(Math.max(30, dragStart.value.boxHeight + dy), canvas.height - box.y));
             break;
         case 'sw':
-            box.width = Math.max(50, dragStart.value.boxWidth - dx);
-            box.height = Math.min(Math.max(30, dragStart.value.boxHeight + dy), canvas.height - box.y);
-            box.width = Math.min(box.width, dragStart.value.boxX + dragStart.value.boxWidth);
+            box.width  = Math.min(MAX_SIG_WIDTH,  Math.min(Math.max(50, dragStart.value.boxWidth  - dx), dragStart.value.boxX + dragStart.value.boxWidth));
+            box.height = Math.min(MAX_SIG_HEIGHT, Math.min(Math.max(30, dragStart.value.boxHeight + dy), canvas.height - box.y));
             box.x = dragStart.value.boxX + (dragStart.value.boxWidth - box.width);
             break;
         case 'ne':
-            box.width = Math.min(Math.max(50, dragStart.value.boxWidth + dx), canvas.width - box.x);
-            box.height = Math.max(30, dragStart.value.boxHeight - dy);
-            box.height = Math.min(box.height, dragStart.value.boxY + dragStart.value.boxHeight);
+            box.width  = Math.min(MAX_SIG_WIDTH,  Math.min(Math.max(50, dragStart.value.boxWidth  + dx), canvas.width  - box.x));
+            box.height = Math.min(MAX_SIG_HEIGHT, Math.min(Math.max(30, dragStart.value.boxHeight - dy), dragStart.value.boxY + dragStart.value.boxHeight));
             box.y = dragStart.value.boxY + (dragStart.value.boxHeight - box.height);
             break;
         case 'nw':
-            box.width = Math.max(50, dragStart.value.boxWidth - dx);
-            box.height = Math.max(30, dragStart.value.boxHeight - dy);
-            box.width = Math.min(box.width, dragStart.value.boxX + dragStart.value.boxWidth);
-            box.height = Math.min(box.height, dragStart.value.boxY + dragStart.value.boxHeight);
+            box.width  = Math.min(MAX_SIG_WIDTH,  Math.min(Math.max(50, dragStart.value.boxWidth  - dx), dragStart.value.boxX + dragStart.value.boxWidth));
+            box.height = Math.min(MAX_SIG_HEIGHT, Math.min(Math.max(30, dragStart.value.boxHeight - dy), dragStart.value.boxY + dragStart.value.boxHeight));
             box.x = dragStart.value.boxX + (dragStart.value.boxWidth - box.width);
             box.y = dragStart.value.boxY + (dragStart.value.boxHeight - box.height);
             break;
     }
 
     if (box.hasDate && box.datePosition) {
-        box.datePosition.x = Math.max(0, Math.min(box.datePosition.x, canvas.width - (box.datePosition.width || 100)));
+        box.datePosition.x = Math.max(0, Math.min(box.datePosition.x, canvas.width  - (box.datePosition.width  || 100)));
         box.datePosition.y = Math.max(0, Math.min(box.datePosition.y, canvas.height - (box.datePosition.height || 30)));
     }
 };
@@ -610,6 +608,12 @@ const deleteBox = (index) => {
         selectedBoxId.value = null;
     }
     signatureBoxes.value.splice(index, 1);
+};
+
+// Delete by box id (used by the on-canvas remove button)
+const deleteBoxById = (id) => {
+    const index = signatureBoxes.value.findIndex(b => b.id === id);
+    if (index !== -1) deleteBox(index);
 };
 
 const getCurrentPageBoxes = () =>
@@ -1119,7 +1123,7 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                         </span>
                                         <span v-if="box.signatureLock">🔒</span>
                                     </div>
-                                    
+
                                     <!-- Compact corner indicator (hidden when dragging THIS box, visible otherwise) -->
                                     <div v-if="!box.signedBy && !(isDragging && selectedBoxId === box.id)"
                                         class="absolute -top-2 -left-2 w-6 h-6 rounded-full text-white text-[10px] font-bold flex items-center justify-center shadow-md transition-all duration-200 pointer-events-none"
@@ -1130,6 +1134,15 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                         :style="{ backgroundColor: box.color || '#3b82f6' }">
                                         {{ enforceSequentialOrder ? box.approvalOrder : box.assignedTo.charAt(0).toUpperCase() }}
                                     </div>
+
+                                    <!-- ✕ Remove button — top-right, visible on hover -->
+                                    <button
+                                        class="absolute -top-2 -right-2 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full text-[10px] font-bold flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                                        @mousedown.stop
+                                        @click.stop="deleteBoxById(box.id)"
+                                        title="Remove box">
+                                        ✕
+                                    </button>
 
                                     <template v-if="box.isEmpty || box.isEmpty == null">
                                         <template v-if="!box.signatureLock">
@@ -1165,7 +1178,6 @@ onUnmounted(() => document.removeEventListener('mouseup', handleMouseUp));
                                                 {{ box.assignedTo }}
                                             </span>
                                         </div>
-
 
                                     </template>
 
