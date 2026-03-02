@@ -1015,61 +1015,130 @@ const removeWhiteBackground = (file) => {
 
 const createSignature = async (text) => {
   const { value: result, isConfirmed } = await $swal.fire({
-    title: "Create your own signature",
+    title: '<span style="font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-.02em;">Create Your Signature</span>',
     html: `
-      <div style="display:flex; flex-direction:column; gap:16px; width:100%; align-items:center;">
+      <div style="display:flex;flex-direction:column;gap:18px;width:100%;align-items:center;box-sizing:border-box;">
 
-        <label style="font-weight:600;">Choose how you want to sign:</label>
-        <div style="display:flex; gap:16px;">
-          <label><input type="radio" name="sigType" value="draw" checked /> Draw</label>
-          <label><input type="radio" name="sigType" value="upload" /> Upload</label>
+        <!-- Pill toggle -->
+        <div style="display:flex;background:#f1f5f9;border-radius:12px;padding:4px;gap:4px;width:fit-content;">
+          <label id="lbl-draw"
+            style="padding:8px 28px;font-weight:700;font-size:13px;cursor:pointer;
+                   background:#2563eb;color:#fff;border-radius:9px;
+                   transition:all .2s;letter-spacing:.01em;user-select:none;">
+            <input type="radio" name="sigType" value="draw" checked style="display:none;"> ✏️&nbsp;&nbsp;Draw
+          </label>
+          <label id="lbl-upload"
+            style="padding:8px 28px;font-weight:700;font-size:13px;cursor:pointer;
+                   background:transparent;color:#64748b;border-radius:9px;
+                   transition:all .2s;letter-spacing:.01em;user-select:none;">
+            <input type="radio" name="sigType" value="upload" style="display:none;"> 📂&nbsp;&nbsp;Upload
+          </label>
         </div>
 
-        <!-- DRAW SIGNATURE -->
-        <div id="draw-wrapper" style="width:100%; text-align:center;">
-          <label style="font-weight:600;">Please sign below:</label>
-          <canvas id="signature-pad" width="700" height="250"
-            style="border:2px dashed #9ca3af; border-radius:12px; background:#f9fafb; width:100%; max-width:700px;">
-          </canvas>
+        <!-- ══ DRAW PANEL ══ -->
+        <div id="draw-wrapper" style="width:100%;text-align:center;">
 
-          <div style="display:flex; align-items:center; gap:10px; max-width:700px; margin:12px auto 0;">
-            <label>Stroke:</label>
-            <input id="thickness-slider" type="range" min="1" max="10" value="4" style="flex:1;">
-            <span id="thickness-value">4</span>
+          <p style="font-size:12px;color:#94a3b8;margin-bottom:10px;letter-spacing:.02em;">
+            Draw your signature inside the box
+          </p>
+
+          <div style="position:relative;display:block;width:100%;max-width:700px;margin:0 auto;">
+            <canvas id="signature-pad"
+              style="display:block;width:100%;height:210px;
+                     border:2px dashed #cbd5e1;border-radius:16px;
+                     background:linear-gradient(160deg,#f8fafc,#f1f5f9);
+                     touch-action:none;cursor:crosshair;
+                     box-shadow:inset 0 2px 6px rgba(0,0,0,.05);">
+            </canvas>
+            <div id="sig-hint" style="
+              position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+              pointer-events:none;font-size:16px;color:#d1d5db;font-style:italic;gap:8px;">
+              <svg width="20" height="20" fill="none" stroke="#d1d5db" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+              </svg>
+              Sign here
+            </div>
           </div>
 
-          <button id="clear-signature" class="swal2-cancel swal2-styled"
-            style="margin-top:12px; background:#ef4444;">
-            Clear Signature
-          </button>
+          <!-- Controls row -->
+          <div style="display:flex;align-items:center;gap:16px;max-width:700px;margin:12px auto 0;flex-wrap:wrap;justify-content:space-between;">
+            <!-- Thickness slider -->
+            <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:140px;">
+              <svg width="12" height="12" fill="#94a3b8" viewBox="0 0 12 12"><circle cx="6" cy="6" r="2.5"/></svg>
+              <input id="thickness-slider" type="range" min="1" max="12" value="3"
+                style="flex:1;height:4px;accent-color:#2563eb;cursor:pointer;">
+              <svg width="18" height="18" fill="#64748b" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6"/></svg>
+            </div>
+
+            <!-- Color swatches -->
+            <div style="display:flex;align-items:center;gap:7px;">
+              <div id="color-black" data-color="#0f172a" title="Black"
+                style="width:26px;height:26px;border-radius:50%;background:#0f172a;
+                       border:3px solid #2563eb;cursor:pointer;transition:transform .15s;"></div>
+              <div id="color-navy" data-color="#1e3a8a" title="Navy"
+                style="width:26px;height:26px;border-radius:50%;background:#1e3a8a;
+                       border:2px solid #e2e8f0;cursor:pointer;transition:transform .15s;"></div>
+              <div id="color-blue" data-color="#1d4ed8" title="Blue"
+                style="width:26px;height:26px;border-radius:50%;background:#1d4ed8;
+                       border:2px solid #e2e8f0;cursor:pointer;transition:transform .15s;"></div>
+              <div id="color-green" data-color="#14532d" title="Dark Green"
+                style="width:26px;height:26px;border-radius:50%;background:#14532d;
+                       border:2px solid #e2e8f0;cursor:pointer;transition:transform .15s;"></div>
+            </div>
+
+            <!-- Clear -->
+            <button id="clear-signature"
+              style="display:flex;align-items:center;gap:6px;padding:7px 16px;
+                     background:#fff1f2;color:#e11d48;
+                     border:1.5px solid #fecdd3;border-radius:10px;
+                     font-weight:700;font-size:13px;cursor:pointer;transition:all .15s;"
+              onmouseenter="this.style.background='#fecdd3'"
+              onmouseleave="this.style.background='#fff1f2'">
+              <svg width="13" height="13" fill="none" stroke="#e11d48" stroke-width="2.2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/>
+              </svg>
+              Clear
+            </button>
+          </div>
         </div>
 
-        <!-- UPLOAD SIGNATURE -->
-        <div id="upload-wrapper"
-          style="display:none; width:100%; max-width:700px; text-align:center;">
-          <label style="font-weight:600;">Upload signature (PNG/JPG):</label>
-          <input type="file" id="signature-upload"
-            accept="image/png,image/jpeg"
-            style="display:block; margin:8px auto;" />
-
+        <!-- ══ UPLOAD PANEL ══ -->
+        <div id="upload-wrapper" style="display:none;width:100%;max-width:700px;">
+          <label for="signature-upload"
+            style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                   border:2px dashed #cbd5e1;border-radius:16px;padding:44px 24px;cursor:pointer;
+                   background:#f8fafc;gap:12px;transition:border-color .2s,background .2s;"
+            onmouseenter="this.style.borderColor='#2563eb';this.style.background='#eff6ff'"
+            onmouseleave="this.style.borderColor='#cbd5e1';this.style.background='#f8fafc'">
+            <div style="width:54px;height:54px;border-radius:14px;background:#dbeafe;
+                        display:flex;align-items:center;justify-content:center;">
+              <svg width="28" height="28" fill="none" stroke="#2563eb" stroke-width="1.6" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.338-2.32 5.75 5.75 0 0 1 .605 11.095"/>
+              </svg>
+            </div>
+            <div style="text-align:center;">
+              <p style="font-weight:800;font-size:14px;color:#1e293b;margin:0 0 3px;">Click to upload</p>
+              <p style="font-size:12px;color:#94a3b8;margin:0;">PNG or JPG · white background removed automatically</p>
+            </div>
+            <input type="file" id="signature-upload" accept="image/png,image/jpeg" style="display:none;" />
+          </label>
           <img id="upload-preview"
-            style="
-              display:none;
-              margin:12px auto 0;
-              max-height:150px;
-              border:1px solid #e5e7eb;
-              border-radius:8px;
-            " />
+            style="display:none;margin:14px auto 0;max-height:180px;
+                   border:1.5px solid #e2e8f0;border-radius:12px;
+                   box-shadow:0 2px 8px rgba(0,0,0,.06);" />
         </div>
 
-        <!-- TERMS -->
-        <div style="width:100%; max-width:700px; text-align:left;">
-          <label style="display:flex; align-items:center; gap:8px; font-size:14px;">
-            <input type="checkbox" id="agree-terms" />
-            <span>
-              I have read and agree to the
+        <!-- ══ TERMS ══ -->
+        <div style="width:100%;max-width:700px;background:#f8fafc;border:1.5px solid #e2e8f0;
+                    border-radius:12px;padding:12px 16px;">
+          <label style="display:flex;align-items:flex-start;gap:10px;font-size:13.5px;
+                         cursor:pointer;color:#475569;line-height:1.5;">
+            <input type="checkbox" id="agree-terms"
+              style="margin-top:2px;accent-color:#2563eb;width:15px;height:15px;cursor:pointer;" />
+            <span>I have read and agree to the
               <span id="open-terms"
-                style="color:#3b82f6; text-decoration:underline; cursor:pointer;">
+                style="color:#2563eb;font-weight:700;text-decoration:underline;cursor:pointer;">
                 Terms and Conditions
               </span>
             </span>
@@ -1078,70 +1147,119 @@ const createSignature = async (text) => {
 
       </div>
     `,
-    width: 800,
+    width: 780,
+    padding: '2.25rem 2.25rem 2rem',
     showCancelButton: true,
-    confirmButtonText: "Confirm Signature",
-    cancelButtonText: "Cancel",
+    confirmButtonText: '✅ &nbsp;Save Signature',
+    cancelButtonText: 'Cancel',
+    confirmButtonColor: '#2563eb',
+    cancelButtonColor: '#94a3b8',
     focusConfirm: false,
+    customClass: { popup: 'sig-swal-web' },
 
     didOpen: () => {
-      const canvas = document.getElementById("signature-pad");
-      const thicknessSlider = document.getElementById("thickness-slider");
-      const thicknessValue = document.getElementById("thickness-value");
-      const uploadInput = document.getElementById("signature-upload");
-      const uploadPreview = document.getElementById("upload-preview");
-      const agreeCheckbox = document.getElementById("agree-terms");
-      const openTerms = document.getElementById("open-terms");
+      const canvas        = document.getElementById('signature-pad');
+      const hint          = document.getElementById('sig-hint');
+      const thickSlider   = document.getElementById('thickness-slider');
+      const uploadInput   = document.getElementById('signature-upload');
+      const uploadPreview = document.getElementById('upload-preview');
+      const agreeChk      = document.getElementById('agree-terms');
+      const openTerms     = document.getElementById('open-terms');
+      const drawWrapper   = document.getElementById('draw-wrapper');
+      const uploadWrapper = document.getElementById('upload-wrapper');
+      const lblDraw       = document.getElementById('lbl-draw');
+      const lblUpload     = document.getElementById('lbl-upload');
+      const colorBtns     = document.querySelectorAll('[data-color]');
 
-      const drawWrapper = document.getElementById("draw-wrapper");
-      const uploadWrapper = document.getElementById("upload-wrapper");
+      // ── Resize canvas to its rendered size before SignaturePad init ──
+      const rect = canvas.getBoundingClientRect();
+      canvas.width  = rect.width;
+      canvas.height = rect.height;
 
-      const radios = document.querySelectorAll('input[name="sigType"]');
-
+      // ── SignaturePad init ────────────────────────────────────
       const signaturePad = new SignaturePad(canvas, {
-        penColor: "black",
-        minWidth: 2,
-        maxWidth: 5,
+        penColor: '#0f172a',
+        minWidth: 1.5,
+        maxWidth: 3,
+        backgroundColor: 'rgba(0,0,0,0)',  // transparent so CSS gradient bg shows
+      });
+      signaturePad.addEventListener('beginStroke', () => { hint.style.display = 'none'; });
+
+      // Hide hint on first stroke
+      canvas.addEventListener('mousedown',  () => { hint.style.display = 'none'; }, { once: true });
+      canvas.addEventListener('touchstart', () => { hint.style.display = 'none'; }, { once: true });
+
+      // ── Clear ────────────────────────────────────────────────
+      document.getElementById('clear-signature').addEventListener('click', () => {
+        signaturePad.clear();
+        hint.style.display = 'flex';
       });
 
-      // ================= TERMS MODAL =================
-      const showTermsModal = () => {
-        if (document.getElementById("terms-popup")) return;
+      // ── Thickness ────────────────────────────────────────────
+      thickSlider.addEventListener('input', e => {
+        const v = parseInt(e.target.value);
+        signaturePad.minWidth = Math.max(0.5, v - 1);
+        signaturePad.maxWidth = v;
+      });
 
-        const termsHtml = `
+      // ── Color swatches ───────────────────────────────────────
+      colorBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          signaturePad.penColor = btn.dataset.color;
+          colorBtns.forEach(b => { b.style.border = '2px solid #e2e8f0'; b.style.transform = 'scale(1)'; });
+          btn.style.border    = '3px solid #2563eb';
+          btn.style.transform = 'scale(1.15)';
+        });
+        btn.addEventListener('mouseenter', () => { btn.style.transform = 'scale(1.1)'; });
+        btn.addEventListener('mouseleave', () => {
+          if (btn.dataset.color !== signaturePad.penColor) btn.style.transform = 'scale(1)';
+        });
+      });
+
+      // ── Mode toggle ──────────────────────────────────────────
+      document.querySelectorAll('input[name="sigType"]').forEach(radio => {
+        radio.closest('label').addEventListener('click', () => {
+          if (radio.value === 'draw') {
+            drawWrapper.style.display   = 'block';
+            uploadWrapper.style.display = 'none';
+            lblDraw.style.background    = '#2563eb'; lblDraw.style.color    = '#fff';
+            lblUpload.style.background  = 'transparent'; lblUpload.style.color = '#64748b';
+          } else {
+            drawWrapper.style.display   = 'none';
+            uploadWrapper.style.display = 'block';
+            lblUpload.style.background  = '#2563eb'; lblUpload.style.color  = '#fff';
+            lblDraw.style.background    = 'transparent'; lblDraw.style.color = '#64748b';
+            signaturePad.clear();
+            hint.style.display = 'flex';
+          }
+        });
+      });
+
+      // ── Upload preview ───────────────────────────────────────
+      uploadInput.addEventListener('change', e => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => { uploadPreview.src = reader.result; uploadPreview.style.display = 'block'; };
+        reader.readAsDataURL(file);
+      });
+
+      // ── Terms modal ──────────────────────────────────────────
+      const showTermsModal = () => {
+        if (document.getElementById('terms-popup')) return;
+        document.body.insertAdjacentHTML('beforeend', `
           <div id="terms-popup"
-            style="
-              position:fixed;
-              inset:0;
-              background:rgba(0,0,0,0.5);
-              display:flex;
-              align-items:center;
-              justify-content:center;
-              z-index:99999;
-            ">
-            <div style="
-              background:white;
-              width:90%;
-              max-width:600px;
-              border-radius:12px;
-              padding:20px;
-              box-shadow:0 10px 20px rgba(0,0,0,0.2);
-            ">
-              <h2 style="font-weight:600; font-size:18px; margin-bottom:10px;">
+            style="position:fixed;inset:0;background:rgba(15,23,42,.6);
+                   display:flex;align-items:center;justify-content:center;
+                   z-index:99999;backdrop-filter:blur(3px);">
+            <div style="background:#fff;width:90%;max-width:520px;border-radius:20px;
+                        padding:28px;box-shadow:0 24px 60px rgba(0,0,0,.2);">
+              <h2 style="font-weight:800;font-size:17px;color:#0f172a;margin-bottom:14px;letter-spacing:-.02em;">
                 Terms and Conditions
               </h2>
-
-              <div style="
-                max-height:300px;
-                overflow-y:auto;
-                border:1px solid #e5e7eb;
-                padding:10px;
-                border-radius:8px;
-                font-size:14px;
-                line-height:1.6;
-                margin-bottom:16px;
-              ">
-                <ol style="padding-left:1.2rem;">
+              <div style="max-height:260px;overflow-y:auto;border:1.5px solid #e2e8f0;padding:14px;
+                          border-radius:10px;font-size:13.5px;line-height:1.7;color:#475569;margin-bottom:18px;">
+                <ol style="padding-left:1.3rem;display:flex;flex-direction:column;gap:8px;">
                   <li>The signature provided is legally binding.</li>
                   <li>The signature belongs to the account holder.</li>
                   <li>Falsification may result in disciplinary action.</li>
@@ -1149,109 +1267,53 @@ const createSignature = async (text) => {
                   <li>Data is handled per data protection policies.</li>
                 </ol>
               </div>
-
-              <div style="text-align:right;">
+              <div style="display:flex;justify-content:flex-end;">
                 <button id="close-terms"
-                  style="
-                    background:#3b82f6;
-                    color:white;
-                    padding:8px 16px;
-                    border:none;
-                    border-radius:6px;
-                    cursor:pointer;
-                  ">
+                  style="background:#2563eb;color:#fff;padding:10px 24px;border:none;
+                         border-radius:10px;font-weight:700;font-size:13.5px;cursor:pointer;">
                   I Understand
                 </button>
               </div>
             </div>
-          </div>
-        `;
-
-        document.body.insertAdjacentHTML("beforeend", termsHtml);
-
-        document.getElementById("close-terms").addEventListener("click", () => {
-          document.getElementById("terms-popup")?.remove();
-          agreeCheckbox.checked = true;
+          </div>`);
+        document.getElementById('close-terms').addEventListener('click', () => {
+          document.getElementById('terms-popup')?.remove();
+          agreeChk.checked = true;
         });
       };
 
-      agreeCheckbox.addEventListener("change", (e) => {
-        if (e.target.checked) showTermsModal();
-      });
+      agreeChk.addEventListener('change', e => { if (e.target.checked) showTermsModal(); });
+      openTerms.addEventListener('click', showTermsModal);
 
-      openTerms.addEventListener("click", showTermsModal);
-
-      // Toggle draw / upload
-      radios.forEach((radio) => {
-        radio.addEventListener("change", () => {
-          if (radio.value === "draw" && radio.checked) {
-            drawWrapper.style.display = "block";
-            uploadWrapper.style.display = "none";
-          } else {
-            drawWrapper.style.display = "none";
-            uploadWrapper.style.display = "block";
-            signaturePad.clear();
-          }
-        });
-      });
-
-      // Stroke thickness
-      thicknessSlider.addEventListener("input", (e) => {
-        const value = parseInt(e.target.value);
-        thicknessValue.textContent = value;
-        signaturePad.minWidth = Math.max(1, value - 1);
-        signaturePad.maxWidth = value;
-      });
-
-      // Clear canvas
-      document
-        .getElementById("clear-signature")
-        .addEventListener("click", () => signaturePad.clear());
-
-      // Upload preview
-      uploadInput.addEventListener("change", (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          uploadPreview.src = reader.result;
-          uploadPreview.style.display = "block";
-        };
-        reader.readAsDataURL(file);
-      });
-
+      // Expose for preConfirm
       window.signaturePadInstance = signaturePad;
     },
 
     preConfirm: () => {
       const signaturePad = window.signaturePadInstance;
-      const agree = document.getElementById("agree-terms");
-      const uploadInput = document.getElementById("signature-upload");
-      const sigType = document.querySelector(
-        'input[name="sigType"]:checked'
-      )?.value;
+      const agree        = document.getElementById('agree-terms');
+      const uploadInput  = document.getElementById('signature-upload');
+      const sigType      = document.querySelector('input[name="sigType"]:checked')?.value;
 
       if (!agree.checked) {
-        $swal.showValidationMessage(
-          "Please agree to the Terms and Conditions."
-        );
+        $swal.showValidationMessage('Please agree to the Terms and Conditions.');
         return false;
       }
 
-      if (sigType === "draw") {
+      if (sigType === 'draw') {
         if (!signaturePad || signaturePad.isEmpty()) {
-          $swal.showValidationMessage("Please draw your signature.");
+          $swal.showValidationMessage('Please draw your signature.');
           return false;
         }
-        return { type: "draw", data: signaturePad.toDataURL("image/png") };
+        return { type: 'draw', data: signaturePad.toDataURL('image/png') };
       }
 
       if (!uploadInput.files.length) {
-        $swal.showValidationMessage("Please upload a signature image.");
+        $swal.showValidationMessage('Please upload a signature image.');
         return false;
       }
 
-      return { type: "upload", file: uploadInput.files[0] };
+      return { type: 'upload', file: uploadInput.files[0] };
     },
   });
 
@@ -1259,9 +1321,9 @@ const createSignature = async (text) => {
   if (isConfirmed && result) {
     let blob;
 
-    if (result.type === "draw") {
-      const byteString = atob(result.data.split(",")[1]);
-      const mimeString = result.data.split(",")[0].split(":")[1].split(";")[0];
+    if (result.type === 'draw') {
+      const byteString = atob(result.data.split(',')[1]);
+      const mimeString = result.data.split(',')[0].split(':')[1].split(';')[0];
       const ab = new ArrayBuffer(byteString.length);
       const ia = new Uint8Array(ab);
       for (let i = 0; i < byteString.length; i++)
@@ -1272,7 +1334,7 @@ const createSignature = async (text) => {
     }
 
     const formData = new FormData();
-    formData.append("signaturefile", blob, "signature.png");
+    formData.append('signaturefile', blob, 'signature.png');
 
     await postusersignature(formData, $swal);
     await checkusersignature($swal);
@@ -1280,7 +1342,7 @@ const createSignature = async (text) => {
     $swal.fire({
       title: `Form ${text}!`,
       text: `The request has been ${text} successfully`,
-      icon: "success",
+      icon: 'success',
       width: 400,
       timer: 1200,
       showConfirmButton: false,

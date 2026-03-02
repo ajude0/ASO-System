@@ -13,15 +13,33 @@ const props = defineProps({
 const router = useRouter();
 
 // ── Scale constants ────────────────────────────────────────────
-// BASE_SCALE: the scale at which all stored coordinates (x, y, width, height) were originally saved.
-// RENDER_SCALE: the scale we actually render the PDF at (larger = bigger PDF).
-// All stored coords are multiplied by (RENDER_SCALE / BASE_SCALE) before positioning.
 const BASE_SCALE   = 1.4;
 const RENDER_SCALE = 2.0;
-const scaleFactor  = RENDER_SCALE / BASE_SCALE;
 
-// Convert a stored coordinate (saved at BASE_SCALE) → pixel position at RENDER_SCALE
-const sc = (val) => val * scaleFactor;
+// User-controlled zoom multiplier (1.0 = 100%)
+const userZoom    = ref(1.0);
+const MIN_ZOOM    = 0.5;
+const MAX_ZOOM    = 3.0;
+const ZOOM_STEP   = 0.25;
+const zoomPercent = computed(() => Math.round(userZoom.value * 100));
+
+// Combined display scale = RENDER_SCALE × userZoom
+const displayScale = computed(() => RENDER_SCALE * userZoom.value);
+// scaleFactor: multiply stored BASE_SCALE coords → current screen px
+const scaleFactor  = computed(() => displayScale.value / BASE_SCALE);
+
+// Convert a stored coordinate → current pixel position
+const sc = (val) => val * scaleFactor.value;
+
+// ── Zoom actions ───────────────────────────────────────────────
+const applyZoom = async () => {
+  for (let i = 1; i <= totalPages.value; i++) await renderPage(i);
+  await nextTick();
+  updatePrePlacedPositions();
+};
+const zoomIn    = async () => { userZoom.value = Math.min(MAX_ZOOM, +(userZoom.value + ZOOM_STEP).toFixed(2)); await applyZoom(); };
+const zoomOut   = async () => { userZoom.value = Math.max(MIN_ZOOM, +(userZoom.value - ZOOM_STEP).toFixed(2)); await applyZoom(); };
+const zoomReset = async () => { userZoom.value = 1.0; await applyZoom(); };
 
 const hub = usePdfSigningHub(
   computed(() => props.documentId),
@@ -48,6 +66,7 @@ const showSidebar       = ref(true);
 
 const localSignatures     = reactive([]);
 const remoteDragPositions = reactive({});
+
 const goBack = () => {
   router.push("/main/639077158657004911");
 };
@@ -71,8 +90,8 @@ const hexToRgba = (hex, alpha) => {
   const h = hex.replace('#', '');
   const bigint = parseInt(h.length === 3 ? h.split('').map(c => c + c).join('') : h, 16);
   const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
+  const g = (bigint >> 8)  & 255;
+  const b =  bigint        & 255;
   return `rgba(${r},${g},${b},${alpha})`;
 };
 
@@ -216,9 +235,9 @@ function registerHubListeners() {
 
 const loadPdf = async () => {
   try {
-    const pdfjsLib  = window['pdfjs-dist/build/pdf'];
+    const pdfjsLib    = window['pdfjs-dist/build/pdf'];
     const arrayBuffer = await props.pdfFile.arrayBuffer();
-    const pdf       = await pdfjsLib.getDocument(arrayBuffer).promise;
+    const pdf         = await pdfjsLib.getDocument(arrayBuffer).promise;
     pdfDocument.value       = pdf;
     totalPages.value        = pdf.numPages;
     canvasRefs.value        = [];
@@ -233,20 +252,28 @@ const loadPdf = async () => {
   }
 };
 
-// ── Render at RENDER_SCALE instead of the old 1.4 ─────────────
+let renderTasks = {};
 const renderPage = async (pageNum) => {
   try {
-    const page     = await pdfDocument.value.getPage(pageNum);
-    const viewport = page.getViewport({ scale: RENDER_SCALE });   // ← changed
+    const page = await pdfDocument.value.getPage(pageNum);
+    if (renderTasks[pageNum]) { renderTasks[pageNum].cancel(); }
+
+    const viewport = page.getViewport({ scale: displayScale.value });
     const canvas   = canvasRefs.value[pageNum - 1];
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     canvas.width  = viewport.width;
     canvas.height = viewport.height;
-    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    const task = page.render({ canvasContext: ctx, viewport });
+    renderTasks[pageNum] = task;
+    await task.promise;
+    renderTasks[pageNum] = null;
+
     await nextTick();
     updatePrePlacedPositions();
   } catch (error) {
+    if (error?.name === 'RenderingCancelledException') return;
     console.error('Error rendering page:', error);
   }
 };
@@ -274,6 +301,8 @@ const updatePrePlacedPositions = () => {
     const canvasRect         = canvas.getBoundingClientRect();
     dateElement.style.left   = (canvasRect.left - containerRect.left + sc(sig.datePosition.x)) + 'px';
     dateElement.style.top    = (canvasRect.top  - containerRect.top  + sc(sig.datePosition.y)) + 'px';
+    dateElement.style.width  = sc(sig.datePosition.width  || 100) + 'px';
+    dateElement.style.height = sc(sig.datePosition.height || 30)  + 'px';
   });
 };
 
@@ -316,18 +345,13 @@ const updateSingleDatePosition = (sigIndex) => {
 };
 
 // ── Cursor: convert screen coords back to BASE_SCALE before sending ──
-// The hub stores/broadcasts coords at BASE_SCALE, so divide by scaleFactor.
 const handleMouseMove = (e) => {
   if (!containerRef.value) return;
   const rect = containerRef.value.getBoundingClientRect();
   const rawX = e.clientX - rect.left;
   const rawY = e.clientY - rect.top;
-  // Send as BASE_SCALE coords so all clients (regardless of their render scale) stay in sync
-  hub.sendCursorMoved(rawX / scaleFactor, rawY / scaleFactor, currentViewPage.value, '#6366f1');
+  hub.sendCursorMoved(rawX / scaleFactor.value, rawY / scaleFactor.value, currentViewPage.value, '#6366f1');
 };
-
-// ── Remote cursor display: incoming coords are BASE_SCALE → scale up ──
-// (No change needed in template — we multiply in the template style binding below)
 
 const goToNextPage = () => {
   if (currentViewPage.value < totalPages.value) { currentViewPage.value++; nextTick(() => updatePrePlacedPositions()); }
@@ -343,9 +367,9 @@ const signaturesSummary = computed(() => {
   return localSignatures.reduce((acc, sig, index) => {
     const item  = { ...sig, index };
     const state = getSigState(sig);
-    if (state === 'pending') acc.pending.push(item);
-    else if (state === 'signed') acc.completed.push(item);
-    else acc.signing.push(item);
+    if (state === 'pending')       acc.pending.push(item);
+    else if (state === 'signed')   acc.completed.push(item);
+    else                           acc.signing.push(item);
     return acc;
   }, { pending: [], signing: [], completed: [] });
 });
@@ -361,7 +385,6 @@ const goToSignature = (sig) => {
   });
 };
 
-// ── isSmallSignatureBox uses sc() to compare rendered size ────
 const isSmallSignatureBox = (sig) => sc(sig.width) <= 120;
 
 const getInitials = (sig) => {
@@ -386,8 +409,7 @@ onUnmounted(async () => {
     <div class="fixed top-4 right-4 z-[200] flex flex-col gap-2 pointer-events-none">
       <transition-group name="toast" tag="div" class="flex flex-col gap-2">
         <div
-          v-for="toast in toasts"
-          :key="toast.id"
+          v-for="toast in toasts" :key="toast.id"
           class="px-4 py-3 rounded-lg shadow-lg text-sm font-semibold flex items-center gap-2 pointer-events-auto max-w-xs"
           :class="{
             'bg-blue-600 text-white':   toast.type === 'info',
@@ -418,7 +440,6 @@ onUnmounted(async () => {
           Back
         </button>
         <div class="h-5 w-px bg-gray-200 flex-shrink-0"></div>
-
         <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold border border-amber-300 flex-shrink-0">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -426,7 +447,6 @@ onUnmounted(async () => {
           </svg>
           View Only
         </span>
-
         <h2 class="text-base font-semibold text-gray-800 truncate">PDF Document</h2>
       </div>
 
@@ -442,17 +462,10 @@ onUnmounted(async () => {
             {{ user.userName }}
           </div>
         </div>
-
         <div class="flex items-center gap-1.5">
-          <span
-            class="w-2 h-2 rounded-full inline-block"
-            :class="hub.isConnected.value ? 'bg-green-500' : 'bg-yellow-400 animate-pulse'"
-          ></span>
-          <span class="text-xs text-gray-400">
-            {{ hub.isConnected.value ? 'Live sync' : 'Connecting…' }}
-          </span>
+          <span class="w-2 h-2 rounded-full inline-block" :class="hub.isConnected.value ? 'bg-green-500' : 'bg-yellow-400 animate-pulse'"></span>
+          <span class="text-xs text-gray-400">{{ hub.isConnected.value ? 'Live sync' : 'Connecting…' }}</span>
         </div>
-
         <span class="text-sm text-gray-500">
           Viewing as <span class="font-semibold text-gray-700">{{ currentUserName }}</span>
         </span>
@@ -469,11 +482,13 @@ onUnmounted(async () => {
       (Signer Number {{ getNextSignerInfo.order }})
     </div>
 
-    <!-- ════════════ PAGE NAVIGATION BAR ════════════ -->
-<div class="flex items-center justify-center gap-3 px-4 py-2 bg-white border-b flex-shrink-0 flex-wrap" :style="{ paddingLeft: showSidebar ? '16rem' : '0' }">
+    <!-- ════════════ PAGE NAVIGATION + ZOOM BAR ════════════ -->
+    <div
+      class="flex items-center justify-center gap-3 px-4 py-2 bg-white border-b flex-shrink-0 flex-wrap"
+      :style="{ paddingLeft: showSidebar ? '16rem' : '0' }"
+    >
       <button
-        @click="goToPrevPage"
-        :disabled="currentViewPage === 1"
+        @click="goToPrevPage" :disabled="currentViewPage === 1"
         class="px-3 py-1.5 bg-gray-700 text-white rounded hover:bg-gray-900 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1.5 text-sm"
       >
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -481,10 +496,11 @@ onUnmounted(async () => {
         </svg>
         Previous
       </button>
+
       <span class="text-sm font-semibold text-gray-600">Page {{ currentViewPage }} of {{ totalPages }}</span>
+
       <button
-        @click="goToNextPage"
-        :disabled="currentViewPage === totalPages"
+        @click="goToNextPage" :disabled="currentViewPage === totalPages"
         class="px-3 py-1.5 bg-gray-700 text-white rounded hover:bg-gray-900 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1.5 text-sm"
       >
         Next
@@ -492,6 +508,7 @@ onUnmounted(async () => {
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
       </button>
+
       <div class="flex items-center gap-1.5">
         <input
           type="number" min="1" :max="totalPages"
@@ -500,6 +517,28 @@ onUnmounted(async () => {
           class="border rounded px-2 py-1 w-16 text-sm text-center"
         />
         <button @click="scrollToPage(goToPageNumber)" class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm">Go</button>
+      </div>
+
+      <!-- Divider -->
+      <div class="w-px h-5 bg-gray-300"></div>
+
+      <!-- ★ Zoom controls ★ -->
+      <div class="flex items-center gap-1 bg-gray-200 rounded-lg p-1">
+        <button
+          @click="zoomOut" :disabled="userZoom <= MIN_ZOOM"
+          class="w-7 h-7 flex items-center justify-center rounded hover:bg-white transition disabled:opacity-40 disabled:cursor-not-allowed font-bold text-gray-700 text-lg leading-none"
+          title="Zoom out"
+        >−</button>
+        <button
+          @click="zoomReset"
+          class="px-2 py-0.5 text-xs font-semibold text-gray-700 hover:bg-white rounded transition min-w-[46px] text-center"
+          title="Reset zoom"
+        >{{ zoomPercent }}%</button>
+        <button
+          @click="zoomIn" :disabled="userZoom >= MAX_ZOOM"
+          class="w-7 h-7 flex items-center justify-center rounded hover:bg-white transition disabled:opacity-40 disabled:cursor-not-allowed font-bold text-gray-700 text-lg leading-none"
+          title="Zoom in"
+        >+</button>
       </div>
     </div>
 
@@ -522,17 +561,14 @@ onUnmounted(async () => {
           <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Active Now</h4>
           <div class="space-y-1">
             <div v-for="user in hub.activeUsers.value" :key="user.emplId" class="flex items-center gap-2 text-sm">
-              <span
-                class="w-2 h-2 rounded-full flex-shrink-0"
-                :class="user.emplId === currentEmplId ? 'bg-blue-500' : 'bg-green-500 animate-pulse'"
-              ></span>
+              <span class="w-2 h-2 rounded-full flex-shrink-0" :class="user.emplId === currentEmplId ? 'bg-blue-500' : 'bg-green-500 animate-pulse'"></span>
               <span class="truncate font-medium text-gray-700">{{ user.userName }}</span>
               <span v-if="user.emplId === currentEmplId" class="text-xs text-gray-400 ml-auto flex-shrink-0">(you)</span>
             </div>
           </div>
         </div>
 
-        <!-- ── PENDING signatures ── -->
+        <!-- PENDING -->
         <div v-if="signaturesSummary.pending.length > 0" class="mb-4">
           <h4 class="text-xs font-semibold text-orange-600 uppercase tracking-wide mb-2 flex items-center gap-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -541,13 +577,10 @@ onUnmounted(async () => {
             Pending ({{ signaturesSummary.pending.length }})
           </h4>
           <div class="space-y-1.5">
-            <div
-              v-for="sig in signaturesSummary.pending"
-              :key="sig.index"
+            <div v-for="sig in signaturesSummary.pending" :key="sig.index"
               @click="goToSignature(sig)"
               class="p-2.5 bg-white rounded-lg border hover:bg-gray-50 cursor-pointer transition-all text-sm"
-              :style="{ borderColor: sig.color || '#fb923c' }"
-            >
+              :style="{ borderColor: sig.color || '#fb923c' }">
               <div class="flex items-center justify-between gap-2">
                 <div class="min-w-0">
                   <div class="flex items-center gap-1.5 mb-0.5">
@@ -567,12 +600,11 @@ onUnmounted(async () => {
           </div>
         </div>
 
-        <!-- ── SIGNING signatures ── -->
+        <!-- SIGNING -->
         <div v-if="signaturesSummary.signing.length > 0" class="mb-4">
           <h4 class="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-2 flex items-center gap-1.5">
             <svg class="w-3.5 h-3.5 animate-bounce-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
             </svg>
             Signing ({{ signaturesSummary.signing.length }})
             <span class="ml-auto flex items-center gap-1">
@@ -583,23 +615,17 @@ onUnmounted(async () => {
             </span>
           </h4>
           <div class="space-y-1.5">
-            <div
-              v-for="sig in signaturesSummary.signing"
-              :key="sig.index"
+            <div v-for="sig in signaturesSummary.signing" :key="sig.index"
               @click="goToSignature(sig)"
               class="p-2.5 rounded-lg border cursor-pointer transition-all text-sm relative overflow-hidden hover:brightness-95"
-              :style="{ borderColor: sig.color || '#60a5fa', backgroundColor: sig.color ? sig.color + '12' : '#eff6ff' }"
-            >
+              :style="{ borderColor: sig.color || '#60a5fa', backgroundColor: sig.color ? sig.color + '12' : '#eff6ff' }">
               <div class="absolute inset-0 signing-shimmer pointer-events-none"></div>
               <div class="flex items-center justify-between gap-2 relative z-10">
                 <div class="min-w-0 flex-1">
                   <div class="flex items-center gap-1.5 mb-0.5">
                     <span class="w-2.5 h-2.5 rounded-full flex-shrink-0 animate-pulse" :style="{ backgroundColor: sig.color || '#60a5fa' }"></span>
                     <p class="font-semibold text-gray-800 truncate">{{ sig.signedBy || sig.assignedTo }}</p>
-                    <span
-                      class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap flex-shrink-0 text-white"
-                      :style="{ backgroundColor: sig.color || '#3b82f6' }"
-                    >
+                    <span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold whitespace-nowrap flex-shrink-0 text-white" :style="{ backgroundColor: sig.color || '#3b82f6' }">
                       <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
                       In Progress
                     </span>
@@ -612,8 +638,7 @@ onUnmounted(async () => {
                 </div>
                 <div class="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center shadow-sm" :style="{ backgroundColor: sig.color || '#3b82f6' }">
                   <svg class="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                   </svg>
                 </div>
               </div>
@@ -621,7 +646,7 @@ onUnmounted(async () => {
           </div>
         </div>
 
-        <!-- ── SIGNED / COMPLETED signatures ── -->
+        <!-- SIGNED / COMPLETED -->
         <div v-if="signaturesSummary.completed.length > 0" class="mb-4">
           <h4 class="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2 flex items-center gap-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -630,13 +655,10 @@ onUnmounted(async () => {
             Signed ({{ signaturesSummary.completed.length }})
           </h4>
           <div class="space-y-1.5">
-            <div
-              v-for="sig in signaturesSummary.completed"
-              :key="sig.index"
+            <div v-for="sig in signaturesSummary.completed" :key="sig.index"
               @click="goToSignature(sig)"
               class="p-2.5 bg-white rounded-lg border hover:bg-gray-50 cursor-pointer transition-all text-sm"
-              :style="{ borderColor: sig.color || '#4ade80' }"
-            >
+              :style="{ borderColor: sig.color || '#4ade80' }">
               <div class="flex items-center justify-between gap-2">
                 <div class="min-w-0">
                   <div class="flex items-center gap-1.5 mb-0.5">
@@ -658,14 +680,11 @@ onUnmounted(async () => {
         </div>
 
         <!-- Empty state -->
-        <div
-          v-if="signaturesSummary.pending.length === 0 && signaturesSummary.completed.length === 0 && signaturesSummary.signing.length === 0"
-          class="text-center py-10 px-4"
-        >
+        <div v-if="signaturesSummary.pending.length === 0 && signaturesSummary.completed.length === 0 && signaturesSummary.signing.length === 0"
+          class="text-center py-10 px-4">
           <div class="bg-gray-50 rounded-lg p-5 border-2 border-dashed border-gray-300">
             <svg class="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             <p class="text-sm text-gray-500">No signatures in this document</p>
           </div>
@@ -686,26 +705,22 @@ onUnmounted(async () => {
 
       <!-- ════════════ PDF CANVAS AREA ════════════ -->
       <div class="flex-1 overflow-auto p-6 bg-gray-100 flex justify-center">
-        <div
-          ref="containerRef"
-          class="relative inline-block"
-          @mousemove="handleMouseMove"
-        >
+        <div ref="containerRef" class="relative inline-block" @mousemove="handleMouseMove">
+
           <!-- PDF Canvas -->
           <div class="relative border border-gray-300 rounded shadow-md bg-white">
             <div class="absolute -top-3 left-4 bg-white px-2 py-0.5 text-xs font-semibold text-gray-500 border rounded">
               Page {{ currentViewPage }}
             </div>
             <canvas
-              v-for="i in totalPages"
-              :key="i"
+              v-for="i in totalPages" :key="i"
               v-show="i === currentViewPage"
               :ref="el => { if (el) canvasRefs[i - 1] = el }"
               class="block"
             ></canvas>
           </div>
 
-          <!-- ─── REMOTE LIVE DRAG OVERLAYS ─── -->
+          <!-- REMOTE LIVE DRAG OVERLAYS -->
           <template v-for="(pos, sigIndex) in remoteDragPositions" :key="'remote-' + sigIndex">
             <div
               v-if="localSignatures[Number(sigIndex)]?.page === currentViewPage && remoteOverlayStyles[Number(sigIndex)]"
@@ -728,31 +743,23 @@ onUnmounted(async () => {
             </div>
           </template>
 
-          <!-- ─── REMOTE CURSOR DOTS ───
-               Incoming cursor x/y are BASE_SCALE coords → multiply by scaleFactor to display correctly -->
+          <!-- REMOTE CURSOR DOTS -->
           <template v-for="(cursor, emplId) in hub.remoteCursors.value" :key="'cursor-' + emplId">
             <div
               v-if="cursor.page === currentViewPage"
               class="absolute pointer-events-none z-50 transition-all duration-75"
               :style="{ left: (cursor.x * scaleFactor) + 'px', top: (cursor.y * scaleFactor) + 'px' }"
             >
-              <div
-                class="w-3 h-3 rounded-full border-2 border-white shadow-md"
-                :style="{ background: cursor.color || '#6366f1', transform: 'translate(-50%, -50%)' }"
-              ></div>
-              <div
-                class="absolute top-3 left-3 text-white text-xs px-2 py-0.5 rounded whitespace-nowrap shadow"
-                :style="{ backgroundColor: cursor.color || '#6366f1' }"
-              >
+              <div class="w-3 h-3 rounded-full border-2 border-white shadow-md" :style="{ background: cursor.color || '#6366f1', transform: 'translate(-50%, -50%)' }"></div>
+              <div class="absolute top-3 left-3 text-white text-xs px-2 py-0.5 rounded whitespace-nowrap shadow" :style="{ backgroundColor: cursor.color || '#6366f1' }">
                 {{ cursor.userName }}
               </div>
             </div>
           </template>
 
-          <!-- ─── SIGNATURE BOXES ─── -->
+          <!-- SIGNATURE BOXES -->
           <div
-            v-for="(sig, index) in localSignatures"
-            :key="'sig-' + index"
+            v-for="(sig, index) in localSignatures" :key="'sig-' + index"
             :ref="el => { if (el) prePlacedSigRefs[index] = el }"
             v-show="sig.page === currentViewPage"
             class="absolute rounded pointer-events-none"
@@ -762,7 +769,6 @@ onUnmounted(async () => {
             }"
             :style="getSigBoxStyle(sig)"
           >
-            <!-- Corner dot badge — only for pending and signing -->
             <div
               v-if="getSigState(sig) !== 'signed'"
               class="absolute -top-2 -left-2 w-5 h-5 rounded-full text-white text-[9px] font-bold flex items-center justify-center shadow-md pointer-events-none z-10"
@@ -771,27 +777,23 @@ onUnmounted(async () => {
               {{ getInitials(sig) }}
             </div>
 
-            <!-- ══ STATE: PENDING ══ -->
+            <!-- PENDING -->
             <div v-if="getSigState(sig) === 'pending'" class="flex flex-col items-center justify-center h-full p-1 pointer-events-none">
               <svg class="w-5 h-5 mb-1" :style="{ color: sig.color || '#fb923c' }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <p v-if="!isSmallSignatureBox(sig)" class="text-xs font-semibold text-center leading-tight" :style="{ color: sig.color || '#fb923c' }">Pending</p>
               <p v-if="!isSmallSignatureBox(sig) && sig.assignedTo" class="text-xs text-center truncate max-w-full px-1 opacity-70" :style="{ color: sig.color || '#fb923c' }">{{ sig.assignedTo }}</p>
             </div>
 
-            <!-- ══ STATE: SIGNING ══ -->
+            <!-- SIGNING -->
             <div v-else-if="getSigState(sig) === 'signing'" class="relative w-full h-full flex flex-col pointer-events-none overflow-hidden rounded">
               <div class="relative w-full h-full">
                 <template v-if="sig.showName">
                   <div class="flex flex-col items-center justify-end pb-2 px-2 h-full">
                     <div class="flex items-end justify-center" style="margin-bottom: -10px;">
-                      <img
-                        :src="sig.imageSrc"
-                        class="object-contain select-none opacity-75"
-                        :style="{ maxWidth: Math.max(sc(sig.width) - 16, (sig.signedBy || '').length * 8) + 'px', maxHeight: (sc(sig.height) - 30) + 'px' }"
-                      />
+                      <img :src="sig.imageSrc" class="object-contain select-none opacity-75"
+                        :style="{ maxWidth: Math.max(sc(sig.width) - 16, (sig.signedBy || '').length * 8) + 'px', maxHeight: (sc(sig.height) - 30) + 'px' }" />
                     </div>
                     <div class="text-center pt-0.5 text-xs" :style="{ minWidth: Math.max(100, (sig.signedBy || '').length * 8) + 'px' }">
                       <div class="font-medium text-gray-700">{{ sig.signedBy }}</div>
@@ -803,25 +805,19 @@ onUnmounted(async () => {
                 </template>
                 <div class="absolute inset-0 rounded pointer-events-none opacity-10" :style="{ backgroundColor: sig.color || '#3b82f6' }"></div>
               </div>
-              <div
-                class="absolute top-1 right-1 flex items-center gap-0.5 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow pointer-events-none"
-                :style="{ backgroundColor: sig.color || '#3b82f6' }"
-              >
+              <div class="absolute top-1 right-1 flex items-center gap-0.5 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow pointer-events-none" :style="{ backgroundColor: sig.color || '#3b82f6' }">
                 <span class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
                 <span v-if="!isSmallSignatureBox(sig)">Signing</span>
               </div>
             </div>
 
-            <!-- ══ STATE: SIGNED ══ -->
+            <!-- SIGNED -->
             <div v-else class="relative w-full h-full flex flex-col pointer-events-none">
               <template v-if="sig.showName">
                 <div class="flex flex-col items-center justify-end pb-2 px-2 h-full">
                   <div class="flex items-end justify-center" style="margin-bottom: -10px;">
-                    <img
-                      :src="sig.imageSrc"
-                      class="object-contain select-none"
-                      :style="{ maxWidth: Math.max(sc(sig.width) - 16, (sig.signedBy || '').length * 8) + 'px', maxHeight: (sc(sig.height) - 30) + 'px' }"
-                    />
+                    <img :src="sig.imageSrc" class="object-contain select-none"
+                      :style="{ maxWidth: Math.max(sc(sig.width) - 16, (sig.signedBy || '').length * 8) + 'px', maxHeight: (sc(sig.height) - 30) + 'px' }" />
                   </div>
                   <div class="text-center pt-0.5 text-xs" :style="{ minWidth: Math.max(100, (sig.signedBy || '').length * 8) + 'px' }">
                     <div class="font-medium text-gray-800">{{ sig.signedBy }}</div>
@@ -834,7 +830,7 @@ onUnmounted(async () => {
             </div>
           </div>
 
-          <!-- ─── DATE LABELS ─── -->
+          <!-- DATE LABELS -->
           <template v-for="(sig, filteredIndex) in localSignatures.filter(s => s.datePosition)" :key="'date-' + filteredIndex">
             <div
               :ref="el => { if (el) prePlacedDateRefs[filteredIndex] = el }"
@@ -851,6 +847,7 @@ onUnmounted(async () => {
               {{ sig.datePosition.dateText || 'MM/DD/YYYY' }}
             </div>
           </template>
+
         </div>
       </div>
     </div>
@@ -895,9 +892,7 @@ onUnmounted(async () => {
   0%, 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.2); }
   50%       { box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.12); }
 }
-.signing-box-glow {
-  animation: signing-glow 2.4s ease-in-out infinite;
-}
+.signing-box-glow { animation: signing-glow 2.4s ease-in-out infinite; }
 
 @keyframes shimmer {
   0%   { transform: translateX(-100%); }
@@ -916,9 +911,7 @@ onUnmounted(async () => {
   0%, 100% { transform: translateY(0); }
   50%       { transform: translateY(-2px); }
 }
-.animate-bounce-subtle {
-  animation: bounce-subtle 1.8s ease-in-out infinite;
-}
+.animate-bounce-subtle { animation: bounce-subtle 1.8s ease-in-out infinite; }
 
 .toast-enter-active, .toast-leave-active { transition: all .3s ease; }
 .toast-enter-from { opacity: 0; transform: translateX(100%); }

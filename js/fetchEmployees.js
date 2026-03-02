@@ -25,7 +25,33 @@ export const getEmployees = async () => {
     approverIndex.value = 0;
     proxyIndex.value = 0;
     availableApprovers.value = response;
-    lastSearched.value = query.value.search
+    lastSearched.value = query.value.search,
+    console.log(response)
+  } catch (error) {
+    console.error("Error fetching menus:", error);
+  } finally{
+    loading.value = false;
+  }
+};
+
+export const getEmployeesForSigner = async () => {
+  const token = getToken();
+  loading.value = true;
+  try {
+    const response = await $fetch(
+      `${API_BASE_URL}/api/Account/get-all-profile-for-signer`,
+      {
+        headers: {
+          token: token,
+        },
+        params: { ...query.value },
+      }
+    );
+    approverIndex.value = 0;
+    proxyIndex.value = 0;
+    availableApprovers.value = response;
+    lastSearched.value = query.value.search,
+    console.log(response)
   } catch (error) {
     console.error("Error fetching menus:", error);
   } finally{

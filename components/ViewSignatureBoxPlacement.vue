@@ -1,620 +1,367 @@
 <script setup>
-import { ref, watch, onMounted, nextTick } from 'vue';
+import { ref, watch, onUnmounted, nextTick, computed } from 'vue';
+import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
+import { toRaw } from 'vue';
 
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { toRaw } from "vue";
-
-// Props
 const props = defineProps({
     isOpen: Boolean,
     pdfTitle: String,
     pdfFile: File,
-    signatures: {
-        type: Array,
-        default: () => []
-    }
+    signatures: { type: Array, default: () => [] }
 });
-
-// Emits
 const emit = defineEmits(['close']);
 
-// Refs
-const containerRef = ref(null);
-const pdfDocument = ref(null);
-const canvasRefs = ref([]);
-const totalPages = ref(0);
-const currentViewPage = ref(1);
-const goToPageNumber = ref(1);
+// ── Scale system ──────────────────────────────────────────────────────────────
+const BASE_SCALE   = 1.4;
+const renderScale  = ref(BASE_SCALE);
+const userZoom     = ref(1.0);
+const MIN_ZOOM     = 0.5;
+const MAX_ZOOM     = 3.0;
+const ZOOM_STEP    = 0.25;
+const displayScale = computed(() => renderScale.value * userZoom.value);
+const scaleFactor  = computed(() => displayScale.value / BASE_SCALE);
+const zoomPercent  = computed(() => Math.round(userZoom.value * 100));
+const sc           = (val) => val * scaleFactor.value;
+
+const zoomIn    = async () => { userZoom.value = Math.min(MAX_ZOOM, +(userZoom.value + ZOOM_STEP).toFixed(2)); await applyZoom(); };
+const zoomOut   = async () => { userZoom.value = Math.max(MIN_ZOOM, +(userZoom.value - ZOOM_STEP).toFixed(2)); await applyZoom(); };
+const zoomReset = async () => { userZoom.value = 1.0; await applyZoom(); };
+const applyZoom = async () => { for (let i = 1; i <= totalPages.value; i++) await renderPage(i); await nextTick(); };
+
+// ── Refs ──────────────────────────────────────────────────────────────────────
+const containerRef     = ref(null);
+const canvasWrapperRef = ref(null);
+const pdfDocument      = ref(null);
+const canvasRefs       = ref([]);
+const totalPages       = ref(0);
+const currentViewPage  = ref(1);
+const goToPageNumber   = ref(1);
+const showSidebar      = ref(false);
 const SIGNATURE_MARGIN_BOTTOM = 10;
 
-// Color helper
-const hexToRgba = (hex, alpha = 0.2) => {
-    const cleaned = hex.replace('#', '');
-    const bigint = parseInt(cleaned, 16);
-    const r = (bigint >> 16) & 255;
-    const g = (bigint >> 8) & 255;
-    const b = bigint & 255;
-    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+// ── Watch ─────────────────────────────────────────────────────────────────────
+watch(() => props.isOpen, async (v) => { if (v && props.pdfFile) { userZoom.value = 1.0; await loadPdf(); } });
+
+// ── ResizeObserver ────────────────────────────────────────────────────────────
+let resizeObserver = null;
+const setupResizeObserver = () => {
+    if (resizeObserver) resizeObserver.disconnect();
+    if (!canvasWrapperRef.value) return;
+    resizeObserver = new ResizeObserver(async (entries) => {
+        for (const entry of entries) {
+            const availableWidth = entry.contentRect.width;
+            if (!pdfDocument.value) return;
+            const page         = await pdfDocument.value.getPage(1);
+            const rotation     = page.rotate ?? 0;
+            const baseViewport = page.getViewport({ scale: BASE_SCALE, rotation });
+            const naturalWidth = baseViewport.width;
+            const usable       = availableWidth - 48;
+            const newScale     = usable < naturalWidth ? Math.max(0.4, (usable / naturalWidth) * BASE_SCALE) : BASE_SCALE;
+            if (Math.abs(newScale - renderScale.value) > 0.01) {
+                renderScale.value = newScale;
+                for (let i = 1; i <= totalPages.value; i++) await renderPage(i);
+                await nextTick();
+            }
+        }
+    });
+    resizeObserver.observe(canvasWrapperRef.value);
 };
 
-// Load PDF when modal opens
-watch(() => props.isOpen, async (newVal) => {
-    if (newVal && props.pdfFile) {
-        await loadPdf();
-    }
-});
-
-// Load PDF Logic
+// ── PDF load / render ─────────────────────────────────────────────────────────
 const loadPdf = async () => {
     try {
-        const pdfjsLib = window['pdfjs-dist/build/pdf'];
+        const pdfjsLib    = window['pdfjs-dist/build/pdf'];
         const arrayBuffer = await props.pdfFile.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+        const pdf         = await pdfjsLib.getDocument(arrayBuffer).promise;
         pdfDocument.value = pdf;
-        totalPages.value = pdf.numPages;
-        canvasRefs.value = [];
-        await nextTick();
-        for (let i = 1; i <= pdf.numPages; i++) {
-            await renderPage(i);
-        }
-    } catch (error) {
-        console.error('Error loading PDF:', error);
-    }
+        totalPages.value  = pdf.numPages;
+        canvasRefs.value  = [];
+        await nextTick(); await nextTick();
+        setupResizeObserver();
+        for (let i = 1; i <= pdf.numPages; i++) await renderPage(i);
+    } catch (e) { console.error('Error loading PDF:', e); }
 };
 
-
-const downloadPdf = async () => {
-  try {
-    if (!props.pdfFile) {
-      alert('PDF file not found');
-      return;
-    }
-    if (!props.signatures || props.signatures.length === 0) {
-      alert('No signatures found');
-      return;
-    }
-
-    // Load PDF
-    const pdfBytes = await props.pdfFile.arrayBuffer();
-    const pdfDoc = await PDFDocument.load(pdfBytes);
-    const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-    for (const sigRaw of props.signatures) {
-      const sig = toRaw(sigRaw);
-      if (!sig || sig.isEmpty || !sig.imageSrc) continue;
-
-      const pageIndex = Math.max(0, (sig.page || 1) - 1);
-      if (pageIndex >= pdfDoc.getPageCount()) continue;
-      const page = pdfDoc.getPage(pageIndex);
-
-      const pageWidth = page.getWidth();
-      const pageHeight = page.getHeight();
-
-      // Scale coordinates from canvas to PDF
-
-    // Scale coordinates from canvas to PDF
-    const canvasWidth = sig.canvasWidth || pageWidth;
-    const canvasHeight = sig.canvasHeight || pageHeight;
-
-    const scaleX = pageWidth / canvasWidth;
-    const scaleY = pageHeight / canvasHeight;
-
-
-      // Embed signature image (PNG/JPG)
-      const imgResp = await fetch(sig.imageSrc);
-      const imgBytes = await imgResp.arrayBuffer();
-      let embeddedImage;
-      try {
-        embeddedImage = await pdfDoc.embedPng(imgBytes);
-      } catch {
-        embeddedImage = await pdfDoc.embedJpg(imgBytes);
-      }
-
-      // Compute image dimensions with aspect ratio
-      const maxImgWidth = sig.width * scaleX;
-      const maxImgHeight = sig.height * scaleY;
-      const imgAspect = embeddedImage.width / embeddedImage.height;
-      let drawWidth = maxImgWidth;
-      let drawHeight = drawWidth / imgAspect;
-      if (drawHeight > maxImgHeight) {
-        drawHeight = maxImgHeight;
-        drawWidth = drawHeight * imgAspect;
-      }
-
-      // X/Y position for signature
-      const xOnPdf = sig.x * scaleX + (maxImgWidth - drawWidth) / 2;
-      let yOnPdf = pageHeight - (sig.y + drawHeight) * scaleY;
-      
-
-      // Name adjustment
-      const hasName = !!sig.showName;
-      let fontSize;
-      if (hasName) {
-        fontSize = Math.max(8, drawHeight * 0.18);
-        yOnPdf -= fontSize / 2; // shift up for name
-      }
-      else{
-        fontSize = Math.max(8, drawHeight * 0.18);
-        yOnPdf -= fontSize / 1; // shift up for name
-      }
-
-      yOnPdf -= 4 * scaleY; //
-      // Draw signature image
-      page.drawImage(embeddedImage, {
-        x: xOnPdf,
-        y: yOnPdf,
-        width: drawWidth,
-        height: drawHeight,
-      });
-
-      // Draw name if exists
-      if (hasName) {
-        const textWidth = Math.min(
-          helveticaFont.widthOfTextAtSize(sig.signedBy, fontSize),
-          drawWidth
-        );
-        const textX = xOnPdf + (drawWidth - textWidth) / 2;
-        const textY = yOnPdf - fontSize / 3;
-
-        page.drawText(sig.signedBy, {
-          x: textX,
-          y: textY,
-          size: fontSize,
-          font: helveticaFont,
-          color: rgb(0, 0, 0),
-        });
-      }
-
-      // Draw date if exists
-      if (sig.hasDate && sig.datePosition) {
-        const dp = toRaw(sig.datePosition);
-        const dateFontSize = (dp.fontSize || 14) * scaleY;
-
-        // Adjust date Y for name shift
-        const dateY =
-          pageHeight -
-          (dp.y + dp.height) * scaleY -
-          (hasName ? fontSize / 10 : 0) +
-          (dp.height * scaleY - dateFontSize) / 2;
-
-        page.drawText(sig.dateText || sig.signedDate || "", {
-          x: dp.x * scaleX + 2, // optional padding
-          y: dateY,
-          size: dateFontSize,
-          font: helveticaFont,
-          color: rgb(0, 0, 0),
-        });
-      }
-    }
-
-    // Save & download PDF
-    const finalPdf = await pdfDoc.save();
-    const blob = new Blob([finalPdf], { type: 'application/pdf' });
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = props.pdfTitle || 'SignedDocument.pdf';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error('PDF download failed:', err);
-    alert('Failed to generate PDF. See console for details.');
-  }
-};
-
-
-
+let renderTasks = {};
 const renderPage = async (pageNum) => {
     try {
         const page = await pdfDocument.value.getPage(pageNum);
-        const viewport = page.getViewport({ scale: 1.4 });
+        if (renderTasks[pageNum]) { renderTasks[pageNum].cancel(); }
+        let rotation = page.rotate ?? 0;
+        let viewport = page.getViewport({ scale: displayScale.value, rotation: 0 });
+        if (viewport.width > viewport.height) { rotation = 90; }
+        viewport = page.getViewport({ scale: displayScale.value, rotation });
         const canvas = canvasRefs.value[pageNum - 1];
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        await page.render({ canvasContext: ctx, viewport }).promise;
-    } catch (error) {
-        console.error('Error rendering page:', error);
-    }
+        canvas.width = viewport.width; canvas.height = viewport.height;
+        const task = page.render({ canvasContext: ctx, viewport });
+        renderTasks[pageNum] = task;
+        await task.promise;
+        renderTasks[pageNum] = null;
+    } catch (e) { if (e?.name !== 'RenderingCancelledException') console.error(e); }
 };
 
-// Get signatures for current page - FILTER TO SHOW ONLY SIGNED ONES
-const getCurrentPageSignatures = () => {
-    return props.signatures.filter(sig =>
-        sig.page === currentViewPage.value && sig.imageSrc
-    );
+// ── Position helpers ──────────────────────────────────────────────────────────
+const getBoxStyle = (sig) => {
+    const canvas = canvasRefs.value[sig.page - 1];
+    if (!canvas || !containerRef.value) return {};
+    const cr = canvas.getBoundingClientRect();
+    const pr = containerRef.value.getBoundingClientRect();
+    return { left: (cr.left - pr.left + sc(sig.x)) + 'px', top: (cr.top - pr.top + sc(sig.y)) + 'px', width: sc(sig.width) + 'px', height: sc(sig.height) + 'px' };
 };
-
-// Navigation
-const goToNextPage = () => {
-    if (currentViewPage.value < totalPages.value) currentViewPage.value++;
+const getDateStyle = (sig) => {
+    if (!sig.datePosition) return {};
+    const canvas = canvasRefs.value[sig.page - 1];
+    if (!canvas || !containerRef.value) return {};
+    const cr = canvas.getBoundingClientRect();
+    const pr = containerRef.value.getBoundingClientRect();
+    return { left: (cr.left - pr.left + sc(sig.datePosition.x)) + 'px', top: (cr.top - pr.top + sc(sig.datePosition.y)) + 'px', width: sc(sig.datePosition.width || 100) + 'px', height: sc(sig.datePosition.height || 30) + 'px' };
 };
-
-const goToPrevPage = () => {
-    if (currentViewPage.value > 1) currentViewPage.value--;
+const getBoxVisualStyle = (sig) => {
+    const base = getBoxStyle(sig);
+    return { ...base, top: sig.showName ? (parseFloat(base.top || 0) - sc(SIGNATURE_MARGIN_BOTTOM)) + 'px' : base.top, backgroundColor: 'transparent' };
 };
+const getDateVisualStyle = (sig) => ({ ...getDateStyle(sig), borderColor: '#36454F', color: '#36454F' });
 
-const scrollToPage = (pageNum) => {
-    if (pageNum >= 1 && pageNum <= totalPages.value) {
-        currentViewPage.value = pageNum;
-    }
-};
-
-// Scroll to specific signature
-const scrollToSignature = async (signature) => {
-    currentViewPage.value = signature.page;
-
-    await nextTick();
-
-    if (containerRef.value && containerRef.value.parentElement) {
-        const scrollContainerEl = containerRef.value.parentElement;
-        const containerHeight = scrollContainerEl.clientHeight;
-        const targetScrollTop = signature.y - (containerHeight / 2) + (signature.height / 2);
-
-        scrollContainerEl.scrollTo({
-            top: Math.max(0, targetScrollTop),
-            behavior: 'smooth'
-        });
-    }
-};
-
-// Position styles - FIXED for multi-page navigation
-const getBoxStyle = (signature) => {
-    const canvas = canvasRefs.value[signature.page - 1];
-    if (!canvas) return {};
-
-    // Since only current page canvas is visible, position relative to it directly
-    return {
-        left: signature.x + 'px',
-        top: signature.y + 'px',
-        width: signature.width + 'px',
-        height: signature.height + 'px'
-    };
-};
-
-const getDateStyle = (signature) => {
-    if (!signature.datePosition) return {};
-    const canvas = canvasRefs.value[signature.page - 1];
-    if (!canvas) return {};
-
-    // Since only current page canvas is visible, position relative to it directly
-    return {
-        left: signature.datePosition.x + 'px',
-        top: signature.datePosition.y + 'px',
-        width: (signature.datePosition.width || 100) + 'px',
-        height: (signature.datePosition.height || 30) + 'px'
-    };
-};
-
-// Visual styles - simplified for view mode
-const getBoxVisualStyle = (signature) => {
-    const base = getBoxStyle(signature);
-    return {
-        ...base,
-        top: signature.showName ? (signature.y - SIGNATURE_MARGIN_BOTTOM) + 'px' : signature.y + 'px', // 👈
-        backgroundColor: 'transparent'
-    };
-};
-
-const getDateVisualStyle = (signature) => {
-    const base = getDateStyle(signature);
-    return {
-        ...base,
-        borderColor: '#36454F',
-        color: '#36454F',
-    };
-};
-
-// Group signatures by signer - ALL SIGNERS (signed and unsigned)
+// ── Signature helpers ─────────────────────────────────────────────────────────
+const getCurrentPageSignatures = () => props.signatures.filter(s => s.page === currentViewPage.value && s.imageSrc);
+const getSignedSignatures      = () => props.signatures.filter(s => s.imageSrc);
+const isSequentialOrder        = () => props.signatures.some(s => s.enforceSequentialOrder);
 const getSignerGroups = () => {
     const groups = {};
-
-    // Include ALL signatures to show all signers
     props.signatures.forEach(sig => {
         const key = sig.assignedEmplId || sig.assignedTo;
-        if (!groups[key]) {
-            groups[key] = {
-                name: sig.assignedTo,
-                emplId: sig.assignedEmplId,
-                color: sig.color,
-                approvalOrder: sig.approvalOrder,
-                signatures: [],
-                signedCount: 0
-            };
-        }
+        if (!groups[key]) groups[key] = { name: sig.assignedTo, emplId: sig.assignedEmplId, color: sig.color, approvalOrder: sig.approvalOrder, signatures: [], signedCount: 0 };
         groups[key].signatures.push(sig);
-        if (sig.imageSrc) {
-            groups[key].signedCount++;
-        }
+        if (sig.imageSrc) groups[key].signedCount++;
     });
-
-    const sortedGroups = Object.values(groups).sort((a, b) =>
-        Number(a.approvalOrder || 0) - Number(b.approvalOrder || 0)
-    );
-
-    // Determine status for sequential signing
+    const sorted = Object.values(groups).sort((a, b) => Number(a.approvalOrder || 0) - Number(b.approvalOrder || 0));
     if (isSequentialOrder()) {
-        let previousCompleted = true;
-
-        sortedGroups.forEach(group => {
-            const isFullySigned = group.signedCount === group.signatures.length;
-
-            if (previousCompleted && !isFullySigned) {
-                group.status = 'pending'; // Current signer who needs to sign
-                previousCompleted = false;
-            } else if (isFullySigned) {
-                group.status = 'signed'; // Already completed
-            } else {
-                group.status = 'waiting'; // Waiting for previous signers
-            }
+        let prev = true;
+        sorted.forEach(g => {
+            const full = g.signedCount === g.signatures.length;
+            if (prev && !full) { g.status = 'pending'; prev = false; } else if (full) { g.status = 'signed'; } else { g.status = 'waiting'; }
         });
-    } else {
-        // For non-sequential, just mark as signed or pending
-        sortedGroups.forEach(group => {
-            group.status = group.signedCount === group.signatures.length ? 'signed' : 'pending';
-        });
+    } else { sorted.forEach(g => { g.status = g.signedCount === g.signatures.length ? 'signed' : 'pending'; }); }
+    return sorted;
+};
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+const goToNextPage = () => { if (currentViewPage.value < totalPages.value) currentViewPage.value++; };
+const goToPrevPage = () => { if (currentViewPage.value > 1) currentViewPage.value--; };
+const scrollToPage = (n) => { if (n >= 1 && n <= totalPages.value) currentViewPage.value = n; };
+const scrollToSignature = async (sig) => {
+    currentViewPage.value = sig.page;
+    await nextTick();
+    if (containerRef.value?.parentElement) {
+        const el = containerRef.value.parentElement;
+        el.scrollTo({ top: Math.max(0, sc(sig.y) - el.clientHeight / 2 + sc(sig.height) / 2), behavior: 'smooth' });
     }
-
-    return sortedGroups;
 };
 
-// Get only signed signatures for the list
-const getSignedSignatures = () => {
-    return props.signatures.filter(sig => sig.imageSrc);
+// ── Download PDF ──────────────────────────────────────────────────────────────
+const downloadPdf = async () => {
+    try {
+        if (!props.pdfFile) { alert('PDF file not found'); return; }
+        if (!props.signatures?.length) { alert('No signatures found'); return; }
+        const pdfDoc = await PDFDocument.load(await props.pdfFile.arrayBuffer());
+        const font   = await pdfDoc.embedFont(StandardFonts.Helvetica);
+        for (const sigRaw of props.signatures) {
+            const sig = toRaw(sigRaw);
+            if (!sig || sig.isEmpty || !sig.imageSrc) continue;
+            const pageIdx = Math.max(0, (sig.page || 1) - 1);
+            if (pageIdx >= pdfDoc.getPageCount()) continue;
+            const page = pdfDoc.getPage(pageIdx);
+            const pw = page.getWidth(); const ph = page.getHeight();
+            const sx = pw / (sig.canvasWidth  || pw);
+            const sy = ph / (sig.canvasHeight || ph);
+            const imgBytes = await (await fetch(sig.imageSrc)).arrayBuffer();
+            let img; try { img = await pdfDoc.embedPng(imgBytes); } catch { img = await pdfDoc.embedJpg(imgBytes); }
+            const mw = sig.width * sx; const mh = sig.height * sy;
+            const ar = img.width / img.height;
+            let dw = mw; let dh = dw / ar;
+            if (dh > mh) { dh = mh; dw = dh * ar; }
+            const xp = sig.x * sx + (mw - dw) / 2;
+            const hasName = !!sig.showName;
+            const fs = Math.max(8, dh * 0.18);
+            let yp = ph - (sig.y + dh) * sy - (hasName ? fs / 2 : fs) - 4 * sy;
+            page.drawImage(img, { x: xp, y: yp, width: dw, height: dh });
+            if (hasName) {
+                const tw = Math.min(font.widthOfTextAtSize(sig.signedBy, fs), dw);
+                page.drawText(sig.signedBy, { x: xp + (dw - tw) / 2, y: yp - fs / 3, size: fs, font, color: rgb(0, 0, 0) });
+            }
+            if (sig.hasDate && sig.datePosition) {
+                const dp = toRaw(sig.datePosition);
+                const dfs = (dp.fontSize || 14) * sy;
+                const dy  = ph - (dp.y + dp.height) * sy - (hasName ? fs / 10 : 0) + (dp.height * sy - dfs) / 2;
+                page.drawText(sig.dateText || sig.signedDate || '', { x: dp.x * sx + 2, y: dy, size: dfs, font, color: rgb(0, 0, 0) });
+            }
+        }
+        const blob = new Blob([await pdfDoc.save()], { type: 'application/pdf' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a'); a.href = url; a.download = props.pdfTitle || 'SignedDocument.pdf';
+        document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    } catch (e) { console.error('PDF download failed:', e); alert('Failed to generate PDF.'); }
 };
 
-// Check if sequential order is enforced
-const isSequentialOrder = () => {
-    return props.signatures.some(sig => sig.enforceSequentialOrder);
-};
+onUnmounted(() => { if (resizeObserver) resizeObserver.disconnect(); });
 </script>
 
 <template>
-    <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center w-full z-50"
-        @click.self="emit('close')">
-        <div class="bg-white rounded-lg shadow-xl max-w-7xl w-full max-h-[95vh] flex flex-col m-4">
+    <div v-if="isOpen" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center w-full z-50" @click.self="emit('close')">
+        <div class="bg-white rounded-lg shadow-xl w-full max-h-[95vh] flex flex-col mx-2 sm:mx-4 max-w-[98vw] sm:max-w-3xl md:max-w-5xl lg:max-w-7xl">
 
-            <!-- Header -->
-            <div class="flex items-center justify-between p-4 border-b">
-                <div>
-                    <h2 class="text-xl font-semibold">View Document</h2>
-                    <p class="text-sm text-gray-600 mt-1">
-                        Tracking all signers and completed signatures
-                    </p>
+            <!-- HEADER -->
+            <div class="flex items-center justify-between p-3 sm:p-4 border-b flex-shrink-0">
+                <div class="flex-1 min-w-0">
+                    <h2 class="text-base sm:text-xl font-semibold truncate">View Document</h2>
+                    <p class="text-xs sm:text-sm text-gray-600 mt-0.5">Tracking all signers and completed signatures</p>
                 </div>
-                <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                <button @click="emit('close')" class="p-2 hover:bg-gray-100 rounded-full transition flex-shrink-0 ml-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                 </button>
             </div>
 
-            <div class="flex flex-1 overflow-hidden">
+            <!-- BODY -->
+            <div class="flex flex-1 overflow-hidden relative">
 
-                <!-- Left Sidebar -->
-                <div class="w-80 border-r bg-gray-50 p-4 overflow-y-auto">
-
-                    <!-- Sequential Order Info -->
-                    <div v-if="isSequentialOrder()" class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                        <div class="flex items-center gap-2 text-blue-700">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <span class="text-sm font-semibold">Sequential Signing</span>
-                        </div>
-                        <p class="text-xs text-blue-600 mt-1">
-                            Signatures completed in order.
-                        </p>
+                <!-- SIDEBAR -->
+                <div v-if="showSidebar" class="border-r bg-gray-50 p-3 sm:p-4 overflow-y-auto flex-shrink-0 w-64 sm:w-72 lg:w-80 absolute sm:relative inset-y-0 left-0 z-30 sm:z-auto shadow-xl sm:shadow-none">
+                    <div class="flex items-center justify-between mb-3">
+                        <h3 class="font-semibold text-sm sm:text-base">Signers</h3>
+                        <button @click="showSidebar = false" class="p-1 hover:bg-gray-200 rounded transition">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+                        </button>
                     </div>
 
-                    <!-- Signers List - ALL signers (signed and unsigned) -->
-                    <div class="bg-white rounded-lg shadow p-4 mb-4">
-                        <h3 class="font-semibold mb-3">Signers ({{ getSignerGroups().length }})</h3>
-
-                        <div v-if="getSignerGroups().length === 0" class="text-sm text-gray-500">
-                            No signers assigned.
+                    <div v-if="isSequentialOrder()" class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                        <div class="flex items-center gap-2 text-blue-700">
+                            <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                            <span class="text-xs sm:text-sm font-semibold">Sequential Signing</span>
                         </div>
+                        <p class="text-xs text-blue-600 mt-1">Signatures completed in order.</p>
+                    </div>
 
+                    <div class="bg-white rounded-lg shadow p-3 sm:p-4 mb-4">
+                        <h3 class="font-semibold mb-3 text-sm">Signers ({{ getSignerGroups().length }})</h3>
+                        <div v-if="!getSignerGroups().length" class="text-xs text-gray-500">No signers assigned.</div>
                         <div v-else class="space-y-2">
-                            <div v-for="(group, index) in getSignerGroups()" :key="group.emplId || group.name" :class="[
-                                'border rounded p-3',
-                                group.status === 'signed' ? 'bg-green-50 border-green-200' :
-                                    group.status === 'pending' ? 'bg-orange-50 border-orange-200' :
-                                        'bg-gray-50 border-gray-300'
-                            ]">
-                                <div class="flex items-center gap-2 mb-2">
-                                    <span v-if="isSequentialOrder()" :class="[
-                                        'flex-shrink-0 w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center',
-                                        group.status === 'signed' ? 'bg-green-500' :
-                                            group.status === 'pending' ? 'bg-orange-500' :
-                                                'bg-gray-400'
-                                    ]">
-                                        {{ group.approvalOrder }}
-                                    </span>
-                                    <span class="inline-block w-3 h-3 rounded flex-shrink-0"
-                                        :style="{ backgroundColor: group.color }"></span>
-                                    <span class="font-medium text-sm">{{ group.name }}</span>
+                            <div v-for="group in getSignerGroups()" :key="group.emplId || group.name"
+                                :class="['border rounded p-2.5', group.status==='signed'?'bg-green-50 border-green-200':group.status==='pending'?'bg-orange-50 border-orange-200':'bg-gray-50 border-gray-300']">
+                                <div class="flex items-center gap-2">
+                                    <span v-if="isSequentialOrder()" :class="['flex-shrink-0 w-5 h-5 rounded-full text-white text-xs font-bold flex items-center justify-center', group.status==='signed'?'bg-green-500':group.status==='pending'?'bg-orange-500':'bg-gray-400']">{{ group.approvalOrder }}</span>
+                                    <span class="inline-block w-3 h-3 rounded flex-shrink-0" :style="{backgroundColor:group.color}"></span>
+                                    <span class="font-medium text-xs truncate">{{ group.name }}</span>
                                 </div>
-
-                                <div class="flex items-center gap-2 mt-2 ml-8">
-                                    <span v-if="group.status === 'signed'"
-                                        class="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded font-semibold">
-                                        ✓ Signed
-                                    </span>
-                                    <span v-else-if="group.status === 'pending'"
-                                        class="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded font-semibold">
-                                        ⏳ Pending
-                                    </span>
-                                    <span v-else
-                                        class="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded font-semibold">
-                                        ⏸ Waiting
-                                    </span>
-                                    <span class="text-xs text-gray-600">
-                                        {{ group.signedCount }}/{{ group.signatures.length }} signature{{
-                                            group.signatures.length !== 1 ? 's' : '' }}
-                                    </span>
+                                <div class="flex items-center gap-2 mt-1.5 ml-7">
+                                    <span v-if="group.status==='signed'" class="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-semibold">✓ Signed</span>
+                                    <span v-else-if="group.status==='pending'" class="text-xs px-1.5 py-0.5 bg-orange-100 text-orange-700 rounded font-semibold">⏳ Pending</span>
+                                    <span v-else class="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded font-semibold">⏸ Waiting</span>
+                                    <span class="text-xs text-gray-500">{{ group.signedCount }}/{{ group.signatures.length }}</span>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Signature Boxes List - Only signed ones -->
-                    <div class="bg-white rounded-lg shadow p-4">
-                        <h3 class="font-semibold mb-3">
-                            Completed Signatures ({{ getSignedSignatures().length }})
-                        </h3>
-
-                        <div v-if="getSignedSignatures().length === 0" class="text-sm text-gray-500">
-                            No completed signatures to display.
-                        </div>
-
-                        <div v-else class="space-y-2 max-h-96 overflow-y-auto">
-                            <div v-for="(sig, index) in getSignedSignatures()" :key="sig.id"
-                                class="p-3 border rounded text-sm cursor-pointer hover:border-blue-400 transition"
-                                @click="scrollToSignature(sig)">
-                                <div class="flex items-start justify-between mb-1">
-                                    <p class="font-semibold text-gray-900 flex items-center gap-2">
-                                        <span class="inline-block w-3 h-3 rounded"
-                                            :style="{ backgroundColor: sig.color || '#3b82f6' }"></span>
-                                        {{ sig.assignedTo }}
-                                        <span v-if="isSequentialOrder()"
-                                            class="text-xs px-1.5 py-0.5 rounded text-white"
-                                            :style="{ backgroundColor: sig.color || '#3b82f6' }">
-                                            #{{ sig.approvalOrder }}
-                                        </span>
+                    <div class="bg-white rounded-lg shadow p-3 sm:p-4">
+                        <h3 class="font-semibold mb-3 text-sm">Completed ({{ getSignedSignatures().length }})</h3>
+                        <div v-if="!getSignedSignatures().length" class="text-xs text-gray-500">No completed signatures.</div>
+                        <div v-else class="space-y-1.5 max-h-72 overflow-y-auto">
+                            <div v-for="sig in getSignedSignatures()" :key="sig.id" class="p-2 border rounded cursor-pointer hover:border-blue-400 transition active:scale-95" @click="scrollToSignature(sig)">
+                                <div class="flex items-center justify-between mb-0.5">
+                                    <p class="font-semibold text-xs text-gray-900 flex items-center gap-1.5">
+                                        <span class="inline-block w-2.5 h-2.5 rounded" :style="{backgroundColor:sig.color||'#3b82f6'}"></span>
+                                        <span class="truncate max-w-[120px]">{{ sig.assignedTo }}</span>
+                                        <span v-if="isSequentialOrder()" class="text-[10px] px-1 rounded text-white" :style="{backgroundColor:sig.color||'#3b82f6'}">#{{ sig.approvalOrder }}</span>
                                     </p>
-
-                                    <span class="text-green-600 text-xs font-bold">✓</span>
+                                    <span class="text-green-600 text-xs font-bold flex-shrink-0">✓</span>
                                 </div>
-
-                                <div class="text-xs text-gray-500">
-                                    Page {{ sig.page }}
-                                    <span v-if="sig.hasDate" class="text-green-600 ml-1">(+Date)</span>
-                                </div>
-
-                                <div v-if="sig.signedBy" class="text-xs text-gray-700 mt-1 font-medium">
-                                    Signed by: {{ sig.signedBy }}
-                                </div>
-
-                                <div v-if="sig.signedDate || sig.datePosition?.dateText" class="text-xs text-gray-600">
-                                    Date: {{ sig.signedDate || sig.datePosition?.dateText }}
-                                </div>
+                                <div class="text-[10px] text-gray-500">Pg {{ sig.page }}<span v-if="sig.hasDate" class="text-green-600 ml-1">(+Date)</span></div>
+                                <div v-if="sig.signedBy" class="text-[10px] text-gray-700 font-medium">{{ sig.signedBy }}</div>
+                                <div v-if="sig.signedDate||sig.datePosition?.dateText" class="text-[10px] text-gray-500">{{ sig.signedDate||sig.datePosition?.dateText }}</div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Main Content -->
+                <!-- Mobile backdrop -->
+                <div v-if="showSidebar" class="fixed inset-0 bg-black bg-opacity-20 z-20 sm:hidden" @click="showSidebar=false"></div>
+
+                <!-- Sidebar toggle -->
+                <button v-if="!showSidebar" @click="showSidebar=true"
+                    class="absolute left-2 top-1/2 -translate-y-1/2 bg-blue-600 text-white p-2 sm:p-3 rounded-lg shadow-xl hover:bg-blue-700 transition z-40 flex flex-col items-center gap-1" title="Show Signers">
+                    <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+                    <div class="flex gap-0.5">
+                        <span v-if="getSignedSignatures().length>0" class="bg-green-500 px-1.5 py-0.5 rounded font-bold text-[10px] text-white">{{ getSignedSignatures().length }}</span>
+                        <span v-if="getSignerGroups().filter(g=>g.status!=='signed').length>0" class="bg-orange-400 px-1.5 py-0.5 rounded font-bold text-[10px] text-white">{{ getSignerGroups().filter(g=>g.status!=='signed').length }}</span>
+                    </div>
+                </button>
+
+                <!-- MAIN CONTENT -->
                 <div class="flex-1 flex flex-col overflow-hidden">
 
-                    <!-- Pagination -->
-                    <div class="mt-4 flex items-center justify-center gap-4 flex-wrap">
-                        <button @click="goToPrevPage" :disabled="currentViewPage === 1"
-                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M15 19l-7-7 7-7" />
-                            </svg>
-                            Previous
+                    <!-- Pagination + Zoom -->
+                    <div class="mt-3 flex items-center justify-center gap-2 sm:gap-3 px-3 flex-wrap flex-shrink-0">
+                        <button @click="goToPrevPage" :disabled="currentViewPage===1"
+                            class="px-2 py-1.5 sm:px-4 sm:py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1 text-sm">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+                            <span class="hidden sm:inline">Previous</span>
                         </button>
-
-                        <div class="text-sm font-semibold text-gray-700">
-                            Page {{ currentViewPage }} of {{ totalPages }}
+                        <span class="text-xs sm:text-sm font-semibold text-gray-700">Page {{ currentViewPage }} / {{ totalPages }}</span>
+                        <button @click="goToNextPage" :disabled="currentViewPage===totalPages"
+                            class="px-2 py-1.5 sm:px-4 sm:py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1 text-sm">
+                            <span class="hidden sm:inline">Next</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </button>
+                        <div class="flex items-center gap-1">
+                            <input type="number" min="1" :max="totalPages" v-model.number="goToPageNumber" @keydown.enter="scrollToPage(goToPageNumber)" class="border rounded px-2 py-1 w-12 sm:w-16 text-xs sm:text-sm text-center"/>
+                            <button @click="scrollToPage(goToPageNumber)" class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-xs sm:text-sm">Go</button>
                         </div>
-
-                        <button @click="goToNextPage" :disabled="currentViewPage === totalPages"
-                            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2">
-                            Next
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 5l7 7-7 7" />
-                            </svg>
-                        </button>
-
-                        <div class="flex items-center gap-2">
-                            <input type="number" min="1" :max="totalPages" v-model.number="goToPageNumber"
-                                @keydown.enter="scrollToPage(goToPageNumber)"
-                                class="border rounded px-2 py-1 w-16 text-sm" placeholder="Page #" />
-                            <button @click="scrollToPage(goToPageNumber)"
-                                class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm">
-                                Go
-                            </button>
+                        <div class="hidden sm:block w-px h-6 bg-gray-300"></div>
+                        <!-- Zoom controls -->
+                        <div class="flex items-center gap-1 bg-gray-200 rounded-lg p-1">
+                            <button @click="zoomOut" :disabled="userZoom<=MIN_ZOOM" class="w-7 h-7 flex items-center justify-center rounded hover:bg-white transition disabled:opacity-40 disabled:cursor-not-allowed font-bold text-gray-700 text-lg leading-none" title="Zoom out">−</button>
+                            <button @click="zoomReset" class="px-2 py-0.5 text-xs font-semibold text-gray-700 hover:bg-white rounded transition min-w-[46px] text-center" title="Reset zoom">{{ zoomPercent }}%</button>
+                            <button @click="zoomIn" :disabled="userZoom>=MAX_ZOOM" class="w-7 h-7 flex items-center justify-center rounded hover:bg-white transition disabled:opacity-40 disabled:cursor-not-allowed font-bold text-gray-700 text-lg leading-none" title="Zoom in">+</button>
                         </div>
                     </div>
 
-                    <!-- PDF Canvas Area -->
-                    <div class="flex-1 overflow-auto p-6 bg-gray-100">
+                    <!-- Canvas wrapper -->
+                    <div ref="canvasWrapperRef" class="flex-1 overflow-auto p-3 sm:p-6 bg-gray-100 flex justify-center">
                         <div ref="containerRef" class="relative inline-block">
                             <div class="relative border-2 border-gray-400 rounded shadow-lg bg-white">
-                                <canvas v-for="i in totalPages" :key="i" v-show="i === currentViewPage"
-                                    :ref="el => { if (el) canvasRefs[i - 1] = el }" class="block"></canvas>
+                                <div class="absolute -top-3 left-3 bg-white px-2 py-0.5 text-xs font-semibold text-gray-600 border rounded">Page {{ currentViewPage }}</div>
+                                <canvas v-for="i in totalPages" :key="i" v-show="i===currentViewPage" :ref="el=>{if(el)canvasRefs[i-1]=el}" class="block"></canvas>
                             </div>
 
-                            <!-- Signature Boxes - ONLY SIGNED ONES (have imageSrc) -->
+                            <!-- Signature overlays -->
                             <template v-for="sig in getCurrentPageSignatures()" :key="sig.id">
-
-                                <!-- Signature Box - Only render if signed -->
                                 <div class="absolute pointer-events-none" :style="getBoxVisualStyle(sig)">
-
-                                    <!-- Signed Signature Content -->
                                     <div class="flex flex-col items-center justify-center h-full relative">
-                                        <!-- Signature Image -->
-                                        <img v-if="sig.imageSrc" :src="sig.imageSrc" alt="Signature"
-                                            class="w-full h-full object-contain z-10" />
-
-                                        <!-- Fallback if no image but marked as signed -->
-                                        <span v-else class="text-sm font-bold text-gray-700 italic z-10">
-                                            [Signature]
-                                        </span>
-
-                                        <!-- Printed name below the line -->
-                                        <span v-if="sig.showName"
-                                            class="absolute bottom-0 text-[10px] font-semibold tracking-wide text-center w-full text-gray-700">
-                                            {{ sig.assignedTo }}
-                                        </span>
+                                        <img v-if="sig.imageSrc" :src="sig.imageSrc" alt="Signature" class="w-full h-full object-contain z-10"/>
+                                        <span v-else class="text-sm font-bold text-gray-700 italic z-10">[Signature]</span>
+                                        <span v-if="sig.showName" class="absolute bottom-0 text-[10px] font-semibold tracking-wide text-center w-full text-gray-700">{{ sig.assignedTo }}</span>
                                     </div>
                                 </div>
-
-                                <!-- Date Box - Only if signed and has date -->
-                                <div v-if="sig.hasDate && sig.datePosition"
-                                    class="absolute px-2 py-1 text-xs font-semibold rounded pointer-events-none flex items-center justify-center"
-                                    :style="getDateVisualStyle(sig)">
-                                    <span>
-                                        {{ sig.signedDate || sig.datePosition?.dateText || new
-                                        Date().toLocaleDateString('en-US') }}
-                                    </span>
+                                <div v-if="sig.hasDate&&sig.datePosition" class="absolute px-1 py-0.5 text-xs font-semibold rounded pointer-events-none flex items-center justify-center" :style="getDateVisualStyle(sig)">
+                                    {{ sig.signedDate||sig.datePosition?.dateText||new Date().toLocaleDateString('en-US') }}
                                 </div>
-
                             </template>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Footer -->
-            <div class="flex items-center justify-between p-4 border-t bg-gray-50">
-                <div class="text-sm text-gray-600">
-                    {{ getSignedSignatures().length }} completed signature{{ getSignedSignatures().length !== 1 ? 's' :
-                    '' }}
-                    <span v-if="isSequentialOrder()" class="ml-2 text-blue-600 font-semibold">
-                        • Sequential Signing Enforced
-                    </span>
+            <!-- FOOTER -->
+            <div class="flex items-center justify-between p-2 sm:p-3 border-t bg-gray-50 flex-shrink-0">
+                <div class="text-xs sm:text-sm text-gray-600">
+                    {{ getSignedSignatures().length }} completed signature{{ getSignedSignatures().length!==1?'s':'' }}
+                    <span v-if="isSequentialOrder()" class="ml-2 text-blue-600 font-semibold hidden sm:inline">• Sequential Signing</span>
                 </div>
-                <div>
-                    <button @click="downloadPdf"
-                        class="px-6 py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold mr-2">
-                        Download PDF
-                    </button>
-                    <button @click="emit('close')"
-                        class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold">
-                        Close
-                    </button>
+                <div class="flex gap-2">
+                    <button @click="downloadPdf" class="px-3 py-1.5 sm:px-6 sm:py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold text-sm">Download PDF</button>
+                    <button @click="emit('close')" class="px-3 py-1.5 sm:px-6 sm:py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-semibold text-sm">Close</button>
                 </div>
             </div>
         </div>
@@ -622,5 +369,5 @@ const isSequentialOrder = () => {
 </template>
 
 <style scoped>
-/* No special styles needed */
+/* No special styles needed — all handled by Tailwind */
 </style>
