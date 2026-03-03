@@ -54,7 +54,7 @@
             <SigntureModal :is-open="isSigningModalOpen" :pdf-file="pdfFile" :signature-file="signatureFile"
                 :current-user-name="currentUserName" :current-empl-id="currentEmplId"
                 :pre-placed-signatures="prePlacedSignatures" @close="closeSigningModal"
-                @save-all-signatures="handleSaveAllSignatures" :documentId="strDocId" />
+                @save-all-signatures="handleSaveAllSignatures" :documentId="strDocId" :free-sign="isFreeSign"/>
             <ViewSignatureBoxPlacement :isOpen="isViewingModalopen" :pdfFile="pdfFile" :signatures="prePlacedSignatures"
                 @close="isViewingModalopen = false" />
         </div>
@@ -70,7 +70,7 @@ import { API_BASE_URL } from "~/config";
 import { getProfile, user } from "~/js/fetchUserProfile";
 import { getsignaturepositons, prePlacedSignatures } from '~/js/fetchsignatureposition';
 import { fetchDocumentPdf, pdfFile } from "~/js/fetchDocumentPdf";
-import { fetchDocumentTitle, title } from "~/js/fetchDocumentTitle";
+import { fetchDocumentTitle, isFreeSign, title } from "~/js/fetchDocumentTitle";
 import { getusersignature } from "~/js/checkusersignature";
 import { checkDocumentSignature } from '~/js/checkdocumentsignature';
 import ViewSignatureBoxPlacement from '~/components/ViewSignatureBoxPlacement.vue';

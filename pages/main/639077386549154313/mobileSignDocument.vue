@@ -1,4 +1,4 @@
-signdocumentmobile
+
 <template>
     <div v-if="loading"><LoadingModal/></div>
     <div v-else>
@@ -41,6 +41,7 @@ signdocumentmobile
                 :current-empl-id="currentEmplId"
                 :pre-placed-signatures="prePlacedSignatures"
                 @close="closeSigningModal"
+                :free-sign="isFreeSign"
                 @save-all-signatures="handleSaveAllSignatures"
                 :documentId="strDocId"
             />
@@ -62,7 +63,7 @@ import { API_BASE_URL } from "~/config";
 import { getProfile, user } from "~/js/fetchUserProfile";
 import { getsignaturepositons, prePlacedSignatures } from '~/js/fetchsignatureposition';
 import { fetchDocumentPdf, pdfFile } from "~/js/fetchDocumentPdf";
-import { fetchDocumentTitle, title } from "~/js/fetchDocumentTitle";
+import { fetchDocumentTitle, title,isFreeSign } from "~/js/fetchDocumentTitle";
 import { getusersignature } from "~/js/checkusersignature";
 import { checkDocumentSignature } from '~/js/checkdocumentsignature';
 import ViewSignatureBoxPlacement from '~/components/ViewSignatureBoxPlacement.vue';

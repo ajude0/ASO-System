@@ -1,4 +1,5 @@
 <template>
+    <BreadCrumbs class="m-4" :nenunames="nenunames" />
    <div class="p-5 mt-5">
     <div class="flex flex-col md:flex-row justify-between">
         <div class="flex gap-2">
@@ -117,15 +118,13 @@
                                         class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize">
                                         Actions
                                     </th>
-                                    <th scope="col"
-                                        class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize">
-                                    </th>
+                                   
                                 </tr>
                             </thead>
 
                             <tbody class="divide-y divide-gray-300">
                                 <tr v-for="(form, index) in forms" :key="index"
-                                    class="bg-white transition-all duration-500 hover:bg-gray-50">
+                                    class="bg-white transition-all duration-500 hover:bg-gray-50 cursor-pointer" @click="viewDocument(form.id)" >
                                     <td class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
                                         {{ form.id }}
                                     </td>
@@ -303,6 +302,11 @@
 import {getListOfDocumentsLiveView , generatePagination, changePage, totalEntries, totalPages, query, loading, forms, sortBy, changePageSize } from "~/js/fetchDocumentLiveView";
 
 import { encryptData } from "~/js/cryptoToken";
+import {
+  fetchCanAccess,
+  nenunames,
+} from "~/js/fetchMenu";
+const paramid = ref();
 
 const router = useRouter();
 
@@ -320,11 +324,18 @@ function clearSearch() {
     query.value.Search = "";
     getListOfDocumentsLiveView();
 }
-onMounted(() => {
-    getListOfDocumentsLiveView();
-
+definePageMeta({
+  middleware: ["auth", "check-menu-access"], // Use an array for multiple middlewares
+  name: "639077158657004911",
 });
-
+onMounted(async() => {
+    await getListOfDocumentsLiveView();
+    const hash = window.location.hash;
+    const parts = hash.split("/");
+    paramid.value = parts[parts.length - 1];
+    await fetchCanAccess(paramid.value);
+    console.log(nenunames.value);
+});
 </script>
 
 <style lang="scss" scoped></style>

@@ -127,9 +127,7 @@
                                         class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize">
                                         Actions
                                     </th>
-                                    <th scope="col"
-                                        class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize">
-                                    </th>
+                                   
                                 </tr>
                             </thead>
 

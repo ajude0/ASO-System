@@ -12,7 +12,7 @@ export default defineNuxtConfig({
   },
 
   app: {
-    baseURL: "/aso",
+    baseURL: "/digifast",
     head: {
       script: [
         {

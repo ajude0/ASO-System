@@ -62,7 +62,7 @@ export const fetchCanAccess = async (menucode) => {
     });
 
     if (data) {
-      sysdescription.value = data.sysdescription;
+      
       canAdd.value = data.canadd;
       canDelete.value = data.candelete;
       canEdit.value = data.canedit;

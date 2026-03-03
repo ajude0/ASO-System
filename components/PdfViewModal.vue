@@ -7,7 +7,8 @@ const props = defineProps({
   currentUserName: String,
   currentEmplId: String,
   documentId: { type: String, required: true },
-  prePlacedSignatures: { type: Array, default: () => [] }
+  prePlacedSignatures: { type: Array, default: () => [] },
+  freeSign: { type: Boolean, default: false }   // ← NEW
 });
 
 const router = useRouter();
@@ -16,22 +17,16 @@ const router = useRouter();
 const BASE_SCALE   = 1.4;
 const RENDER_SCALE = 2.0;
 
-// User-controlled zoom multiplier (1.0 = 100%)
 const userZoom    = ref(1.0);
 const MIN_ZOOM    = 0.5;
 const MAX_ZOOM    = 3.0;
 const ZOOM_STEP   = 0.25;
 const zoomPercent = computed(() => Math.round(userZoom.value * 100));
 
-// Combined display scale = RENDER_SCALE × userZoom
 const displayScale = computed(() => RENDER_SCALE * userZoom.value);
-// scaleFactor: multiply stored BASE_SCALE coords → current screen px
 const scaleFactor  = computed(() => displayScale.value / BASE_SCALE);
-
-// Convert a stored coordinate → current pixel position
 const sc = (val) => val * scaleFactor.value;
 
-// ── Zoom actions ───────────────────────────────────────────────
 const applyZoom = async () => {
   for (let i = 1; i <= totalPages.value; i++) await renderPage(i);
   await nextTick();
@@ -77,6 +72,18 @@ const getSigState = (sig) => {
   return 'signing';
 };
 
+// ── When freeSign=true, only show boxes that have been signed ──
+// pending boxes are invisible — the PDF looks clean until someone signs
+const shouldShowSigBox = (sig) => {
+  if (!props.freeSign) return true;               // normal mode: show everything
+  return getSigState(sig) !== 'pending';          // freeSign mode: hide pending only
+};
+
+const shouldShowDateBox = (sig) => {
+  if (!props.freeSign) return true;
+  return getSigState(sig) !== 'pending';
+};
+
 // ── Color helpers ──────────────────────────────────────────────
 const getSigBorderColor = (sig) => {
   if (sig.color) return sig.color;
@@ -95,7 +102,6 @@ const hexToRgba = (hex, alpha) => {
   return `rgba(${r},${g},${b},${alpha})`;
 };
 
-// ── Box style uses sc() for width/height ──────────────────────
 const getSigBoxStyle = (sig) => {
   const state       = getSigState(sig);
   const borderColor = getSigBorderColor(sig);
@@ -132,7 +138,6 @@ const getNextSignerInfo = computed(() => {
   return nextSig ? { name: nextSig.assignedTo, order: nextSig.approvalOrder } : null;
 });
 
-// ── Remote overlay: positions are stored coords → need sc() ───
 const remoteOverlayStyles = computed(() => {
   const styles = {};
   if (!containerRef.value) return styles;
@@ -278,7 +283,6 @@ const renderPage = async (pageNum) => {
   }
 };
 
-// ── All positions use sc() to convert stored → rendered coords ─
 const updatePrePlacedPositions = () => {
   if (!containerRef.value || canvasRefs.value.length === 0) return;
   const containerRect = containerRef.value.getBoundingClientRect();
@@ -344,7 +348,6 @@ const updateSingleDatePosition = (sigIndex) => {
   }
 };
 
-// ── Cursor: convert screen coords back to BASE_SCALE before sending ──
 const handleMouseMove = (e) => {
   if (!containerRef.value) return;
   const rect = containerRef.value.getBoundingClientRect();
@@ -363,15 +366,50 @@ const scrollToPage = (pageNum) => {
   if (pageNum >= 1 && pageNum <= totalPages.value) { currentViewPage.value = pageNum; nextTick(() => updatePrePlacedPositions()); }
 };
 
+// ── Sidebar summary — in freeSign mode hide pending from sidebar too ──
 const signaturesSummary = computed(() => {
   return localSignatures.reduce((acc, sig, index) => {
     const item  = { ...sig, index };
     const state = getSigState(sig);
+    // freeSign mode: don't list pending boxes — PDF looks clean
+    if (state === 'pending' && props.freeSign) return acc;
     if (state === 'pending')       acc.pending.push(item);
     else if (state === 'signed')   acc.completed.push(item);
     else                           acc.signing.push(item);
     return acc;
   }, { pending: [], signing: [], completed: [] });
+});
+const signaturesStats = computed(() => {
+  const summary = localSignatures.reduce((acc, sig, index) => {
+    const item  = { ...sig, index };
+    const state = getSigState(sig);
+
+    // freeSign mode: don't list pending boxes
+    if (state === 'pending' && props.freeSign) return acc;
+
+    if (state === 'pending')       acc.pending.push(item);
+    else if (state === 'signed')   acc.completed.push(item);
+    else                           acc.signing.push(item);
+
+    return acc;
+  }, { pending: [], signing: [], completed: [] });
+
+  const total =
+    summary.pending.length +
+    summary.signing.length +
+    summary.completed.length;
+
+  return {
+    ...summary,
+    total,
+    pendingCount: summary.pending.length,
+    signingCount: summary.signing.length,
+    completedCount: summary.completed.length,
+
+    pendingPercent: total ? ((summary.pending.length / total) * 100).toFixed(1) : 0,
+    signingPercent: total ? ((summary.signing.length / total) * 100).toFixed(1) : 0,
+    completedPercent: total ? ((summary.completed.length / total) * 100).toFixed(1) : 0,
+  };
 });
 
 const highlightedSignatureIndex = ref(null);
@@ -449,42 +487,9 @@ onUnmounted(async () => {
         </span>
         <h2 class="text-base font-semibold text-gray-800 truncate">PDF Document</h2>
       </div>
-
-      <div class="flex items-center gap-4 flex-shrink-0">
-        <div v-if="hub.activeUsers.value.length > 1" class="flex items-center gap-2">
-          <span class="text-xs text-gray-400">Also viewing:</span>
-          <div
-            v-for="user in hub.activeUsers.value.filter(u => u.emplId !== currentEmplId)"
-            :key="user.emplId"
-            class="flex items-center gap-1 bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-full font-semibold"
-          >
-            <span class="w-2 h-2 bg-green-500 rounded-full inline-block animate-pulse"></span>
-            {{ user.userName }}
-          </div>
-        </div>
-        <div class="flex items-center gap-1.5">
-          <span class="w-2 h-2 rounded-full inline-block" :class="hub.isConnected.value ? 'bg-green-500' : 'bg-yellow-400 animate-pulse'"></span>
-          <span class="text-xs text-gray-400">{{ hub.isConnected.value ? 'Live sync' : 'Connecting…' }}</span>
-        </div>
-        <span class="text-sm text-gray-500">
-          Viewing as <span class="font-semibold text-gray-700">{{ currentUserName }}</span>
-        </span>
-      </div>
-    </div>
-
-    <!-- Sequential order banner -->
+       <!-- ════════════ PAGE NAVIGATION + ZOOM BAR ════════════ -->
     <div
-      v-if="isSequentialOrderEnforced && getNextSignerInfo"
-      class="px-5 py-2 bg-blue-50 border-b border-blue-200 text-xs text-blue-700 flex items-center gap-1 flex-shrink-0"
-    >
-      🔄 Sequential Order: Waiting for
-      <strong>{{ getNextSignerInfo.name }}</strong>
-      (Signer Number {{ getNextSignerInfo.order }})
-    </div>
-
-    <!-- ════════════ PAGE NAVIGATION + ZOOM BAR ════════════ -->
-    <div
-      class="flex items-center justify-center gap-3 px-4 py-2 bg-white border-b flex-shrink-0 flex-wrap"
+      class="flex items-center justify-center gap-3 px-4 py-2 bg-white flex-shrink-0 flex-wrap"
       :style="{ paddingLeft: showSidebar ? '16rem' : '0' }"
     >
       <button
@@ -519,10 +524,8 @@ onUnmounted(async () => {
         <button @click="scrollToPage(goToPageNumber)" class="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm">Go</button>
       </div>
 
-      <!-- Divider -->
       <div class="w-px h-5 bg-gray-300"></div>
 
-      <!-- ★ Zoom controls ★ -->
       <div class="flex items-center gap-1 bg-gray-200 rounded-lg p-1">
         <button
           @click="zoomOut" :disabled="userZoom <= MIN_ZOOM"
@@ -542,6 +545,40 @@ onUnmounted(async () => {
       </div>
     </div>
 
+
+      <div class="flex items-center gap-4 flex-shrink-0">
+        <div v-if="hub.activeUsers.value.length > 1" class="flex items-center gap-2">
+          <span class="text-xs text-gray-400">Also viewing:</span>
+          <div
+            v-for="user in hub.activeUsers.value.filter(u => u.emplId !== currentEmplId)"
+            :key="user.emplId"
+            class="flex items-center gap-1 bg-indigo-100 text-indigo-700 text-xs px-2 py-1 rounded-full font-semibold"
+          >
+            <span class="w-2 h-2 bg-green-500 rounded-full inline-block animate-pulse"></span>
+            {{ user.userName }}
+          </div>
+        </div>
+        <div class="flex items-center gap-1.5">
+          <span class="w-2 h-2 rounded-full inline-block" :class="hub.isConnected.value ? 'bg-green-500' : 'bg-yellow-400 animate-pulse'"></span>
+          <span class="text-xs text-gray-400">{{ hub.isConnected.value ? 'Live sync' : 'Connecting…' }}</span>
+        </div>
+        <span class="text-sm text-gray-500">
+          Viewing as <span class="font-semibold text-gray-700">{{ currentUserName }}</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Sequential order banner — hidden in freeSign mode (no pending order concept) -->
+    <div
+      v-if="!freeSign && isSequentialOrderEnforced && getNextSignerInfo"
+      class="px-5 py-2 bg-blue-50 border-b border-blue-200 text-xs text-blue-700 flex items-center gap-1 flex-shrink-0"
+    >
+      🔄 Sequential Order: Waiting for
+      <strong>{{ getNextSignerInfo.name }}</strong>
+      (Signer Number {{ getNextSignerInfo.order }})
+    </div>
+
+   
     <!-- ════════════ BODY ════════════ -->
     <div class="flex flex-1 overflow-hidden relative">
 
@@ -556,20 +593,52 @@ onUnmounted(async () => {
           </button>
         </div>
 
-        <!-- Active users panel -->
-        <div v-if="hub.activeUsers.value.length > 0" class="mb-4 bg-gray-50 rounded-lg border p-3">
-          <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Active Now</h4>
-          <div class="space-y-1">
-            <div v-for="user in hub.activeUsers.value" :key="user.emplId" class="flex items-center gap-2 text-sm">
-              <span class="w-2 h-2 rounded-full flex-shrink-0" :class="user.emplId === currentEmplId ? 'bg-blue-500' : 'bg-green-500 animate-pulse'"></span>
-              <span class="truncate font-medium text-gray-700">{{ user.userName }}</span>
-              <span v-if="user.emplId === currentEmplId" class="text-xs text-gray-400 ml-auto flex-shrink-0">(you)</span>
-            </div>
-          </div>
-        </div>
+    
+   <div class="mb-4 bg-white rounded-xl border shadow-sm p-4">
+  <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+    Signature Statistics
+  </h4>
 
-        <!-- PENDING -->
-        <div v-if="signaturesSummary.pending.length > 0" class="mb-4">
+  <div class="space-y-2">
+    <!-- Completed -->
+    <div class="flex items-center justify-between">
+      <span class="text-sm font-medium text-green-700">Signed</span>
+      <span class="text-sm font-semibold text-gray-700">{{ signaturesStats.completedCount }} ({{ signaturesStats.completedPercent }}%)</span>
+    </div>
+    <div class="w-full h-2 bg-green-100 rounded-full overflow-hidden">
+      <div
+        class="h-2 bg-green-500 rounded-full transition-all duration-300"
+        :style="{ width: signaturesStats.completedPercent + '%' }"
+      ></div>
+    </div>
+
+    <!-- Pending -->
+    <div class="flex items-center justify-between mt-2">
+      <span class="text-sm font-medium text-yellow-700">Pending</span>
+      <span class="text-sm font-semibold text-gray-700">{{ signaturesStats.pendingCount }} ({{ signaturesStats.pendingPercent }}%)</span>
+    </div>
+    <div class="w-full h-2 bg-yellow-100 rounded-full overflow-hidden">
+      <div
+        class="h-2 bg-yellow-400 rounded-full transition-all duration-300"
+        :style="{ width: signaturesStats.pendingPercent + '%' }"
+      ></div>
+    </div>
+
+    <!-- Signing -->
+    <div class="flex items-center justify-between mt-2">
+      <span class="text-sm font-medium text-blue-700">Signing</span>
+      <span class="text-sm font-semibold text-gray-700">{{ signaturesStats.signingCount }} ({{ signaturesStats.signingPercent }}%)</span>
+    </div>
+    <div class="w-full h-2 bg-blue-100 rounded-full overflow-hidden">
+      <div
+        class="h-2 bg-blue-500 rounded-full transition-all duration-300"
+        :style="{ width: signaturesStats.signingPercent + '%' }"
+      ></div>
+    </div>
+  </div>
+</div>
+        <!-- PENDING — hidden entirely when freeSign=true -->
+        <div v-if="!freeSign && signaturesSummary.pending.length > 0" class="mb-4">
           <h4 class="text-xs font-semibold text-orange-600 uppercase tracking-wide mb-2 flex items-center gap-1">
             <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -680,8 +749,10 @@ onUnmounted(async () => {
         </div>
 
         <!-- Empty state -->
-        <div v-if="signaturesSummary.pending.length === 0 && signaturesSummary.completed.length === 0 && signaturesSummary.signing.length === 0"
-          class="text-center py-10 px-4">
+        <div
+          v-if="signaturesSummary.pending.length === 0 && signaturesSummary.completed.length === 0 && signaturesSummary.signing.length === 0"
+          class="text-center py-10 px-4"
+        >
           <div class="bg-gray-50 rounded-lg p-5 border-2 border-dashed border-gray-300">
             <svg class="w-12 h-12 mx-auto mb-2 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -693,15 +764,15 @@ onUnmounted(async () => {
 
       <!-- Collapsed sidebar toggle -->
       <button
-        v-if="!showSidebar"
-        @click="showSidebar = true"
-        class="absolute left-3 top-1/2 -translate-y-1/2 bg-gray-700 text-white p-2.5 rounded-lg shadow-xl hover:bg-gray-900 transition z-40"
-        title="Show Signatures"
-      >
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
-        </svg>
-      </button>
+  v-if="!showSidebar"
+  @click="showSidebar = true"
+  class="absolute left-3 top-3 bg-gray-700 text-white p-2.5 rounded-lg shadow-xl hover:bg-gray-900 transition z-40"
+  title="Show Signatures"
+>
+  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+  </svg>
+</button>
 
       <!-- ════════════ PDF CANVAS AREA ════════════ -->
       <div class="flex-1 overflow-auto p-6 bg-gray-100 flex justify-center">
@@ -757,11 +828,13 @@ onUnmounted(async () => {
             </div>
           </template>
 
-          <!-- SIGNATURE BOXES -->
+          <!-- SIGNATURE BOXES                                                       -->
+          <!-- freeSign=false → show all boxes (pending/signing/signed)              -->
+          <!-- freeSign=true  → hide pending boxes; only signing + signed are shown  -->
           <div
             v-for="(sig, index) in localSignatures" :key="'sig-' + index"
             :ref="el => { if (el) prePlacedSigRefs[index] = el }"
-            v-show="sig.page === currentViewPage"
+            v-show="sig.page === currentViewPage && shouldShowSigBox(sig)"
             class="absolute rounded pointer-events-none"
             :class="{
               'ring-4 ring-yellow-400 ring-offset-2 animate-pulse': highlightedSignatureIndex === index,
@@ -830,15 +903,14 @@ onUnmounted(async () => {
             </div>
           </div>
 
-          <!-- DATE LABELS -->
+          <!-- DATE LABELS                                                            -->
+          <!-- freeSign=true → hide date labels for pending sigs                     -->
           <template v-for="(sig, filteredIndex) in localSignatures.filter(s => s.datePosition)" :key="'date-' + filteredIndex">
             <div
               :ref="el => { if (el) prePlacedDateRefs[filteredIndex] = el }"
-              v-show="sig.page === currentViewPage"
+              v-show="sig.page === currentViewPage && shouldShowDateBox(sig)"
               class="absolute select-none text-sm font-semibold rounded px-2 py-0.5 pointer-events-none"
               :style="{
-                left:            sig.datePosition.x + 'px',
-                top:             sig.datePosition.y + 'px',
                 border:          `1.5px solid ${sig.color || (getSigState(sig) === 'signed' ? '#4ade80' : getSigState(sig) === 'signing' ? '#60a5fa' : '#fb923c')}`,
                 color:           sig.color || (getSigState(sig) === 'signed' ? '#166534' : getSigState(sig) === 'signing' ? '#1d4ed8' : '#c2410c'),
                 backgroundColor: 'transparent',
@@ -855,10 +927,13 @@ onUnmounted(async () => {
     <!-- ════════════════════ FOOTER ════════════════════ -->
     <div class="flex items-center justify-between px-4 py-2 border-t bg-white flex-shrink-0">
       <div class="flex items-center gap-4 text-xs text-gray-500">
-        <div class="flex items-center gap-1.5">
-          <span class="w-3 h-3 rounded border-2 border-dashed border-orange-400 bg-orange-50 inline-block"></span>
-          Pending
-        </div>
+        <!-- Pending legend hidden in freeSign mode since those boxes aren't shown -->
+        <template v-if="!freeSign">
+          <div class="flex items-center gap-1.5">
+            <span class="w-3 h-3 rounded border-2 border-dashed border-orange-400 bg-orange-50 inline-block"></span>
+            Pending
+          </div>
+        </template>
         <div class="flex items-center gap-1.5">
           <span class="w-3 h-3 rounded border-2 border-blue-400 bg-blue-50 inline-block relative overflow-hidden">
             <span class="absolute inset-0 signing-shimmer-mini"></span>

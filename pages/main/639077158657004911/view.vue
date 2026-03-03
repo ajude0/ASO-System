@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue';
 import { getProfile, user } from '~/js/fetchUserProfile';
 import { getsignaturepositons, prePlacedSignatures } from '~/js/fetchsignatureposition';
 import { fetchDocumentPdf, pdfFile } from '~/js/fetchDocumentPdf';
-import { fetchDocumentTitle, title } from '~/js/fetchDocumentTitle';
+import { fetchDocumentTitle, title,isFreeSign } from '~/js/fetchDocumentTitle';
 import { getToken, getDocumentId } from '~/js/cryptoToken';
 import LoadingModal from '~/components/modal/LoadingModal.vue';
 import PdfViewModal from '~/components/PdfViewModal.vue';
@@ -60,6 +60,7 @@ onMounted(async () => {
     :current-user-name="currentUserName"
     :current-empl-id="currentEmplId"
     :pre-placed-signatures="prePlacedSignatures"
+    :free-sign="false"
       @back="goBack"
   />
 </template>

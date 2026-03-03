@@ -1,6 +1,4 @@
 
-// export const API_BASE_URL = "https://apps.fastlogistics.com.ph/asoapi"
-// export const API_BASE_URL = "https://localhost:7182"
 
 const config = useRuntimeConfig()
 const isProd = process.env.NODE_ENV === 'production';

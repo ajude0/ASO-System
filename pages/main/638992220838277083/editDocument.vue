@@ -13,7 +13,7 @@ import { postusersignature } from "~/js/usersignature";
 import { API_BASE_URL } from "~/config";
 import { getToken, getDocumentId } from "~/js/cryptoToken";
 import { fetchDocumentPdf, pdfFile } from "~/js/fetchDocumentPdf";
-import { fetchDocumentTitle, title,isLiveView } from "~/js/fetchDocumentTitle";
+import { fetchDocumentTitle, title,isLiveView,isFreeSign } from "~/js/fetchDocumentTitle";
 import { checkDocumentSignature } from "~/js/checkdocumentsignature";
 import { emailsignaturereminder } from "~/js/emailsignaturereminder";
 import LoadingModal from "~/components/modal/LoadingModal.vue";
@@ -1180,9 +1180,7 @@ onMounted(async () => {
               </svg>
               Sign Document
             </button>
-            <p class="text-xs text-gray-500 mt-2 text-center">
-              {{ getUserStats(currentUserName).pending }} signature(s) pending
-            </p>
+            
           </div>
 
           <!-- Actions -->
@@ -1370,6 +1368,7 @@ onMounted(async () => {
     <SignatureBoxPlacement
       :is-open="isPlacementModalOpen"
       :pdf-file="pdfFile"
+      :free-sign="isFreeSign"
       :existingSignatures="prePlacedSignatures"
       @close="closePlacementModal"
       @save-signatures="handleSaveSignatures"
@@ -1384,6 +1383,7 @@ onMounted(async () => {
       :current-empl-id="currentEmplId"
       :documentId="strDocId"
       :pre-placed-signatures="prePlacedSignatures"
+      :free-sign = "isFreeSign"
       @close="closeSigningModal"
       @save-all-signatures="handleSaveAllSignatures"
     />

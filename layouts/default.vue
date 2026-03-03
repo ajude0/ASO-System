@@ -14,15 +14,15 @@ const route = useRoute();
 onMounted(() => {
   document.documentElement.style.overflow = "hidden";
 });
-var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
-        (function(){
-        var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
-        s1.async=true;
-        s1.src='https://embed.tawk.to/6211d95b1ffac05b1d7ac12c/1fsari3nm';
-        s1.charset='UTF-8';
-        s1.setAttribute('crossorigin','*');
-        s0.parentNode.insertBefore(s1,s0);
-        })();
+// var Tawk_API=Tawk_API||{}, Tawk_LoadStart=new Date();
+//         (function(){
+//         var s1=document.createElement("script"),s0=document.getElementsByTagName("script")[0];
+//         s1.async=true;
+//         s1.src='https://embed.tawk.to/6211d95b1ffac05b1d7ac12c/1fsari3nm';
+//         s1.charset='UTF-8';
+//         s1.setAttribute('crossorigin','*');
+//         s0.parentNode.insertBefore(s1,s0);
+//         })();
 
 watch(route, () => {
   if (sidebarOpen && window.innerWidth < 1024) {
@@ -37,7 +37,7 @@ watch(route, () => {
      <Sidebar mobile-orientation="start" />
       <div class="flex flex-col h-screen w-full overflow-x-auto">
         <TopBar />
-        <main class="flex-1 overflow-auto md:pb-8 lg:px-4 relative">
+        <main class="flex-1 overflow-auto md:pb-8 lg:px-4 relative mt-2">
           <!-- Added relative here -->
           <div class="relative overflow-auto shadow-md">
             <!-- Wrapper div for slot content -->

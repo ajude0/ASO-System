@@ -84,15 +84,13 @@
                                         class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize">
                                         Actions
                                     </th>
-                                    <th scope="col"
-                                        class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize">
-                                    </th>
+                                 
                                 </tr>
                             </thead>
 
                             <tbody class="divide-y divide-gray-300">
                                 <tr v-for="(form, index) in forms" :key="index"
-                                    class="bg-white transition-all duration-500 hover:bg-gray-50">
+                                    class="bg-white transition-all duration-500 hover:bg-gray-100 cursor-pointer" @click="viewDocument(form.id)">
                                     <td class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
                                         {{ form.id }}
                                     </td>
