@@ -13,7 +13,7 @@ import { postusersignature } from "~/js/usersignature";
 import { API_BASE_URL } from "~/config";
 import { getToken, getDocumentId } from "~/js/cryptoToken";
 import { fetchDocumentPdf, pdfFile } from "~/js/fetchDocumentPdf";
-import { fetchDocumentTitle, title,isLiveView,isFreeSign } from "~/js/fetchDocumentTitle";
+import { fetchDocumentTitle, title, isLiveView, isFreeSign } from "~/js/fetchDocumentTitle";
 import { checkDocumentSignature } from "~/js/checkdocumentsignature";
 import { emailsignaturereminder } from "~/js/emailsignaturereminder";
 import LoadingModal from "~/components/modal/LoadingModal.vue";
@@ -31,36 +31,89 @@ const loading = ref(true);
 
 
 const toggleLiveView = async () => {
+  const newValue = !isLiveView.value;
+
+  // Show SweetAlert info before toggling
+  const { isConfirmed } = await $swal.fire({
+    title: newValue
+      ? '<span style="font-size:1.1rem;font-weight:700;">Enable Live View?</span>'
+      : '<span style="font-size:1.1rem;font-weight:700;">Disable Live View?</span>',
+    html: newValue
+      ? `
+        <div style="text-align:left;padding:4px 0;">
+          <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:12px;">
+            <span style="font-size:1.4rem;">📊</span>
+            <p style="margin:0;color:#374151;font-size:0.9rem;line-height:1.5;">
+              This document will appear on the <strong>dashboard</strong>.
+            </p>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <span style="font-size:1.4rem;">🔴</span>
+            <p style="margin:0;color:#374151;font-size:0.9rem;line-height:1.5;">
+              The user can view all signers in real-time as they complete their signatures.
+            </p>
+          </div>
+        </div>
+      `
+      : `
+        <div style="text-align:left;padding:4px 0;">
+          <div style="display:flex;align-items:flex-start;gap:12px;">
+            <span style="font-size:1.4rem;">🔒</span>
+            <p style="margin:0;color:#374151;font-size:0.9rem;line-height:1.5;">
+              This document will <strong>no longer</strong> be reflected on the dashboard.
+            </p>
+          </div>
+        </div>
+      `,
+    icon: "info",
+    showCancelButton: true,
+    confirmButtonText: newValue ? '✅ Enable' : '🔒 Disable',
+    cancelButtonText: 'Cancel',
+    confirmButtonColor: newValue ? '#2563EB' : '#6B7280',
+    cancelButtonColor: '#e5e7eb',
+  });
+
+  if (!isConfirmed) return;
+
   try {
-      const docId = getDocumentId();
-      const token = getToken();
-    // toggle locally muna (optional)
-   const newValue = !isLiveView.value
-   console.log(newValue)
+    const docId = getDocumentId();
+    const token = getToken();
 
+    const res = await $fetch(
+      `${API_BASE_URL}/api/DocumentUpload/toggle-live-view/${docId}`,
+      {
+        method: 'POST',
+        headers: {
+          token: token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newValue ? 1 : 0)
+      }
+    );
 
-  const res = await $fetch(
-  `${API_BASE_URL}/api/DocumentUpload/toggle-live-view/${docId}`,
-  {
-    method: 'POST',
-    headers: {
-      token: token,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(newValue ? 1 : 0)
-  }
-)
+    isLiveView.value = newValue;
 
-    isLiveView.value = newValue
-    console.log(res.message)
+    await $swal.fire({
+      title: newValue ? 'Live View Enabled!' : 'Live View Disabled!',
+      text: newValue
+        ? 'This document is now visible on the dashboard with real-time signing updates.'
+        : 'This document is no longer visible on the dashboard.',
+      icon: 'success',
+      timer: 1500,
+      showConfirmButton: false,
+    });
+
+    console.log(res.message);
   } catch (error) {
-    console.error("Error updating live view:", error)
-
-    // rollback pag nag fail
- 
+    console.error("Error updating live view:", error);
+    await $swal.fire({
+      title: 'Update Failed',
+      text: 'Something went wrong while updating Live View. Please try again.',
+      icon: 'error',
+      confirmButtonColor: '#2563EB',
+    });
   }
-}
-
+};
 
 
 const formatDateToISO = (d) => {
@@ -169,12 +222,11 @@ const handleSaveSignatures = async (boxes) => {
     });
     await getsignaturepositons(docId);
   } catch (error) {
+    prePlacedSignatures.value = null;
     let errorMessage = "Something went wrong. Please try again later.";
 
-    // Check if the error response has a readable message
     if (error?.data?.message) {
       errorMessage = error.data.message;
-
       showToast({
         message: errorMessage,
         type: "error",
@@ -207,10 +259,9 @@ const openSigningModal = () => {
     (s) => s.assignedEmplId === currentEmplId.value && s.isEmpty,
   );
 
-
-
   isSigningModalOpen.value = true;
 };
+
 const removeWhiteBackground = (file) => {
   return new Promise((resolve) => {
     const img = new Image();
@@ -230,19 +281,17 @@ const removeWhiteBackground = (file) => {
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = imageData.data;
 
-      // Remove white / near-white pixels
       for (let i = 0; i < data.length; i += 4) {
         const r = data[i];
         const g = data[i + 1];
         const b = data[i + 2];
 
         if (r > 245 && g > 245 && b > 245) {
-          data[i + 3] = 0; // transparent
+          data[i + 3] = 0;
         }
       }
 
       ctx.putImageData(imageData, 0, 0);
-
       canvas.toBlob((blob) => resolve(blob), "image/png", 1);
     };
   });
@@ -270,13 +319,11 @@ const createSignature = async (text) => {
           </label>
         </div>
 
-        <!-- ══ DRAW PANEL ══ -->
+        <!-- DRAW PANEL -->
         <div id="draw-wrapper" style="width:100%;text-align:center;">
-
           <p style="font-size:12px;color:#94a3b8;margin-bottom:10px;letter-spacing:.02em;">
             Draw your signature inside the box
           </p>
-
           <div style="position:relative;display:block;width:100%;max-width:700px;margin:0 auto;">
             <canvas id="signature-pad"
               style="display:block;width:100%;height:210px;
@@ -294,18 +341,13 @@ const createSignature = async (text) => {
               Sign here
             </div>
           </div>
-
-          <!-- Controls row -->
           <div style="display:flex;align-items:center;gap:16px;max-width:700px;margin:12px auto 0;flex-wrap:wrap;justify-content:space-between;">
-            <!-- Thickness slider -->
             <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:140px;">
               <svg width="12" height="12" fill="#94a3b8" viewBox="0 0 12 12"><circle cx="6" cy="6" r="2.5"/></svg>
               <input id="thickness-slider" type="range" min="1" max="12" value="3"
                 style="flex:1;height:4px;accent-color:#2563eb;cursor:pointer;">
               <svg width="18" height="18" fill="#64748b" viewBox="0 0 18 18"><circle cx="9" cy="9" r="6"/></svg>
             </div>
-
-            <!-- Color swatches -->
             <div style="display:flex;align-items:center;gap:7px;">
               <div id="color-black" data-color="#0f172a" title="Black"
                 style="width:26px;height:26px;border-radius:50%;background:#0f172a;
@@ -320,8 +362,6 @@ const createSignature = async (text) => {
                 style="width:26px;height:26px;border-radius:50%;background:#14532d;
                        border:2px solid #e2e8f0;cursor:pointer;transition:transform .15s;"></div>
             </div>
-
-            <!-- Clear -->
             <button id="clear-signature"
               style="display:flex;align-items:center;gap:6px;padding:7px 16px;
                      background:#fff1f2;color:#e11d48;
@@ -337,7 +377,7 @@ const createSignature = async (text) => {
           </div>
         </div>
 
-        <!-- ══ UPLOAD PANEL ══ -->
+        <!-- UPLOAD PANEL -->
         <div id="upload-wrapper" style="display:none;width:100%;max-width:700px;">
           <label for="signature-upload"
             style="display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -364,7 +404,7 @@ const createSignature = async (text) => {
                    box-shadow:0 2px 8px rgba(0,0,0,.06);" />
         </div>
 
-        <!-- ══ TERMS ══ -->
+        <!-- TERMS -->
         <div style="width:100%;max-width:700px;background:#f8fafc;border:1.5px solid #e2e8f0;
                     border-radius:12px;padding:12px 16px;">
           <label style="display:flex;align-items:flex-start;gap:10px;font-size:13.5px;
@@ -374,7 +414,7 @@ const createSignature = async (text) => {
             <span>I have read and agree to the
               <span id="open-terms"
                 style="color:#2563eb;font-weight:700;text-decoration:underline;cursor:pointer;">
-                Terms and Conditions
+                Electronic Signature Terms & Conditions.
               </span>
             </span>
           </label>
@@ -406,37 +446,29 @@ const createSignature = async (text) => {
       const lblUpload     = document.getElementById('lbl-upload');
       const colorBtns     = document.querySelectorAll('[data-color]');
 
-      // ── Resize canvas to its rendered size before SignaturePad init ──
       const rect = canvas.getBoundingClientRect();
       canvas.width  = rect.width;
       canvas.height = rect.height;
 
-      // ── SignaturePad init ────────────────────────────────────
       const signaturePad = new SignaturePad(canvas, {
-  penColor: '#0f172a',
-  minWidth: 1.5,
-  maxWidth: 3,
-  backgroundColor: 'rgba(0,0,0,0)',
+        penColor: '#0f172a',
+        minWidth: 1.5,
+        maxWidth: 3,
+        backgroundColor: 'rgba(0,0,0,0)',
+      });
+      signaturePad.addEventListener('beginStroke', () => { hint.style.display = 'none'; });
 
-});
-signaturePad.addEventListener('beginStroke', () => { hint.style.display = 'none'; });
-
-
-
-      // ── Clear ────────────────────────────────────────────────
       document.getElementById('clear-signature').addEventListener('click', () => {
         signaturePad.clear();
         hint.style.display = 'flex';
       });
 
-      // ── Thickness ────────────────────────────────────────────
       thickSlider.addEventListener('input', e => {
         const v = parseInt(e.target.value);
         signaturePad.minWidth = Math.max(0.5, v - 1);
         signaturePad.maxWidth = v;
       });
 
-      // ── Color swatches ───────────────────────────────────────
       colorBtns.forEach(btn => {
         btn.addEventListener('click', () => {
           signaturePad.penColor = btn.dataset.color;
@@ -450,7 +482,6 @@ signaturePad.addEventListener('beginStroke', () => { hint.style.display = 'none'
         });
       });
 
-      // ── Mode toggle ──────────────────────────────────────────
       document.querySelectorAll('input[name="sigType"]').forEach(radio => {
         radio.closest('label').addEventListener('click', () => {
           if (radio.value === 'draw') {
@@ -469,7 +500,6 @@ signaturePad.addEventListener('beginStroke', () => { hint.style.display = 'none'
         });
       });
 
-      // ── Upload preview ───────────────────────────────────────
       uploadInput.addEventListener('change', e => {
         const file = e.target.files[0];
         if (!file) return;
@@ -478,7 +508,6 @@ signaturePad.addEventListener('beginStroke', () => { hint.style.display = 'none'
         reader.readAsDataURL(file);
       });
 
-      // ── Terms modal ──────────────────────────────────────────
       const showTermsModal = () => {
         if (document.getElementById('terms-popup')) return;
         document.body.insertAdjacentHTML('beforeend', `
@@ -489,16 +518,18 @@ signaturePad.addEventListener('beginStroke', () => { hint.style.display = 'none'
             <div style="background:#fff;width:90%;max-width:520px;border-radius:20px;
                         padding:28px;box-shadow:0 24px 60px rgba(0,0,0,.2);">
               <h2 style="font-weight:800;font-size:17px;color:#0f172a;margin-bottom:14px;letter-spacing:-.02em;">
-                Terms and Conditions
+                Electronic Signature Terms & Conditions.
               </h2>
               <div style="max-height:260px;overflow-y:auto;border:1.5px solid #e2e8f0;padding:14px;
                           border-radius:10px;font-size:13.5px;line-height:1.7;color:#475569;margin-bottom:18px;">
+               By using this system to sign documents, you agree that your electronic signature (drawn or typed) is the <b> legal equivalent of your handwritten </b> signature. You consent to the use of electronic signatures for all documents processed through this system.
+          You understand that:
                 <ol style="padding-left:1.3rem;display:flex;flex-direction:column;gap:8px;">
-                  <li>By signing this form, you confirm that the information provided is true and accurate.</li>
-                  <li>You acknowledge that this signature has the same legal validity as your handwritten signature.</li>
-                  <li>Any falsification of information may result in disciplinary or legal action.</li>
-                  <li>The organization reserves the right to verify your submission for authenticity.</li>
-                  <li>All data collected will be processed in accordance with applicable data protection laws.</li>
+                  <li>1. Your electronic signature <b>binds you legally</b> to the document you are signing.</li>
+                  <li>2. The system will record your <b>user ID, timestamp, IP address, device information, and signature image</b> to validate authenticity.</li>
+                  <li>3. The signed document is <b>stored securely</b> and cannot be altered without detection.</li>
+                  <li>4. You may <b>request access, correction, or deletion</b> of your personal data in accordance with the <b>Data Privacy Act of 2012 (RA 10173)</b>.</li>
+                  <li>5. You confirm that you are <b>authorized to sign</b> the document and agree to comply with company policies regarding document approvals.</li>
                 </ol>
               </div>
               <div style="display:flex;justify-content:flex-end;">
@@ -519,7 +550,6 @@ signaturePad.addEventListener('beginStroke', () => { hint.style.display = 'none'
       agreeChk.addEventListener('change', e => { if (e.target.checked) showTermsModal(); });
       openTerms.addEventListener('click', showTermsModal);
 
-      // Expose for preConfirm
       window.signaturePadInstance = signaturePad;
     },
 
@@ -530,7 +560,7 @@ signaturePad.addEventListener('beginStroke', () => { hint.style.display = 'none'
       const sigType      = document.querySelector('input[name="sigType"]:checked')?.value;
 
       if (!agree.checked) {
-        $swal.showValidationMessage('Please agree to the Terms and Conditions.');
+        $swal.showValidationMessage('Please agree to the Electronic Signature Terms & Conditions.');
         return false;
       }
 
@@ -551,7 +581,6 @@ signaturePad.addEventListener('beginStroke', () => { hint.style.display = 'none'
     },
   });
 
-  // ================= SAVE SIGNATURE =================
   if (!isConfirmed || !result) return;
 
   let blob;
@@ -576,7 +605,7 @@ signaturePad.addEventListener('beginStroke', () => { hint.style.display = 'none'
 
 // Handle signature application
 const handleSaveAllSignatures = async (updatedSignatures) => {
-  // Save all signatures at once
+  loading.value = true;
   prePlacedSignatures.value = updatedSignatures;
   console.log(updatedSignatures);
   const token = getToken();
@@ -586,7 +615,6 @@ const handleSaveAllSignatures = async (updatedSignatures) => {
   form.append("title", "SAMPLE");
   form.append("file", pdfFile.value);
 
-  // append array correctly
   updatedSignatures.forEach((sig, i) => {
     if (sig.id != null) {
       form.append(`signatories[${i}].id`, sig.id);
@@ -600,62 +628,35 @@ const handleSaveAllSignatures = async (updatedSignatures) => {
     form.append(`signatories[${i}].hasName`, sig.showName == true ? 1 : 0);
     form.append(`signatories[${i}].color`, sig.color);
     form.append(`signatories[${i}].dateLock`, sig.dateLock == true ? 1 : 0);
-    form.append(
-      `signatories[${i}].dateX`,
-      sig.datePosition ? sig.datePosition.x : 0,
-    );
-    form.append(
-      `signatories[${i}].dateY`,
-      sig.datePosition ? sig.datePosition.y : 0,
-    );
-    form.append(
-      `signatories[${i}].dateCanvasHeight`,
-      sig.datePosition ? sig.datePosition.canvasHeight : 0,
-    );
-    form.append(
-      `signatories[${i}].dateCanvasWidth`,
-      sig.datePosition ? sig.datePosition.canvasWidth : 0,
-    );
-    form.append(
-      `signatories[${i}].dateWidth`,
-      sig.datePosition ? sig.datePosition.width : 0,
-    );
-    form.append(
-      `signatories[${i}].dateHeight`,
-      sig.datePosition ? sig.datePosition.height : 0,
-    );
+    form.append(`signatories[${i}].dateX`, sig.datePosition ? sig.datePosition.x : 0);
+    form.append(`signatories[${i}].dateY`, sig.datePosition ? sig.datePosition.y : 0);
+    form.append(`signatories[${i}].dateCanvasHeight`, sig.datePosition ? sig.datePosition.canvasHeight : 0);
+    form.append(`signatories[${i}].dateCanvasWidth`, sig.datePosition ? sig.datePosition.canvasWidth : 0);
+    form.append(`signatories[${i}].dateWidth`, sig.datePosition ? sig.datePosition.width : 0);
+    form.append(`signatories[${i}].dateHeight`, sig.datePosition ? sig.datePosition.height : 0);
     form.append(`signatories[${i}].hasDate`, sig.hasDate == true ? 1 : 0);
     form.append(`signatories[${i}].height`, sig.height);
     form.append(`signatories[${i}].width`, sig.width);
     form.append(`signatories[${i}].page`, sig.page);
     form.append(`signatories[${i}].isEmpty`, sig.isEmpty);
-    form.append(
-      `signatories[${i}].signatureLock`,
-      sig.signatureLock == true ? 1 : 0,
-    );
+    form.append(`signatories[${i}].signatureLock`, sig.signatureLock == true ? 1 : 0);
     form.append(`signatories[${i}].y`, sig.y);
     form.append(`signatories[${i}].x`, sig.x);
-    form.append(
-      `signatories[${i}].enforceSequentialOrder`,
-      sig.enforceSequentialOrder == true ? 1 : 0,
-    );
+    form.append(`signatories[${i}].enforceSequentialOrder`, sig.enforceSequentialOrder == true ? 1 : 0);
     form.append(`signatories[${i}].approvalOrder`, sig.approvalOrder);
     form.append(
       `signatories[${i}].signatureDate`,
-      sig.signatureDate
-        ? formatDateToISO(sig.signatureDate)
-        : new Date().toISOString(),
+      sig.signatureDate ? formatDateToISO(sig.signatureDate) : new Date().toISOString(),
     );
   });
+
   try {
     await $fetch(
       `${API_BASE_URL}/api/DocumentUploadSignature/sign-signature/${docId}`,
       {
         method: "POST",
         body: form,
-        headers: {
-          token: token,
-        },
+        headers: { token: token },
       },
     );
     await $swal.fire({
@@ -668,12 +669,10 @@ const handleSaveAllSignatures = async (updatedSignatures) => {
 
     await checkDocumentSignature(docId);
   } catch (error) {
+     await getsignaturepositons(docId);
     let errorMessage = "Something went wrong. Please try again later.";
-
-    // Check if the error response has a readable message
     if (error?.data?.message) {
       errorMessage = error.data.message;
-
       showToast({
         message: errorMessage,
         type: "error",
@@ -681,27 +680,21 @@ const handleSaveAllSignatures = async (updatedSignatures) => {
         showConfirmButton: false,
       });
     }
+  } finally{
+    loading.value = false;
   }
 };
 
 // Close modals
-const closeSigningModal = () => {
-  isSigningModalOpen.value = false;
-};
-
-const closePlacementModal = () => {
-  isPlacementModalOpen.value = false;
-};
+const closeSigningModal = () => { isSigningModalOpen.value = false; };
+const closePlacementModal = () => { isPlacementModalOpen.value = false; };
 
 const sequential = computed(() => {
-  return prePlacedSignatures.value.some(
-    (sig) => sig.enforceSequentialOrder === true,
-  );
+  return prePlacedSignatures.value.some((sig) => sig.enforceSequentialOrder === true);
 });
+
 const signatureStatuses = computed(() => {
   const grouped = {};
-
-  // Step 1: determine individual status first
   let signatures = [...prePlacedSignatures.value];
 
   if (sequential.value) {
@@ -710,18 +703,13 @@ const signatureStatuses = computed(() => {
 
     signatures = signatures.map((sig) => {
       let approvalStatus;
-
       if (!sig.isEmpty) {
         approvalStatus = "signed";
-      } else if (
-        firstUnsigned &&
-        sig.approvalOrder === firstUnsigned.approvalOrder
-      ) {
+      } else if (firstUnsigned && sig.approvalOrder === firstUnsigned.approvalOrder) {
         approvalStatus = "pending";
       } else {
         approvalStatus = "waiting";
       }
-
       return { ...sig, approvalStatus };
     });
   } else {
@@ -731,10 +719,8 @@ const signatureStatuses = computed(() => {
     }));
   }
 
-  // Step 2: group by employee
   signatures.forEach((sig) => {
     const key = sig.assignedEmplId;
-
     if (!grouped[key]) {
       grouped[key] = {
         assignedEmplId: key,
@@ -745,15 +731,12 @@ const signatureStatuses = computed(() => {
         waiting: 0,
       };
     }
-
     grouped[key].total++;
-
     if (sig.approvalStatus === "signed") grouped[key].signed++;
     if (sig.approvalStatus === "pending") grouped[key].pending++;
     if (sig.approvalStatus === "waiting") grouped[key].waiting++;
   });
 
-  // Step 3: return unique employees only
   return Object.values(grouped);
 });
 
@@ -765,41 +748,28 @@ const signatureStatusestemp = computed(() => {
     }));
   }
 
-  // Sort by approver number
-  const sorted = [...prePlacedSignatures.value].sort(
-    (a, b) => a.approvalOrder - b.approvalOrder,
-  );
-
-  // Find the lowest approver that is not signed
+  const sorted = [...prePlacedSignatures.value].sort((a, b) => a.approvalOrder - b.approvalOrder);
   const firstUnsigned = sorted.find((sig) => sig.isEmpty);
 
   return sorted.map((sig) => {
     let status;
-
     if (!sig.isEmpty) {
       status = "signed";
-    } else if (
-      firstUnsigned &&
-      sig.approvalOrder === firstUnsigned.approvalOrder
-    ) {
-      status = "pending"; // Only this one can sign now
+    } else if (firstUnsigned && sig.approvalOrder === firstUnsigned.approvalOrder) {
+      status = "pending";
     } else {
-      status = "waiting"; // All others must wait
+      status = "waiting";
     }
-
     return { ...sig, approvalStatus: status };
   });
 });
 
 const getStats = () => {
   const items = signatureStatusestemp.value;
-
   const total = items.length;
   const signed = items.filter((s) => s.approvalStatus === "signed").length;
-  const pending = items.filter((s) => s.approvalStatus === "pending").length; // Only 1 in sequential
+  const pending = items.filter((s) => s.approvalStatus === "pending").length;
   const waiting = items.filter((s) => s.approvalStatus === "waiting").length;
-
-  // Find the current pending approver (if sequential)
   const pendingSig = items.find((s) => s.approvalStatus === "pending");
 
   return {
@@ -812,9 +782,7 @@ const getStats = () => {
 };
 
 const getUserStats = (userName) => {
-  const userSigs = prePlacedSignatures.value.filter(
-    (s) => s.assignedTo === userName,
-  );
+  const userSigs = prePlacedSignatures.value.filter((s) => s.assignedTo === userName);
   const signed = userSigs.filter((s) => !s.isEmpty).length;
   const pending = userSigs.length - signed;
   return { total: userSigs.length, signed, pending };
@@ -823,24 +791,10 @@ const getUserStats = (userName) => {
 const saveFinalPdf = async () => {
   try {
     const stats = getStats();
-    if (stats.signed === 0) {
-      alert("No signatures to save!");
-      return;
-    }
-    if (
-      stats.pending > 0 &&
-      !confirm(
-        `There are still ${stats.pending} pending and ${stats.waiting} waiting signature(s). Save anyway?`,
-      )
-    ) {
-      return;
-    }
-    if (!pdfFile.value) {
-      alert("No PDF uploaded.");
-      return;
-    }
+    if (stats.signed === 0) { alert("No signatures to save!"); return; }
+    if (stats.pending > 0 && !confirm(`There are still ${stats.pending} pending and ${stats.waiting} waiting signature(s). Save anyway?`)) return;
+    if (!pdfFile.value) { alert("No PDF uploaded."); return; }
 
-    // Load PDF
     const pdfBytes = await pdfFile.value.arrayBuffer();
     const pdfDoc = await PDFDocument.load(pdfBytes);
     const helveticaFont = await pdfDoc.embedFont(StandardFonts.Helvetica);
@@ -855,94 +809,48 @@ const saveFinalPdf = async () => {
 
       const pageWidth = page.getWidth();
       const pageHeight = page.getHeight();
-
-      // Scale coordinates from canvas to PDF
       const canvasWidth = sig.canvasWidth || pageWidth;
       const canvasHeight = sig.canvasHeight || pageHeight;
-
       const scaleX = pageWidth / canvasWidth;
       const scaleY = pageHeight / canvasHeight;
 
       if (sig.showName && sig.signedBy) {
-        // Embed signature image
         const imgResp = await fetch(sig.imageSrc);
         const imgBytes = await imgResp.arrayBuffer();
         let embeddedImage;
-        try {
-          embeddedImage = await pdfDoc.embedPng(imgBytes);
-        } catch {
-          embeddedImage = await pdfDoc.embedJpg(imgBytes);
-        }
+        try { embeddedImage = await pdfDoc.embedPng(imgBytes); }
+        catch { embeddedImage = await pdfDoc.embedJpg(imgBytes); }
 
-        // Adjust signature width for name like UI
-        const maxImgWidth =
-          sig.showName && sig.signedBy
-            ? Math.max(sig.width - 16, sig.signedBy.length * 8) * scaleX
-            : sig.width * scaleX;
-
+        const maxImgWidth = sig.showName && sig.signedBy
+          ? Math.max(sig.width - 16, sig.signedBy.length * 8) * scaleX
+          : sig.width * scaleX;
         const maxImgHeight = sig.height * scaleY;
-
         const imgAspect = embeddedImage.width / embeddedImage.height;
         let drawWidth = maxImgWidth;
         let drawHeight = drawWidth / imgAspect;
-        if (drawHeight > maxImgHeight) {
-          drawHeight = maxImgHeight;
-          drawWidth = drawHeight * imgAspect;
-        }
+        if (drawHeight > maxImgHeight) { drawHeight = maxImgHeight; drawWidth = drawHeight * imgAspect; }
 
-        // Signature coordinates (flip Y axis) – exact match to UI
         const xOnPdf = sig.x * scaleX + (sig.width * scaleX - drawWidth) / 2;
         let yOnPdf = pageHeight - (sig.y + drawHeight) * scaleY;
+        if (sig.showName && sig.signedBy) yOnPdf -= 5;
 
-        // Adjust y slightly if showing name
-        if (sig.showName && sig.signedBy) {
-          yOnPdf -= 5; // reduces vertical position by 1px
-        }
+        page.drawImage(embeddedImage, { x: xOnPdf, y: yOnPdf, width: drawWidth, height: drawHeight });
 
-        // Draw signature
-        page.drawImage(embeddedImage, {
-          x: xOnPdf,
-          y: yOnPdf,
-          width: drawWidth,
-          height: drawHeight,
-        });
-
-        // Draw name slightly overlapping signature
         if (sig.showName && sig.signedBy) {
           const fontSize = Math.max(8, drawHeight * 0.18);
-          const textWidth = Math.min(
-            helveticaFont.widthOfTextAtSize(sig.signedBy, fontSize),
-            drawWidth,
-          );
+          const textWidth = Math.min(helveticaFont.widthOfTextAtSize(sig.signedBy, fontSize), drawWidth);
           const textX = xOnPdf + (drawWidth - textWidth) / 2;
-
-          // Small overlap with signature
           const textY = yOnPdf - fontSize / 3;
-
-          page.drawText(sig.signedBy, {
-            x: textX,
-            y: textY,
-            size: fontSize,
-            font: helveticaFont,
-            color: rgb(0, 0, 0),
-          });
+          page.drawText(sig.signedBy, { x: textX, y: textY, size: fontSize, font: helveticaFont, color: rgb(0, 0, 0) });
         }
 
-        // Draw date exactly at its canvas position
         if (sig.hasDate && sig.datePosition) {
           const dp = toRaw(sig.datePosition);
           const dateX = dp.x * scaleX;
-          let dateY = pageHeight - (dp.y + dp.height) * scaleY;
+          let dateY = pageHeight - (dp.y + dp.height) * scaleY - 5;
           const fontSize = (dp.fontSize || 14) * scaleY;
           const dateText = dp.dateText || sig.signedDate || "";
-          dateY -= 5;
-          page.drawText(dateText, {
-            x: dateX,
-            y: dateY + (dp.height * scaleY - fontSize) / 2, // vertical center
-            size: fontSize,
-            font: helveticaFont,
-            color: rgb(0, 0, 0),
-          });
+          page.drawText(dateText, { x: dateX, y: dateY + (dp.height * scaleY - fontSize) / 2, size: fontSize, font: helveticaFont, color: rgb(0, 0, 0) });
         }
       } else {
         const xOnPdf = sig.x * scaleX;
@@ -950,45 +858,25 @@ const saveFinalPdf = async () => {
         const widthOnPdf = sig.width * scaleX;
         const heightOnPdf = sig.height * scaleY;
 
-        // Embed signature image
         const imgResp = await fetch(sig.imageSrc);
         const imgBytes = await imgResp.arrayBuffer();
         let embeddedImage;
-        try {
-          embeddedImage = await pdfDoc.embedPng(imgBytes);
-        } catch {
-          embeddedImage = await pdfDoc.embedJpg(imgBytes);
-        }
+        try { embeddedImage = await pdfDoc.embedPng(imgBytes); }
+        catch { embeddedImage = await pdfDoc.embedJpg(imgBytes); }
 
-        page.drawImage(embeddedImage, {
-          x: xOnPdf,
-          y: yOnPdf,
-          width: widthOnPdf,
-          height: heightOnPdf,
-        });
+        page.drawImage(embeddedImage, { x: xOnPdf, y: yOnPdf, width: widthOnPdf, height: heightOnPdf });
 
-        // Draw date if exists (no background)
         if (sig.hasDate && sig.datePosition) {
           const dp = toRaw(sig.datePosition);
-
           const dateX = dp.x * scaleX;
           const dateY = pageHeight - dp.y * scaleY - dp.height * scaleY;
           const fontSize = (dp.fontSize || 14) * scaleY;
           const dateText = dp.dateText || sig.signedDate || "";
-
-          // Draw only the text
-          page.drawText(dateText, {
-            x: dateX + 2, // optional padding
-            y: dateY + (dp.height * scaleY - fontSize) / 2,
-            size: fontSize,
-            font: helveticaFont,
-            color: rgb(0, 0, 0),
-          });
+          page.drawText(dateText, { x: dateX + 2, y: dateY + (dp.height * scaleY - fontSize) / 2, size: fontSize, font: helveticaFont, color: rgb(0, 0, 0) });
         }
       }
     }
 
-    // Save PDF and trigger download
     const finalPdfBytes = await pdfDoc.save();
     const blob = new Blob([finalPdfBytes], { type: "application/pdf" });
     const url = URL.createObjectURL(blob);
@@ -1006,6 +894,7 @@ const saveFinalPdf = async () => {
     alert("Failed to save PDF. Check console for details.");
   }
 };
+
 onMounted(async () => {
   loading.value = true;
   await getProfile();
@@ -1041,49 +930,67 @@ onMounted(async () => {
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <!-- Left Column: Main Controls -->
         <div class="lg:col-span-2 space-y-6">
-          <!-- Step 1: Upload PDF -->
-         <div class="bg-white rounded-2xl border border-zinc-100 shadow-sm px-5 py-4 flex items-center justify-between gap-4">
-  
-  <!-- Title -->
-  <div class="flex items-center gap-3 min-w-0">
-    <div class="w-9 h-9 rounded-lg bg-zinc-100 flex items-center justify-center shrink-0">
-      <svg class="w-4 h-4 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <polyline points="14,2 14,8 20,8"/>
-      </svg>
-    </div>
-    <h2 class="text-base font-semibold text-zinc-800 truncate tracking-tight">{{ pdfTitle }}</h2>
-  </div>
 
-  <!-- Live Toggle -->
-  <label class="flex items-center gap-2.5 cursor-pointer shrink-0 select-none" @click="toggleLiveView">
-    <!-- Track -->
-    <div
-      class="relative w-11 h-6 rounded-full transition-colors duration-200"
-      :class="isLiveView ? 'bg-blue-600' : 'bg-zinc-200'"
-    >
-      <!-- Thumb -->
-      <span
-        class="absolute top-1 left-1 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200"
-        :class="isLiveView ? 'translate-x-5' : 'translate-x-0'"
-      />
-    </div>
+          <!-- Document Title + Live View Toggle Card -->
+          <div class="bg-white rounded-2xl border border-zinc-100 shadow-sm px-5 py-4 flex items-center justify-between gap-4">
 
-    <!-- Text + Badge -->
-    <div class="flex items-center gap-1.5">
-      <span class="text-sm font-medium text-zinc-600">Live View</span>
-      <span
-        class="text-[10px] font-bold tracking-wide px-1.5 py-0.5 rounded"
-        :class="isLiveView ? 'bg-blue-100 text-blue-600' : 'bg-zinc-100 text-zinc-400'"
-      >
-        {{ isLiveView ? 'ON' : 'OFF' }}
-      </span>
-    </div>
-  </label>
+            <!-- Title -->
+            <div class="flex items-center gap-3 min-w-0">
+              <div class="w-9 h-9 rounded-lg bg-zinc-100 flex items-center justify-center shrink-0">
+                <svg class="w-4 h-4 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14,2 14,8 20,8"/>
+                </svg>
+              </div>
+              <h2 class="text-base font-semibold text-zinc-800 truncate tracking-tight">{{ pdfTitle }}</h2>
+            </div>
 
-</div>
+            <!-- Enhanced Live View Toggle -->
+            <div
+              class="flex items-center justify-between p-3 rounded-xl border transition-all duration-300 shrink-0 min-w-[220px]"
+              :class="isLiveView ? 'border-blue-300 bg-blue-50' : 'border-zinc-200 bg-zinc-50'"
+            >
+              <div class="flex items-center gap-2.5">
+                <!-- Icon -->
+                <div
+                  class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300 shrink-0"
+                  :class="isLiveView ? 'bg-blue-600' : 'bg-zinc-300'"
+                >
+                  <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M15 10l4.553-2.069A1 1 0 0121 8.868v6.264a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                  </svg>
+                </div>
+                <!-- Label -->
+                <div>
+                  <p class="text-sm font-semibold text-zinc-700 leading-none mb-0.5">Live View</p>
+                  <p
+                    class="text-[11px] transition-colors duration-300 leading-none"
+                    :class="isLiveView ? 'text-blue-500' : 'text-zinc-400'"
+                  >
+                    {{ isLiveView ? 'Visible on dashboard' : 'Hidden from dashboard' }}
+                  </p>
+                </div>
+              </div>
 
-          <!-- Step 2: Place Signature Boxes -->
+              <!-- Toggle Switch -->
+              <button
+                type="button"
+                @click="toggleLiveView"
+                class="relative inline-flex h-6 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ml-3 shrink-0"
+                :class="isLiveView ? 'bg-blue-600' : 'bg-zinc-300'"
+                style="width: 44px;"
+              >
+                <span class="sr-only">Toggle Live View</span>
+                <span
+                  class="inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-in-out"
+                  :style="isLiveView ? 'transform: translateX(24px)' : 'transform: translateX(4px)'"
+                />
+              </button>
+            </div>
+          </div>
+
+          <!-- Step 1: Place Signature Boxes -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <div class="flex items-center gap-2 mb-4">
               <div
@@ -1101,30 +1008,18 @@ onMounted(async () => {
               :disabled="!pdfFile"
               class="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-2"
             >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
               Place Signature Boxes
             </button>
-            <p
-              v-if="prePlacedSignatures.length > 0"
-              class="text-sm text-green-600 mt-2 text-center"
-            >
+            <p v-if="prePlacedSignatures.length > 0" class="text-sm text-green-600 mt-2 text-center">
               ✓ {{ prePlacedSignatures.length }} box(es) placed
             </p>
           </div>
 
-          <!-- Step 3: Current User & Sign -->
+          <!-- Step 2: Sign -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <div class="flex items-center gap-2 mb-4">
               <div
@@ -1135,52 +1030,34 @@ onMounted(async () => {
               <h2 class="text-xl font-semibold">Sign</h2>
             </div>
 
-            <!-- Signature Upload -->
+            <!-- No Signature Warning -->
             <div
               v-if="!signatureFile"
               class="mb-6 p-4 bg-gray-50 rounded-xl shadow-md flex flex-col items-center"
             >
-              <!-- Button -->
               <button
                 @click="createSignature"
                 class="flex items-center justify-center w-full max-w-xs px-4 py-3 bg-green-600 text-white font-semibold rounded-lg shadow hover:bg-green-700 active:bg-green-800 transition-colors duration-200 gap-2"
               >
                 Create Signature
               </button>
-
-              <!-- Warning Label -->
-              <p
-                class="mt-3 text-center text-sm text-red-600 bg-red-100 rounded-md px-3 py-2 w-full shadow-sm"
-              >
-                ⚠️ You don’t have a current signature. Please create one to
-                continue.
+              <p class="mt-3 text-center text-sm text-red-600 bg-red-100 rounded-md px-3 py-2 w-full shadow-sm">
+                ⚠️ You don't have a current signature. Please create one to continue.
               </p>
             </div>
 
             <!-- Sign Button -->
             <button
               @click="openSigningModal"
-              :disabled="
-                !pdfFile || !signatureFile || prePlacedSignatures.length === 0
-              "
+              :disabled="!pdfFile || !signatureFile || prePlacedSignatures.length === 0"
               class="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-bold text-lg flex items-center justify-center gap-2"
             >
-              <svg
-                class="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                />
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
               Sign Document
             </button>
-            
           </div>
 
           <!-- Actions -->
@@ -1201,88 +1078,67 @@ onMounted(async () => {
         <!-- Right Column: Stats & Signature List -->
         <div class="space-y-6">
           <!-- Overall Progress -->
-          <!-- Overall Progress -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4">Document Progress</h2>
 
             <div class="space-y-3">
-              <!-- Total -->
               <div class="flex justify-between items-center">
                 <span class="text-gray-600">Total Boxes:</span>
                 <span class="font-bold text-lg">{{ getStats().total }}</span>
               </div>
-
-              <!-- Signed -->
               <div class="flex justify-between items-center">
                 <span class="text-green-600">Signed:</span>
-                <span class="font-bold text-lg text-green-600">{{
-                  getStats().signed
-                }}</span>
+                <span class="font-bold text-lg text-green-600">{{ getStats().signed }}</span>
               </div>
-
-              <!-- Pending -->
               <div class="flex justify-between items-center">
                 <span class="text-orange-600">Pending:</span>
-                <span class="font-bold text-lg text-orange-600">{{
-                  getStats().pending
-                }}</span>
+                <span class="font-bold text-lg text-orange-600">{{ getStats().pending }}</span>
               </div>
-
-              <!-- Waiting -->
               <div class="flex justify-between items-center">
                 <span class="text-gray-600">Waiting:</span>
-                <span class="font-bold text-lg text-gray-600">{{
-                  getStats().waiting
-                }}</span>
+                <span class="font-bold text-lg text-gray-600">{{ getStats().waiting }}</span>
               </div>
 
-              <!-- Progress bar -->
               <div class="mt-4 pt-4 border-t">
                 <div class="w-full bg-gray-200 rounded-full h-4">
                   <div
                     class="bg-green-600 h-4 rounded-full transition-all duration-300"
-                    :style="{
-                      width: `${
-                        getStats().total > 0
-                          ? (getStats().signed / getStats().total) * 100
-                          : 0
-                      }%`,
-                    }"
+                    :style="{ width: `${getStats().total > 0 ? (getStats().signed / getStats().total) * 100 : 0}%` }"
                   ></div>
                 </div>
-
                 <p class="text-xs text-gray-500 text-center mt-1">
-                  {{
-                    getStats().total > 0
-                      ? Math.round((getStats().signed / getStats().total) * 100)
-                      : 0
-                  }}% Complete
+                  {{ getStats().total > 0 ? Math.round((getStats().signed / getStats().total) * 100) : 0 }}% Complete
                 </p>
               </div>
 
-              <!-- Dynamic Status Message -->
+              <!-- Live View status indicator in progress card -->
+              <div class="pt-3 border-t">
+                <div class="flex items-center gap-2 text-xs">
+                  <span class="w-2 h-2 rounded-full shrink-0"
+                    :class="isLiveView ? 'bg-blue-500' : 'bg-zinc-300'"></span>
+                  <span :class="isLiveView ? 'text-blue-600 font-medium' : 'text-zinc-400'">
+                    Live View {{ isLiveView ? 'ON — visible on dashboard' : 'OFF' }}
+                  </span>
+                </div>
+              </div>
+
               <p
                 class="text-sm text-center mt-3 font-medium"
                 :class="{
                   'text-green-700': getStats().signed === getStats().total,
                   'text-orange-700': getStats().pending === 1,
-                  'text-gray-600':
-                    getStats().waiting > 0 && getStats().pending === 0,
+                  'text-gray-600': getStats().waiting > 0 && getStats().pending === 0,
                 }"
               >
-                <!-- DONE -->
                 <template v-if="getStats().signed === getStats().total">
                   ✅ All signatures completed.
                 </template>
-
-                <!-- PENDING APPROVER -->
                 <template v-else-if="getStats().nextApproverNumber">
-                  ⏳ Waiting for Signer #{{ getStats().nextApproverNumber }} to
-                  sign…
+                  ⏳ Waiting for Signer #{{ getStats().nextApproverNumber }} to sign…
                 </template>
-
-                <!-- DEFAULT -->
-                <template v-else> ⏳ Waiting for signatures… </template>
+                <template v-else>
+                  ⏳ Waiting for signatures…
+                </template>
               </p>
             </div>
           </div>
@@ -1291,10 +1147,7 @@ onMounted(async () => {
           <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4">All Signature Boxes</h2>
 
-            <div
-              v-if="prePlacedSignatures.length === 0"
-              class="text-gray-400 text-center py-8 text-sm"
-            >
+            <div v-if="prePlacedSignatures.length === 0" class="text-gray-400 text-center py-8 text-sm">
               No signature boxes placed yet
             </div>
 
@@ -1304,50 +1157,26 @@ onMounted(async () => {
                 :key="sig.assignedEmplId"
                 class="p-3 border rounded text-sm"
                 :class="{
-                  'border-green-300 bg-green-50':
-                    sig.pending === 0 && sig.waiting === 0,
+                  'border-green-300 bg-green-50': sig.pending === 0 && sig.waiting === 0,
                   'border-blue-300 bg-blue-50': sig.pending > 0,
-                  'border-gray-300 bg-gray-50':
-                    sig.pending === 0 && sig.waiting > 0,
+                  'border-gray-300 bg-gray-50': sig.pending === 0 && sig.waiting > 0,
                 }"
               >
                 <div class="flex justify-between items-start">
                   <div>
                     <p class="font-semibold">{{ sig.assignedTo }}</p>
-
-                    <p class="text-xs text-gray-600">
-                      Total signatures: {{ sig.total }}
-                    </p>
-
+                    <p class="text-xs text-gray-600">Total signatures: {{ sig.total }}</p>
                     <p class="text-xs text-gray-500">
                       Signed: {{ sig.signed }} / Pending: {{ sig.pending }}
-                      <span v-if="sig.waiting > 0">
-                        / Waiting: {{ sig.waiting }}</span
-                      >
+                      <span v-if="sig.waiting > 0"> / Waiting: {{ sig.waiting }}</span>
                     </p>
                   </div>
 
                   <div class="flex flex-col items-end">
-                    <!-- STATUS LABEL -->
-                    <span
-                      v-if="sig.pending > 0"
-                      class="text-orange-500 text-xs font-bold"
-                    >
-                      ⏳ Pending
-                    </span>
+                    <span v-if="sig.pending > 0" class="text-orange-500 text-xs font-bold">⏳ Pending</span>
+                    <span v-else-if="sig.waiting > 0" class="text-gray-500 text-xs font-bold">⏳ Waiting</span>
+                    <span v-else class="text-green-600 text-xs font-bold">✓ Completed</span>
 
-                    <span
-                      v-else-if="sig.waiting > 0"
-                      class="text-gray-500 text-xs font-bold"
-                    >
-                      ⏳ Waiting
-                    </span>
-
-                    <span v-else class="text-green-600 text-xs font-bold">
-                      ✓ Completed
-                    </span>
-
-                    <!-- RESEND BUTTON -->
                     <button
                       v-if="sig.pending > 0"
                       @click="resendEmail(sig.assignedEmplId)"
@@ -1383,7 +1212,7 @@ onMounted(async () => {
       :current-empl-id="currentEmplId"
       :documentId="strDocId"
       :pre-placed-signatures="prePlacedSignatures"
-      :free-sign = "isFreeSign"
+      :free-sign="isFreeSign"
       @close="closeSigningModal"
       @save-all-signatures="handleSaveAllSignatures"
     />

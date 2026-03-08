@@ -40,14 +40,13 @@ const handleLiveViewToggle = async () => {
                     <div style="display:flex; align-items:flex-start; gap:12px; margin-bottom:12px;">
                         <span style="font-size:1.5rem;">📊</span>
                         <p style="margin:0; color:#374151; font-size:0.9rem; line-height:1.5;">
-                            This document will appear on the <strong>dashboard</strong> and be visible to all signers.
+                                This document will appear on the <strong>dashboard</strong>.
                         </p>
                     </div>
                     <div style="display:flex; align-items:flex-start; gap:12px;">
                         <span style="font-size:1.5rem;">🔴</span>
                         <p style="margin:0; color:#374151; font-size:0.9rem; line-height:1.5;">
-                            All signers can <strong>watch the signing progress in real-time</strong> as each person completes their signature.
-                        </p>
+                            The user can view all signers in real-time as they complete their signatures.
                     </div>
                 </div>
             `,
@@ -66,7 +65,7 @@ const handleLiveViewToggle = async () => {
                     <div style="display:flex; align-items:flex-start; gap:12px;">
                         <span style="font-size:1.5rem;">🔒</span>
                         <p style="margin:0; color:#374151; font-size:0.9rem; line-height:1.5;">
-                            This document will <strong>not</strong> be reflected on the dashboard. Signers will not be able to see the real-time signing progress of others.
+                            This document will <strong>not</strong> be reflected on the dashboard. 
                         </p>
                     </div>
                 </div>
@@ -93,12 +92,7 @@ const handleFreeSignToggle = async () => {
                             Signers can place their signature <strong>anywhere on the document</strong> — no fixed signature boxes required.
                         </p>
                     </div>
-                    <div style="display:flex; align-items:flex-start; gap:12px;">
-                        <span style="font-size:1.5rem;">💡</span>
-                        <p style="margin:0; color:#374151; font-size:0.9rem; line-height:1.5;">
-                            You may still place optional guide boxes, but signers are <strong>not restricted</strong> to them.
-                        </p>
-                    </div>
+                  
                 </div>
             `,
             icon: "info",
@@ -335,10 +329,12 @@ onMounted(async () => {
                                 class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
                                 2
                             </div>
-                            <h2 class="text-xl font-semibold">Place Signature Boxes</h2>
+                           <h2 class="text-xl font-semibold">
+                            {{ isFreeSign ? "Add Member" : "Place Signature Boxes" }}
+                            </h2>
                         </div>
                         <p class="text-sm text-gray-600 mb-4">
-                            Draw boxes on the PDF where each person should sign
+                            {{isFreeSign ? "Add members who will sign this document" :"Draw boxes on the PDF where each person should sign"}}
                         </p>
                         <button @click="openPlacementModal" :disabled="!pdfFile"
                             class="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-2">

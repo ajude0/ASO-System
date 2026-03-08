@@ -921,17 +921,49 @@ const removeWhiteBackground = (file) => {
         const b = data[i + 2];
 
         if (r > 245 && g > 245 && b > 245) {
-          data[i + 3] = 0; // transparent
+          data[i + 3] = 0;
         }
       }
 
       ctx.putImageData(imageData, 0, 0);
 
-      canvas.toBlob((blob) => resolve(blob), "image/png", 1);
+      // --- Find bounding box of non-transparent pixels ---
+      let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          const alpha = data[(y * canvas.width + x) * 4 + 3];
+          if (alpha > 0) {
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+      }
+
+      const sigWidth = maxX - minX + 1;
+      const sigHeight = maxY - minY + 1;
+
+      // --- Draw centered onto a new canvas of the same original size ---
+      const centeredCanvas = document.createElement("canvas");
+      centeredCanvas.width = canvas.width;
+      centeredCanvas.height = canvas.height;
+      const centeredCtx = centeredCanvas.getContext("2d");
+
+      const offsetX = Math.floor((canvas.width - sigWidth) / 2);
+      const offsetY = Math.floor((canvas.height - sigHeight) / 2);
+
+      centeredCtx.drawImage(
+        canvas,
+        minX, minY, sigWidth, sigHeight,     // source: cropped sig
+        offsetX, offsetY, sigWidth, sigHeight // destination: centered
+      );
+
+      centeredCanvas.toBlob((blob) => resolve(blob), "image/png", 1);
     };
   });
 };
-
 const createSignature = async (text) => {
   const { value: result, isConfirmed } = await $swal.fire({
     title: '<span style="font-size:18px;font-weight:800;color:#0f172a;letter-spacing:-.02em;">Create Your Signature</span>',
@@ -1058,7 +1090,7 @@ const createSignature = async (text) => {
             <span>I have read and agree to the
               <span id="open-terms"
                 style="color:#2563eb;font-weight:700;text-decoration:underline;cursor:pointer;">
-                Terms and Conditions
+                Electronic Signature Terms & Conditions.
               </span>
             </span>
           </label>
@@ -1155,13 +1187,20 @@ const createSignature = async (text) => {
       });
 
       // ── Upload preview ───────────────────────────────────────
-      uploadInput.addEventListener('change', e => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => { uploadPreview.src = reader.result; uploadPreview.style.display = 'block'; };
-        reader.readAsDataURL(file);
-      });
+      uploadInput.addEventListener('change', async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  // Process: remove background + center the signature
+  const processedBlob = await removeWhiteBackground(file);
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    uploadPreview.src = reader.result;
+    uploadPreview.style.display = 'block';
+  };
+  reader.readAsDataURL(processedBlob); // <-- use the processed blob, not the raw file
+});
 
       // ── Terms modal ──────────────────────────────────────────
       const showTermsModal = () => {
@@ -1174,16 +1213,18 @@ const createSignature = async (text) => {
             <div style="background:#fff;width:90%;max-width:520px;border-radius:20px;
                         padding:28px;box-shadow:0 24px 60px rgba(0,0,0,.2);">
               <h2 style="font-weight:800;font-size:17px;color:#0f172a;margin-bottom:14px;letter-spacing:-.02em;">
-                Terms and Conditions
+                Electronic Signature Terms & Conditions.
               </h2>
               <div style="max-height:260px;overflow-y:auto;border:1.5px solid #e2e8f0;padding:14px;
                           border-radius:10px;font-size:13.5px;line-height:1.7;color:#475569;margin-bottom:18px;">
+                          By using this system to sign documents, you agree that your electronic signature (drawn or typed) is the <b> legal equivalent of your handwritten </b> signature. You consent to the use of electronic signatures for all documents processed through this system.
+          You understand that:
                 <ol style="padding-left:1.3rem;display:flex;flex-direction:column;gap:8px;">
-                  <li>The signature provided is legally binding.</li>
-                  <li>The signature belongs to the account holder.</li>
-                  <li>Falsification may result in disciplinary action.</li>
-                  <li>The organization may verify authenticity.</li>
-                  <li>Data is handled per data protection policies.</li>
+                  <li>1. Your electronic signature <b>binds you legally</b> to the document you are signing.</li>
+                  <li>2. The system will record your <b>user ID, timestamp, IP address, device information, and signature image</b> to validate authenticity.</li>
+                  <li>3. The signed document is <b>stored securely</b> and cannot be altered without detection.</li>
+                  <li>4. You may <b>request access, correction, or deletion</b> of your personal data in accordance with the <b>Data Privacy Act of 2012 (RA 10173)</b>.</li>
+                  <li>5. You confirm that you are <b>authorized to sign</b> the document and agree to comply with company policies regarding document approvals.</li>
                 </ol>
               </div>
               <div style="display:flex;justify-content:flex-end;">
@@ -1215,7 +1256,7 @@ const createSignature = async (text) => {
       const sigType      = document.querySelector('input[name="sigType"]:checked')?.value;
 
       if (!agree.checked) {
-        $swal.showValidationMessage('Please agree to the Terms and Conditions.');
+        $swal.showValidationMessage('Please agree to the Electronic Signature Terms & Conditions.');
         return false;
       }
 

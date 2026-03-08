@@ -762,7 +762,7 @@ const createSignature = async (text) => {
             <span>I have read and agree to the
               <span id="open-terms"
                 style="color:#2563eb;font-weight:700;text-decoration:underline;cursor:pointer;">
-                Terms and Conditions
+                Electronic Signature Terms & Conditions.
               </span>
             </span>
           </label>
@@ -878,16 +878,18 @@ const createSignature = async (text) => {
             <div style="background:#fff;width:90%;max-width:520px;border-radius:20px;
                         padding:28px;box-shadow:0 24px 60px rgba(0,0,0,.2);">
               <h2 style="font-weight:800;font-size:17px;color:#0f172a;margin-bottom:14px;letter-spacing:-.02em;">
-                Terms and Conditions
+                Electronic Signature Terms & Conditions.
               </h2>
               <div style="max-height:260px;overflow-y:auto;border:1.5px solid #e2e8f0;padding:14px;
                           border-radius:10px;font-size:13.5px;line-height:1.7;color:#475569;margin-bottom:18px;">
+               By using this system to sign documents, you agree that your electronic signature (drawn or typed) is the <b> legal equivalent of your handwritten </b> signature. You consent to the use of electronic signatures for all documents processed through this system.
+          You understand that:
                 <ol style="padding-left:1.3rem;display:flex;flex-direction:column;gap:8px;">
-                  <li>The signature provided is legally binding.</li>
-                  <li>The signature belongs to the account holder.</li>
-                  <li>Falsification may result in disciplinary action.</li>
-                  <li>The organization may verify authenticity.</li>
-                  <li>Data is handled per data protection policies.</li>
+                  <li>1. Your electronic signature <b>binds you legally</b> to the document you are signing.</li>
+                  <li>2. The system will record your <b>user ID, timestamp, IP address, device information, and signature image</b> to validate authenticity.</li>
+                  <li>3. The signed document is <b>stored securely</b> and cannot be altered without detection.</li>
+                  <li>4. You may <b>request access, correction, or deletion</b> of your personal data in accordance with the <b>Data Privacy Act of 2012 (RA 10173)</b>.</li>
+                  <li>5. You confirm that you are <b>authorized to sign</b> the document and agree to comply with company policies regarding document approvals.</li>
                 </ol>
               </div>
               <div style="display:flex;justify-content:flex-end;">
@@ -919,7 +921,7 @@ const createSignature = async (text) => {
       const sigType      = document.querySelector('input[name="sigType"]:checked')?.value;
 
       if (!agree.checked) {
-        $swal.showValidationMessage('Please agree to the Terms and Conditions.');
+        $swal.showValidationMessage('Please agree to the Electronic Signature Terms & Conditions.');
         return false;
       }
 
