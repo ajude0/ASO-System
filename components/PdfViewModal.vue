@@ -598,7 +598,13 @@ onUnmounted(async () => {
   <h4 class="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
     Signature Statistics
   </h4>
-
+   <!-- Total -->
+  <div class="flex items-center justify-between bg-gradient-to-r from-gray-800 to-gray-900 text-white rounded-lg px-4 py-3 mb-4 shadow">
+    <div>
+      <p class="text-xs uppercase tracking-wide text-gray-300">Total Signatures</p>
+      <p class="text-2xl font-bold">{{ signaturesStats.total }}</p>
+    </div>
+  </div>
   <div class="space-y-2">
     <!-- Completed -->
     <div class="flex items-center justify-between">
