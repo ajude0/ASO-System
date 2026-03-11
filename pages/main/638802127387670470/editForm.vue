@@ -635,22 +635,22 @@
         <div class="flex items-center space-x-2">
           <input
             type="checkbox"
-            id="approvers-checkbox"
+            id="approver-checkbox"
             class="scale-150 accent-blue-600"
             v-model="isInOrderBoolean"
           />
-          <label for="approvers-checkbox" class="text-md text-gray-700"
+          <label for="approver-checkbox" class="text-md text-gray-700"
             >In Order</label
           >
         </div>
         <div class="flex items-center space-x-2">
           <input
             type="checkbox"
-            id="approvers-checkbox"
+            id="autoclose-checkbox"
             class="scale-150 accent-blue-600"
             v-model="isAutoCloseBoolean"
           />
-          <label for="approvers-checkbox" class="text-md text-gray-700"
+          <label for="autoclose-checkbox" class="text-md text-gray-700"
             >Is Auto Close</label
           >
         </div>

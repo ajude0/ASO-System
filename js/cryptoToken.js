@@ -57,6 +57,9 @@ export const clearAsoStorage = () => {
     "signDocumentId",
     "user_token_aso"
   ];
+    // Delete cookie
+  document.cookie = "_sys_pref_cache=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
+  document.cookie = "user_token_aso=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
 
   keys.forEach(key => localStorage.removeItem(key));
 };

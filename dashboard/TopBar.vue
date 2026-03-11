@@ -160,8 +160,7 @@ function toggleDropdown() {
 
 function Logout() {
   clearAsoStorage();
-  // Delete cookie
-  document.cookie = "_sys_pref_cache=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
+
   router.push('/')
 }
 
@@ -234,6 +233,12 @@ onMounted(async () => {
   getUserImage(user.value.userid, user.value.empid)
   document.addEventListener('click', handleClickOutside);
 });
+onBeforeUnmount(async ()=> {
+  await getProfile();
+  await fetchSysDescription();
+  getUserImage(user.value.userid, user.value.empid)
+  document.addEventListener('click', handleClickOutside);
+})
 onUnmounted(async () => {
   document.removeEventListener('click', handleClickOutside);
 });

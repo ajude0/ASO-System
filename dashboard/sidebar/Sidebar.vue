@@ -10,15 +10,18 @@ defineProps({
     default: "end",
   },
 });
-
-onMounted(() => {
-  document.addEventListener("click", handleClickOutside);
-  fetchUserMenu();
-});
-
-onBeforeUnmount(() => {
+onBeforeUnmount(async() => {
   document.removeEventListener("click", handleClickOutside);
+  await fetchUserMenu();
 });
+
+onMounted(async() => {
+  document.addEventListener("click", handleClickOutside);
+  await fetchUserMenu();
+});
+
+
+
 
 const isActive = ref(true);
 const open = ref([]);

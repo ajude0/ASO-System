@@ -4,9 +4,12 @@ import { getToken } from "~/js/cryptoToken";
 import { getProfile, user } from "~/js/fetchUserProfile";
 import { getusersignature } from "~/js/checkusersignature";
 import { API_BASE_URL } from "~/config";
+import LoadingModal from "~/components/modal/LoadingModal.vue";
+import { getMaxlength,maxlength } from "~/js/getmaxlength";
 
 // State
 const { $swal } = useNuxtApp();
+const isLoading = ref(false);
 const isPlacementModalOpen = ref(false);
 const pdfFile = ref(null);
 const signatureFile = ref(null);
@@ -15,16 +18,36 @@ const currentEmplId = ref();
 const pdfTitle = ref();
 const isLiveView = ref(false);
 const isFreeSign = ref(false);
+const titleError = ref("");
 
 // Pre-placed signature boxes with user assignments
 const prePlacedSignatures = ref([]);
 
 // File upload handlers
 const handlePdfUpload = (event) => {
-    const file = event.target.files[0];
-    if (file && file.type === "application/pdf") {
-        pdfFile.value = file;
-    }
+  const file = event.target.files[0];
+
+  if (!file) return;
+
+  if (file.type !== "application/pdf") {
+    alert("Only PDF files are allowed.");
+    event.target.value = "";
+    return;
+  }
+
+  if (file.name.length > maxlength.value.Title) {
+    $swal.fire({
+        title: 'Info',
+        text: `File name must not exceed ${maxlength.value.Title} characters.`,
+        icon: 'info',
+        timer: 1000,
+        showConfirmButton: false,
+    })
+    event.target.value = "";
+    return;
+  }
+
+  pdfFile.value = file;
 };
 
 // Toggle handlers with SweetAlert info
@@ -120,17 +143,29 @@ const handleFreeSignToggle = async () => {
 };
 
 // Open placement modal
-const openPlacementModal = () => {
+const openPlacementModal = async () => {
     if (!pdfFile.value) {
         alert("Please upload a PDF first!");
+        return;
+    }
+    if (!pdfTitle.value){
+
+        titleError.value = "Please input a Document Title first"
+       await $swal.fire({
+            title: "Missing Document Title",
+            text: "Please enter a document title before proceeding.",
+            icon: "info",
+            timer: 1200,
+            showConfirmButton: false,
+            });
         return;
     }
     isPlacementModalOpen.value = true;
 };
 
 const handleSaveSignatures = async (boxes) => {
-    prePlacedSignatures.value = boxes;
-    console.log(boxes);
+    isLoading.value = true;
+   
     const token = getToken();
     const form = new FormData();
 
@@ -187,12 +222,14 @@ const handleSaveSignatures = async (boxes) => {
         if (error?.data?.message) {
             errorMessage = error.data.message;
             showToast({
-                message: errorMessage,
+                message: errorMessage || 'Error',
                 type: "error",
                 timer: 1000,
                 showConfirmButton: false,
             });
         }
+    } finally{
+        isLoading.value = false;
     }
 };
 
@@ -210,6 +247,7 @@ const getStats = () => {
 
 onMounted(async () => {
     await getProfile();
+    await getMaxlength($swal, 'AsoDocumentUpload')
     signatureFile.value = await getusersignature($swal);
     currentEmplId.value = user.value.empid;
     currentUserName.value = user.value.requestorname;
@@ -217,7 +255,8 @@ onMounted(async () => {
 </script>
 
 <template>
-    <div class="min-h-screen bg-gray-50 p-8">
+    <div v-if="isLoading"> <LoadingModal/></div>
+    <div v-else class="min-h-screen bg-gray-50 p-8">
         <div class="mx-auto">
             <div class="mb-8">
                 <h1 class="text-3xl font-bold text-gray-900 mb-2">
@@ -242,10 +281,26 @@ onMounted(async () => {
                         </div>
 
                         <!-- Title Input -->
+                         <div class="mb-1">
                         <label class="block text-sm font-medium text-gray-700 mb-1">Document Title</label>
-                        <input type="text" v-model="pdfTitle"
-                            class="block w-full text-sm text-gray-700 border border-gray-300 rounded-md px-3 py-2 mb-4 focus:ring-blue-500 focus:border-blue-500" />
-
+                       <input
+                        type="text"
+                        v-model="pdfTitle"
+                        @input="titleError = null"
+                        :maxlength="maxlength.Title"
+                        class="block w-full text-sm text-gray-700 border rounded-md px-3 py-2"
+                        :class="titleError 
+                            ? 'border-red-300 focus:ring-red-500 focus:border-red-500'
+                            : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'"
+                        />
+                            <div :class="titleError ?'flex justify-between': 'flex justify-end'">
+                            <p v-if="titleError" class="text-sm text-red-500">{{ titleError }}</p>
+                            <div class="text-xs text-gray-500 mt-1">
+                            {{ pdfTitle?.length || 0 }}/{{ maxlength.Title }}
+                            </div>
+                            </div>
+                        
+                        </div>
                         <!-- PDF Upload -->
                         <label class="block text-sm font-medium text-gray-700 mb-1">Select PDF File</label>
                         <input type="file" accept="application/pdf" @change="handlePdfUpload"
@@ -338,11 +393,16 @@ onMounted(async () => {
                         </p>
                         <button @click="openPlacementModal" :disabled="!pdfFile"
                             class="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-2">
+                            <div v-if="!isFreeSign" class="flex gap-1 items-center">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                             </svg>
                             Place Signature Boxes
+                            </div>
+                            <div v-else>
+                                Add Member/s
+                            </div>
                         </button>
                         <p v-if="prePlacedSignatures.length > 0" class="text-sm text-green-600 mt-2 text-center">
                             ✓ {{ prePlacedSignatures.length }} box(es) placed

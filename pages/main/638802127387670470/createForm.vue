@@ -374,8 +374,8 @@
           <label for="approvers-checkbox" class="text-md text-gray-700">In Order</label>
         </div>
         <div class="flex items-center space-x-2">
-          <input type="checkbox" id="approvers-checkbox" class="scale-150 accent-blue-600" v-model="form.isautoclose" />
-          <label for="approvers-checkbox" class="text-md text-gray-700">Is Auto Close</label>
+          <input type="checkbox" id="autoclose-checkbox" class="scale-150 accent-blue-600" v-model="form.isautoclose" />
+          <label for="autoclose-checkbox" class="text-md text-gray-700">Is Auto Close</label>
         </div>
       </div>
       <div class="flex justify-end mb-2 gap-4 mt-4">

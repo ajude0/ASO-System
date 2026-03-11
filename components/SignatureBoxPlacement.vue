@@ -54,17 +54,17 @@ const tutorialStepsNormal = [
   { id: 'show-name', title: '🪪 Step 8 – Show Name on Box', body: 'Check <strong>Show name on box</strong> to print the signer\'s full name directly beneath their signature when they sign.', target: '.tutorial-target-newbox', position: 'right' },
   { id: 'excel-import', title: '📊 Step 9 – Import from Excel', body: 'Use the <strong>Import Members from Excel</strong> section to upload a spreadsheet with <code>name</code> and <code>emplId</code> columns to bulk-add signers.', target: '.tutorial-target-excel', position: 'right' },
   { id: 'auto-place', title: '⚡ Step 10 – Auto-Place Signatures', body: 'Use <strong>Auto-Place All Signers</strong> to automatically stack signature boxes vertically down the page. A live preview shows exactly where each box will land before you commit.', target: '.tutorial-target-autoplace', position: 'right' },
-  { id: 'boxes-list', title: '📋 Step 11 – Review Placed Boxes', body: 'All placed boxes appear in the <strong>Boxes</strong> list. Click any entry to jump to that box on the PDF. Use 🗑️ to remove it.', target: '.tutorial-target-boxeslist', position: 'right' },
-  { id: 'save', title: '✅ Step 12 – Save', body: 'When everything looks good, click <strong>Save Output</strong> to confirm the signature placements and send them to the document workflow.', target: '.tutorial-target-save', position: 'top' },
+  { id: 'boxes-list', title: '📋 Step 11 – Review Placed Boxes', body: 'All placed boxes appear in the <strong>Boxes</strong> list. Click any entry to jump to that box on the PDF. Use 🗑️ to remove it.', target: '.tutorial-target-boxeslist', position: 'top' },
+  { id: 'save', title: '✅ Step 12 – Save', body: 'When everything looks good, click <strong>Save Output</strong> to confirm the signature placements and send them to the document workflow.', target: '.tutorial-target-save', position: 'center' },
 ];
 
 const tutorialStepsFreeSign = [
   { id: 'welcome', title: '👋 Welcome to Signer Selection!', body: 'In this mode you simply choose <em>who</em> needs to sign — the system will automatically place their signature boxes on the last page of the document.', target: null, position: 'center' },
-  { id: 'excel-free', title: '📊 Step 1 – Import from Excel', body: 'Upload an <strong>.xlsx</strong> file with <code>name</code> and <code>emplId</code> columns to bulk-add all signers at once.', target: '.tutorial-target-free-excel', position: 'bottom' },
-  { id: 'add-signer', title: '➕ Step 2 – Add Signers Manually', body: 'Click <strong>Add Signer from Directory</strong> to search for employees one by one.', target: '.tutorial-target-free-addbtn', position: 'bottom' },
-  { id: 'sequential-free', title: '🔢 Step 3 – Sequential Order (Optional)', body: 'Enable <strong>Enforce Sequential Signing Order</strong> if signers must complete the document one at a time in the listed order.', target: '.tutorial-target-free-sequential', position: 'bottom' },
-  { id: 'reorder', title: '↕️ Step 4 – Reorder Signers', body: 'Drag the <strong>⋮⋮</strong> handle on each signer card to rearrange the signing order. The numbered badge updates automatically.', target: '.tutorial-target-free-list', position: 'bottom' },
-  { id: 'save-free', title: '✅ Step 5 – Save', body: 'Happy with your signer list? Click <strong>Save</strong> and the system will handle the rest.', target: '.tutorial-target-free-save', position: 'top' },
+  { id: 'excel-free', title: '📊 Step 1 – Import from Excel', body: 'Upload an <strong>.xlsx</strong> file with <code>name</code> and <code>emplId</code> columns to bulk-add all signers at once.', target: '.tutorial-target-free-excel', position: 'top' },
+  { id: 'add-signer', title: '➕ Step 2 – Add Signers Manually', body: 'Click <strong>Add Signer from Directory</strong> to search for employees one by one.', target: '.tutorial-target-free-addbtn', position: 'top' },
+  { id: 'sequential-free', title: '🔢 Step 3 – Sequential Order (Optional)', body: 'Enable <strong>Enforce Sequential Signing Order</strong> if signers must complete the document one at a time in the listed order.', target: '.tutorial-target-free-sequential', position: 'top' },
+  { id: 'reorder', title: '↕️ Step 4 – Reorder Signers', body: 'Drag the <strong>⋮⋮</strong> handle on each signer card to rearrange the signing order. The numbered badge updates automatically.', target: '.tutorial-target-free-list', position: 'top' },
+  { id: 'save-free', title: '✅ Step 5 – Save', body: 'Happy with your signer list? Click <strong>Save</strong> and the system will handle the rest.', target: '.tutorial-target-free-save', position: 'center' },
 ];
 
 const tutorialSteps = computed(() => props.freeSign ? tutorialStepsFreeSign : tutorialStepsNormal);
@@ -76,6 +76,21 @@ const updateHighlight = async () => {
   if (!step || !step.target) { tutorialHighlight.value = null; return; }
   const el = document.querySelector(step.target);
   if (!el) { tutorialHighlight.value = null; return; }
+
+  // ── Auto-scroll the sidebar so the target element is visible ──
+  const sidebar = el.closest('.overflow-y-auto');
+  if (sidebar) {
+    const elRect = el.getBoundingClientRect();
+    const sidebarRect = sidebar.getBoundingClientRect();
+    const isAbove = elRect.top < sidebarRect.top;
+    const isBelow = elRect.bottom > sidebarRect.bottom;
+    if (isAbove || isBelow) {
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      // Wait for smooth scroll to finish before measuring
+      await new Promise(resolve => setTimeout(resolve, 350));
+    }
+  }
+
   const rect = el.getBoundingClientRect();
   tutorialHighlight.value = { top: rect.top - 6, left: rect.left - 6, width: rect.width + 12, height: rect.height + 12 };
 };
@@ -234,14 +249,11 @@ const handleExcelUpload = async (event) => {
       }))
       .filter(m => m.name);
 
-    console.log(members);
-
     if (!members.length) {
       excelError.value = 'No valid member rows found.';
       return;
     }
-
-
+    console.log(members);
 
     const validationResult = await $fetch(`https://localhost:7182/api/excel/validate-excel-members`, {
       method: 'POST',
@@ -280,6 +292,74 @@ const addAllImportedMembers = () => {
   importedMembers.value.forEach(m => upsertSigner({ name: m.name, emplId: m.emplId }));
 };
 
+// Simulates the exact same placement logic as autoPlaceSignatures()
+// so the preview matches the final result 1-to-1
+const autoPlacePreviewSlots = computed(() => {
+  const l = autoPlaceLayout.value;
+
+  if (l.hasOverflow || l.total === 0) return {};
+
+  const eligible = autoPlaceEligibleSigners.value;
+  const f = autoPlaceForm.value;
+
+  // Force reactivity on signatureBoxes items
+  signatureBoxes.value.forEach(b => {
+    b.x; b.y; b.width; b.height; b.hasDate; b.datePosition?.x; b.datePosition?.y; b.datePosition?.height;
+  });
+
+const getOccupiedForPage = (pageNum) => {
+  return signatureBoxes.value
+    .filter(b => {
+      if (b.page !== pageNum) return false;
+      const isSigned = b.isEmpty === false;
+      if (isSigned) return true; // signed boxes always block
+      if (!f.keepExisting) return false; // replace mode: all empty boxes get wiped, don't block
+      // keepExisting mode: only kept boxes (not being re-placed) block
+      const isBeingReplaced = eligible.some(
+        s => (s.emplId && s.emplId === b.assignedEmplId) || s.name === b.assignedTo
+      );
+      return !isBeingReplaced;
+    })
+    .map(b => ({
+      x: b.x, y: b.y, w: b.width,
+      h: b.hasDate && b.datePosition
+        ? (b.datePosition.y + b.datePosition.height) - b.y
+        : b.height,
+    }));
+};
+  const result = {};
+  const newBoxesPerPage = {};
+
+  eligible.forEach((signer) => {
+    for (let pageOffset = 0; pageOffset <= totalPages.value; pageOffset++) {
+      const pageNum = l.startPage + pageOffset;
+      if (pageNum > totalPages.value) break;
+
+      if (!newBoxesPerPage[pageNum]) newBoxesPerPage[pageNum] = [];
+      if (!result[pageNum]) result[pageNum] = [];
+
+      const canvas = canvasRefs.value[pageNum - 1];
+      const CW = canvas ? canvas.width / scaleFactor.value : l.CW;
+      const CH = canvas ? canvas.height / scaleFactor.value : l.CH;
+
+      const occupiedKept = getOccupiedForPage(pageNum);
+      const { x, y, found } = findFreeSlot(
+        occupiedKept, l.sigW, l.blockH, l.sigH, CW, CH, l, newBoxesPerPage[pageNum]
+      );
+
+      if (!found) continue;
+
+      result[pageNum].push({ signer, x, y });
+      newBoxesPerPage[pageNum].push({
+        x, y, w: l.sigW,
+        h: f.hasDate ? l.sigH + l.dateGp + l.dateH : l.sigH,
+      });
+      break;
+    }
+  });
+  console.log(result);
+  return result;
+});
 // ─────────────────────────────────────────────────────────────────────────────
 // AUTO-PLACE SIGNATURES (normal mode only)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -301,15 +381,66 @@ const autoPlaceForm = ref({
   dateLock: false,
   showName: false,
   startPage: null,
-  direction: 'vertical',  // 'vertical' | 'horizontal'
+  direction: 'vertical',
+  keepExisting: true,  // ← keep already-placed boxes in position
 });
 
 const openAutoPlaceModal = () => {
-  autoPlaceForm.value.startPage = totalPages.value;
+  autoPlaceForm.value.startPage = 1;
   showAutoPlaceModal.value = true;
 };
 
-// Core layout calculation — reactive to all form changes
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper: does a signer have an "active" (isEmpty=true) box already placed?
+// Signed boxes (isEmpty=false) are NOT counted — they are locked/done.
+// ─────────────────────────────────────────────────────────────────────────────
+const signerHasActiveBox = (signer) => {
+  return signatureBoxes.value.some(b =>
+    (b.isEmpty === true || b.isEmpty == null) &&
+    ((signer.emplId && b.assignedEmplId === signer.emplId) || b.assignedTo === signer.name)
+  );
+};
+
+// Signers eligible for auto-place:
+//   - If keepExisting=true  → only those WITHOUT an active (isEmpty=true) box
+//   - If keepExisting=false → all signers that don't have a signed (isEmpty=false) box
+//   - Either way, signers whose box is already signed (isEmpty=false) are ALWAYS excluded
+const autoPlaceEligibleSigners = computed(() => {
+  return signers.value.filter(s => {
+    const hasSignedBox = signatureBoxes.value.some(b =>
+      b.isEmpty === false &&
+      ((s.emplId && b.assignedEmplId === s.emplId) || b.assignedTo === s.name)
+    );
+    if (hasSignedBox) return false; // always skip already-signed
+    if (autoPlaceForm.value.keepExisting) return !signerHasActiveBox(s);
+    return true;
+  });
+});
+
+// Signers that will be SKIPPED because they're already signed
+const autoPlaceSignedSigners = computed(() =>
+  signers.value.filter(s =>
+    signatureBoxes.value.some(b =>
+      b.isEmpty === false &&
+      ((s.emplId && b.assignedEmplId === s.emplId) || b.assignedTo === s.name)
+    )
+  )
+);
+
+// Signers that will be KEPT in place (keepExisting=true and has active box)
+const autoPlaceKeptSigners = computed(() =>
+  autoPlaceForm.value.keepExisting
+    ? signers.value.filter(s =>
+        signerHasActiveBox(s) &&
+        !signatureBoxes.value.some(b =>
+          b.isEmpty === false &&
+          ((s.emplId && b.assignedEmplId === s.emplId) || b.assignedTo === s.name)
+        )
+      )
+    : []
+);
+
+// Core layout calculation — uses only eligible signers count
 const autoPlaceLayout = computed(() => {
   const f = autoPlaceForm.value;
 
@@ -335,7 +466,6 @@ const autoPlaceLayout = computed(() => {
   let perPage, sigOverflowX, sigOverflowY, hasOverflow, suggestedSigW, suggestedSigH;
 
   if (f.direction === 'horizontal') {
-    // Grid wrap: fill left→right per row, then next row, overflow to next page
     sigOverflowX = sigW > usableW;
     sigOverflowY = blockH > usableH;
     hasOverflow = sigOverflowX || sigOverflowY;
@@ -353,22 +483,22 @@ const autoPlaceLayout = computed(() => {
     suggestedSigH = Math.max(20, Math.floor(usableH - dateGp - dateH));
   }
 
-  const total = signers.value.length;
-  const pagesNeeded = Math.ceil(total / perPage);
+  const eligible = autoPlaceEligibleSigners.value;
+  const total = eligible.length;
+  const pagesNeeded = total === 0 ? 0 : Math.ceil(total / perPage);
 
   const startPage = Math.max(1, Math.min(Number(f.startPage) || totalPages.value, totalPages.value));
   const endPage = startPage + pagesNeeded - 1;
-  const exceedsDoc = endPage > totalPages.value;
+  const exceedsDoc = pagesNeeded > 0 && endPage > totalPages.value;
 
   const pageSlots = Array.from({ length: pagesNeeded }, (_, pi) => {
     const pageNum = startPage + pi;
     const fromIdx = pi * perPage;
     const toIdx = Math.min(fromIdx + perPage, total);
-    const pageSigners = signers.value.slice(fromIdx, toIdx);
+    const pageSigners = eligible.slice(fromIdx, toIdx);
     return { pageNum, signers: pageSigners, overflow: pageNum > totalPages.value };
   });
 
-  // Expose grid dimensions for template and placer
   const colsPerRow = f.direction === 'horizontal'
     ? Math.max(1, Math.floor((usableW + gX) / (sigW + gX)))
     : 1;
@@ -398,76 +528,178 @@ const applySuggestedSize = () => {
   autoPlaceForm.value.sigHeight = autoPlaceLayout.value.suggestedSigH;
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Collision helpers for auto-place
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Returns true when rect A overlaps rect B (with an optional padding buffer)
+const rectsOverlap = (ax, ay, aw, ah, bx, by, bw, bh, pad = 4) => {
+  return (
+    ax < bx + bw + pad &&
+    ax + aw + pad > bx &&
+    ay < by + bh + pad &&
+    ay + ah + pad > by
+  );
+};
+
+// Given a list of already-occupied rects on a page, find the first candidate
+// (x, y) slot — generated in the same top→bottom / left→right order the normal
+// algorithm would use — that does NOT collide with any occupied rect.
+// blockH includes the date field height so we never overlap that either.
+const findFreeSlot = (occupiedRects, sigW, blockH, sigH, CW, CH, l, pageOccupiedNewBoxes) => {
+  // Combine pre-existing kept boxes with boxes we've already placed this run
+  const allOccupied = [...occupiedRects, ...pageOccupiedNewBoxes];
+
+  if (l.direction === 'horizontal') {
+    // Scan row by row, column by column
+    for (let row = 0; ; row++) {
+      const y = l.mY + row * (blockH + l.gY);
+      if (y + sigH > CH - l.mB) break; // no more vertical room on this page
+      for (let col = 0; col < l.colsPerRow; col++) {
+        const x = l.mX + col * (sigW + l.gX);
+        if (x + sigW > CW - l.mR) continue;
+        const free = !allOccupied.some(r =>
+          rectsOverlap(x, y, sigW, blockH, r.x, r.y, r.w, r.h)
+        );
+        if (free) return { x, y, found: true };
+      }
+    }
+  } else {
+    // Vertical: fixed x, scan downward
+    const x = Math.max(0, Math.min(l.mX, CW - sigW));
+    for (let slot = 0; ; slot++) {
+      const y = l.mY + slot * (blockH + l.gY);
+      if (y + sigH > CH - l.mB) break;
+      const free = !allOccupied.some(r =>
+        rectsOverlap(x, y, sigW, blockH, r.x, r.y, r.w, r.h)
+      );
+      if (free) return { x, y, found: true };
+    }
+  }
+  return { x: 0, y: 0, found: false }; // page full — caller will spill to next page
+};
+
 const autoPlaceSignatures = () => {
+  const eligible = autoPlaceEligibleSigners.value;
+
   if (signers.value.length === 0) { alert('Add at least one signer first.'); return; }
+  if (eligible.length === 0) {
+    alert(
+      autoPlaceForm.value.keepExisting
+        ? 'All signers already have boxes placed. Uncheck "Keep existing positions" to re-place empty boxes.'
+        : 'No eligible signers to place. Signed boxes cannot be replaced.'
+    );
+    return;
+  }
   if (autoPlaceHasBlocker.value) return;
 
   const f = autoPlaceForm.value;
   const l = autoPlaceLayout.value;
 
-  // Remove ALL existing boxes for these signers
-  const keys = new Set(signers.value.map(s => s.emplId || s.name));
-  signatureBoxes.value = signatureBoxes.value.filter(b => !keys.has(b.assignedEmplId || b.assignedTo));
-
-  signers.value.forEach((signer, i) => {
-    const pi = Math.floor(i / l.perPage);
-    const slot = i % l.perPage;
-    const pageNum = l.startPage + pi;
-    const canvas = canvasRefs.value[pageNum - 1];
-    const CW = canvas ? canvas.width / scaleFactor.value : l.CW;
-    const CH = canvas ? canvas.height / scaleFactor.value : l.CH;
-
-    let x, y;
-
-    if (l.direction === 'horizontal') {
-      // Grid wrap: left→right per row, then down to next row, overflow to next page
-      const col = slot % l.colsPerRow;
-      const row = Math.floor(slot / l.colsPerRow);
-      x = l.mX + col * (l.sigW + l.gX);
-      y = l.mY + row * (l.blockH + l.gY);
-    } else {
-      // Top-to-bottom stacking
-      x = Math.max(0, Math.min(l.mX, CW - l.sigW));
-      y = l.mY + slot * (l.blockH + l.gY);
-    }
-
-    x = Math.max(0, Math.min(x, CW - l.sigW));
-    y = Math.max(0, Math.min(y, CH - l.sigH));
-
-    const box = {
-      id: generateId(),
-      assignedTo: signer.name,
-      assignedEmplId: signer.emplId || '',
-      page: pageNum,
-      x: Math.round(x),
-      y: Math.round(y),
-      width: l.sigW,
-      height: l.sigH,
-      hasDate: f.hasDate,
-      isEmpty: true,
-      datePosition: null,
-      color: signer.color,
-      showName: f.showName,
-      signatureLock: !!f.sigLock,
-      dateLock: !!f.dateLock,
-      approvalOrder: Number(signer.approvalOrder || 1),
-    };
-
-    if (box.hasDate) {
-      const dW = Math.max(60, Number(f.dateWidth) || 150);
-      const dateY = y + l.sigH + l.dateGp;
-      box.datePosition = {
-        x: Math.round(Math.max(0, Math.min(x, CW - dW))),
-        y: Math.round(Math.min(dateY, CH - l.dateH)),
-        width: dW,
-        height: l.dateH,
-      };
-    }
-
-    signatureBoxes.value.push(box);
+  // Remove only the boxes that will be re-placed (eligible signers' active/empty boxes)
+  const keysToReplace = new Set(eligible.map(s => s.emplId || s.name));
+  signatureBoxes.value = signatureBoxes.value.filter(b => {
+    const key = b.assignedEmplId || b.assignedTo;
+    if (keysToReplace.has(key) && (b.isEmpty === true || b.isEmpty == null)) return false;
+    return true;
   });
 
-  currentViewPage.value = l.startPage;
+  // Build a map of occupied rects per page from ALL boxes that are being kept
+  // (both signed boxes and kept-in-place empty boxes).  We use blockH so that
+  // the date strip below a box is also treated as occupied space.
+  const getOccupiedForPage = (pageNum) => {
+    return signatureBoxes.value
+      .filter(b => b.page === pageNum)
+      .map(b => ({
+        x: b.x,
+        y: b.y,
+        // treat the full block (sig + optional date) as occupied
+        w: b.width,
+        h: b.hasDate && b.datePosition
+          ? (b.datePosition.y + b.datePosition.height) - b.y   // bottom of date minus top of sig
+          : b.height,
+      }));
+  };
+
+  // Per-page tracker for boxes placed during THIS run (so new boxes don't
+  // collide with each other either).
+  const newBoxesPerPage = {};
+
+  eligible.forEach((signer) => {
+    // Try pages starting from startPage; if a page is full, spill to the next.
+    let placed = false;
+    for (let pageOffset = 0; pageOffset <= totalPages.value; pageOffset++) {
+      const pageNum = l.startPage + pageOffset;
+      if (pageNum > totalPages.value) break;
+
+      const canvas = canvasRefs.value[pageNum - 1];
+      const CW = canvas ? canvas.width / scaleFactor.value : l.CW;
+      const CH = canvas ? canvas.height / scaleFactor.value : l.CH;
+
+      if (!newBoxesPerPage[pageNum]) newBoxesPerPage[pageNum] = [];
+
+      const occupiedKept = getOccupiedForPage(pageNum);
+      const { x, y, found } = findFreeSlot(
+        occupiedKept,
+        l.sigW, l.blockH, l.sigH,
+        CW, CH, l,
+        newBoxesPerPage[pageNum]
+      );
+
+      if (!found) continue; // page is full — try the next one
+
+      const box = {
+        id: generateId(),
+        assignedTo: signer.name,
+        assignedEmplId: signer.emplId || '',
+        page: pageNum,
+        x: Math.round(x),
+        y: Math.round(y),
+        width: l.sigW,
+        height: l.sigH,
+        hasDate: f.hasDate,
+        isEmpty: true,
+        datePosition: null,
+        color: signer.color,
+        showName: f.showName,
+        signatureLock: !!f.sigLock,
+        dateLock: !!f.dateLock,
+        approvalOrder: Number(signer.approvalOrder || 1),
+      };
+
+      if (box.hasDate) {
+        const dW = Math.max(60, Number(f.dateWidth) || 150);
+        const dateY = y + l.sigH + l.dateGp;
+        box.datePosition = {
+          x: Math.round(Math.max(0, Math.min(x, CW - dW))),
+          y: Math.round(Math.min(dateY, CH - l.dateH)),
+          width: dW,
+          height: l.dateH,
+        };
+      }
+
+      signatureBoxes.value.push(box);
+
+      // Register this new box so the next signer avoids it too
+      newBoxesPerPage[pageNum].push({
+        x: box.x,
+        y: box.y,
+        w: box.width,
+        h: box.hasDate && box.datePosition
+          ? (box.datePosition.y + box.datePosition.height) - box.y
+          : box.height,
+      });
+
+      placed = true;
+      break;
+    }
+
+    if (!placed) {
+      console.warn(`Could not find a free slot for signer: ${signer.name}`);
+    }
+  });
+
+  currentViewPage.value = 1;
   showAutoPlaceModal.value = false;
 };
 
@@ -659,6 +891,7 @@ watch(() => props.isOpen, async (newVal) => {
     signatureBoxes.value = [];
     enforceSequentialOrder.value = false;
     importedMembers.value = [];
+    invalidMembers.value = [];
     showImportedList.value = false;
     excelError.value = '';
 
@@ -1074,21 +1307,16 @@ onUnmounted(() => {
           <div class="flex items-center gap-1.5 mb-3">
             <span v-for="(_, i) in tutorialSteps" :key="i" class="block rounded-full transition-all duration-300"
               :class="i === tutorialStep ? 'w-4 h-2 bg-blue-600' : i < tutorialStep ? 'w-2 h-2 bg-blue-300' : 'w-2 h-2 bg-gray-200'"></span>
-            <span class="ml-auto text-[11px] text-gray-400 font-medium">{{ tutorialStep + 1 }} / {{ tutorialSteps.length
-              }}</span>
+            <span class="ml-auto text-[11px] text-gray-400 font-medium">{{ tutorialStep + 1 }} / {{ tutorialSteps.length }}</span>
           </div>
-          <h4 class="font-bold text-gray-900 text-sm mb-1.5" v-if="currentTutorialStep">{{ currentTutorialStep.title }}
-          </h4>
-          <p class="text-xs text-gray-600 leading-relaxed" v-if="currentTutorialStep" v-html="currentTutorialStep.body">
-          </p>
+          <h4 class="font-bold text-gray-900 text-sm mb-1.5" v-if="currentTutorialStep">{{ currentTutorialStep.title }}</h4>
+          <p class="text-xs text-gray-600 leading-relaxed" v-if="currentTutorialStep" v-html="currentTutorialStep.body"></p>
           <div class="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
             <button @click="endTutorial"
-              class="text-xs text-gray-400 hover:text-gray-600 transition underline underline-offset-2">Skip
-              tutorial</button>
+              class="text-xs text-gray-400 hover:text-gray-600 transition underline underline-offset-2">Skip tutorial</button>
             <div class="flex gap-2">
               <button v-if="tutorialStep > 0" @click="tutorialPrev"
-                class="px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 transition text-gray-600 font-medium">←
-                Back</button>
+                class="px-3 py-1.5 text-xs border border-gray-200 rounded-lg hover:bg-gray-50 transition text-gray-600 font-medium">← Back</button>
               <button @click="tutorialNext"
                 class="px-4 py-1.5 text-xs bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold shadow-sm">
                 {{ tutorialStep === tutorialSteps.length - 1 ? '🎉 Done' : 'Next →' }}
@@ -1125,6 +1353,22 @@ onUnmounted(() => {
       <!-- Body -->
       <div class="flex-1 overflow-y-auto px-6 py-5 space-y-4">
 
+           <div class="tutorial-target-download bg-green-50 border border-green-200 rounded-lg shadow p-4 mb-4">
+            <div class="flex flex-col items-center gap-2 mb-1.5">
+              <div class="flex items-center gap-2 mb-1.5"><svg class="w-6 h-6 text-green-600" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+              <path fill-rule="evenodd" d="M9 2.221V7H4.221a2 2 0 0 1 .365-.5L8.5 2.586A2 2 0 0 1 9 2.22ZM11 2v5a2 2 0 0 1-2 2H4v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-7Z" clip-rule="evenodd"/>
+            </svg>
+
+              <span class="text-sm font-bold text-green-800">Download Excel Files Guide</span></div>
+              <DownloadExcel 
+                file-path="/excel/member.xlsx"
+                file-name="member.xlsx"
+                label="Download Member"
+              />
+            </div>
+           
+          </div>
+
         <!-- ── Excel Import (freeSign) ── -->
         <div class="tutorial-target-free-excel bg-amber-50 border border-amber-200 rounded-xl p-4">
           <div class="flex items-center gap-2 mb-1.5">
@@ -1148,39 +1392,37 @@ onUnmounted(() => {
               :disabled="excelImporting" />
           </label>
           <p v-if="excelError" class="mt-2 text-xs text-red-600 font-medium">{{ excelError }}</p>
-          <!-- Invalid members warning -->
-<div v-if="invalidMembers.length > 0" class="mt-2 bg-red-50 border border-red-200 rounded-lg p-2.5">
-  <div class="flex items-center gap-1.5 mb-1.5">
-    <svg class="w-3.5 h-3.5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-        d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-    </svg>
-    <span class="text-xs font-bold text-red-700">{{ invalidMembers.length }} member(s) not recognized</span>
-  </div>
-  <p class="text-[10px] text-red-600 mb-1.5">These entries could not be matched in the employee and were skipped:</p>
-  <div class="max-h-28 overflow-y-auto space-y-1">
-    <div v-for="(m, i) in invalidMembers" :key="i"
-      class="flex items-start gap-2 bg-white border border-red-100 rounded px-2 py-1.5 text-[10px]">
-      <svg class="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-      </svg>
-      <div class="min-w-0 flex-1">
-        <p class="font-semibold text-red-800 truncate">{{ m.name || '(no name)' }}</p>
-        <p class="text-red-400">ID: {{ m.emplId || 'N/A' }} </p>
-      </div>
-    </div>
-  </div>
-</div>
+
+          <!-- Invalid members warning (freeSign) -->
+          <div v-if="invalidMembers.length > 0" class="mt-2 bg-red-50 border border-red-200 rounded-lg p-2.5">
+            <div class="flex items-center gap-1.5 mb-1.5">
+              <svg class="w-3.5 h-3.5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              <span class="text-xs font-bold text-red-700">{{ invalidMembers.length }} member(s) not recognized</span>
+            </div>
+            <p class="text-[10px] text-red-600 mb-1.5">These entries could not be matched in the employee directory and were skipped:</p>
+            <div class="max-h-28 overflow-y-auto space-y-1">
+              <div v-for="(m, i) in invalidMembers" :key="i"
+                class="flex items-start gap-2 bg-white border border-red-100 rounded px-2 py-1.5 text-[10px]">
+                <svg class="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+                <div class="min-w-0 flex-1">
+                  <p class="font-semibold text-red-800 truncate">{{ m.name || '(no name)' }}</p>
+                  <p class="text-red-400">Employee ID: {{ m.emplId || 'N/A' }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- Sequential toggle -->
-        <div
-          class="tutorial-target-free-sequential flex items-center justify-between bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+        <div class="tutorial-target-free-sequential flex items-center justify-between bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
           <div class="flex items-center gap-2.5">
-            <input type="checkbox" v-model="enforceSequentialOrder" id="seqFree"
-              class="rounded w-4 h-4 accent-blue-600" />
-            <label for="seqFree" class="text-sm font-semibold text-gray-700 cursor-pointer">Enforce Sequential Signing
-              Order</label>
+            <input type="checkbox" v-model="enforceSequentialOrder" id="seqFree" class="rounded w-4 h-4 accent-blue-600" />
+            <label for="seqFree" class="text-sm font-semibold text-gray-700 cursor-pointer">Enforce Sequential Signing Order</label>
           </div>
           <span v-if="enforceSequentialOrder"
             class="text-xs bg-blue-600 text-white px-2.5 py-0.5 rounded-full font-semibold tracking-wide">ON</span>
@@ -1197,26 +1439,19 @@ onUnmounted(() => {
 
         <!-- Signers list -->
         <div v-if="signers.length > 0" class="tutorial-target-free-list">
-          <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Signers &mdash; {{
-            signers.length }}
-          </p>
-          <draggable v-model="signers" item-key="emplId" @end="onSignersDragEnd" handle=".signer-drag-handle"
-            class="space-y-2">
+          <p class="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Signers &mdash; {{ signers.length }}</p>
+          <draggable v-model="signers" item-key="emplId" @end="onSignersDragEnd" handle=".signer-drag-handle" class="space-y-2">
             <template #item="{ element: s, index }">
-              <div
-                class="flex items-center gap-3 bg-white border-2 rounded-xl px-3 py-3 shadow-sm transition hover:shadow-md"
+              <div class="flex items-center gap-3 bg-white border-2 rounded-xl px-3 py-3 shadow-sm transition hover:shadow-md"
                 :style="{ borderColor: s.color }">
-                <span
-                  class="signer-drag-handle cursor-move text-gray-300 hover:text-gray-500 text-base leading-none select-none">⋮⋮</span>
+                <span class="signer-drag-handle cursor-move text-gray-300 hover:text-gray-500 text-base leading-none select-none">⋮⋮</span>
                 <span v-if="enforceSequentialOrder"
                   class="flex-shrink-0 w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center shadow-sm"
                   :style="{ backgroundColor: s.color }">{{ s.approvalOrder }}</span>
-                <span class="flex-shrink-0 w-3 h-3 rounded-full border border-white shadow-sm"
-                  :style="{ backgroundColor: s.color }"></span>
+                <span class="flex-shrink-0 w-3 h-3 rounded-full border border-white shadow-sm" :style="{ backgroundColor: s.color }"></span>
                 <span class="flex-1 font-medium text-gray-800 text-sm truncate">{{ s.name }}</span>
                 <button @click="removeSigner(index)"
-                  class="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
-                  title="Remove signer">
+                  class="p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition" title="Remove signer">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -1239,8 +1474,7 @@ onUnmounted(() => {
 
       <!-- Footer -->
       <div class="flex items-center justify-between px-6 py-4 border-t bg-gray-50 rounded-b-2xl">
-        <span class="text-xs text-gray-400">{{ signers.length }} signer{{ signers.length !== 1 ? 's' : '' }}
-          selected</span>
+        <span class="text-xs text-gray-400">{{ signers.length }} signer{{ signers.length !== 1 ? 's' : '' }} selected</span>
         <div class="flex gap-2">
           <button @click="emit('close')"
             class="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-600 hover:bg-gray-100 transition font-medium">Cancel</button>
@@ -1291,8 +1525,7 @@ onUnmounted(() => {
             <h3 class="font-semibold text-sm sm:text-base">Options</h3>
             <button @click="showSidebar = false" class="p-1 hover:bg-gray-200 rounded transition">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
               </svg>
             </button>
           </div>
@@ -1302,46 +1535,37 @@ onUnmounted(() => {
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <input type="checkbox" v-model="enforceSequentialOrder" id="sequentialOrder" class="rounded w-4 h-4" />
-                <label for="sequentialOrder" class="text-sm font-semibold text-gray-700">Enforce Sequential Signer
-                  Order</label>
+                <label for="sequentialOrder" class="text-sm font-semibold text-gray-700">Enforce Sequential Signer Order</label>
               </div>
-              <div v-if="enforceSequentialOrder" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">ENABLED
-              </div>
+              <div v-if="enforceSequentialOrder" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">ENABLED</div>
             </div>
-            <p class="text-xs text-gray-500 mt-2">When enabled, signatures must be completed in the order listed below.
-            </p>
+            <p class="text-xs text-gray-500 mt-2">When enabled, signatures must be completed in the order listed below.</p>
           </div>
 
           <!-- Signers List -->
           <div class="tutorial-target-signers bg-white rounded-lg shadow p-4 mb-4">
             <h3 class="font-semibold mb-3">Signers ({{ signers.length }})</h3>
-            <div v-if="signers.length === 0" class="text-sm text-gray-500">No signers yet. Use "Assign" to add from the
-              directory.</div>
-            <draggable v-model="signers" item-key="emplId" @end="onSignersDragEnd" handle=".signer-drag-handle"
-              class="space-y-2">
+            <div v-if="signers.length === 0" class="text-sm text-gray-500">No signers yet. Use "Assign" to add from the directory.</div>
+            <draggable v-model="signers" item-key="emplId" @end="onSignersDragEnd" handle=".signer-drag-handle" class="space-y-2">
               <template #item="{ element: s, index }">
                 <div class="w-full border-2 rounded p-2 transition flex items-center justify-between gap-2"
                   :style="{ borderColor: s.color, backgroundColor: (newBoxForm.assignedEmplId === s.emplId || newBoxForm.assignedTo === s.name) ? hexToRgba(s.color, 0.15) : 'transparent' }"
                   :class="(newBoxForm.assignedEmplId === s.emplId || newBoxForm.assignedTo === s.name) ? 'ring-2' : ''">
                   <div class="flex items-center gap-2 flex-1 min-w-0">
-                    <span class="signer-drag-handle cursor-move text-gray-400 hover:text-gray-600"
-                      title="Drag to reorder">⋮⋮</span>
+                    <span class="signer-drag-handle cursor-move text-gray-400 hover:text-gray-600" title="Drag to reorder">⋮⋮</span>
                     <span v-if="enforceSequentialOrder"
                       class="flex-shrink-0 w-6 h-6 rounded-full text-white text-xs font-bold flex items-center justify-center"
                       :style="{ backgroundColor: s.color }">{{ s.approvalOrder }}</span>
-                    <span class="flex-shrink-0 inline-block w-4 h-4 rounded border border-gray-300"
-                      :style="{ backgroundColor: s.color }"></span>
+                    <span class="flex-shrink-0 inline-block w-4 h-4 rounded border border-gray-300" :style="{ backgroundColor: s.color }"></span>
                     <span class="font-medium truncate">{{ s.name }}</span>
                   </div>
                   <div class="flex items-center gap-1 flex-shrink-0">
                     <button @click="setActiveSigner(s)"
                       class="px-2 py-1 text-xs text-white rounded hover:opacity-90 transition"
                       :style="{ backgroundColor: s.color }">Select</button>
-                    <button @click="removeSigner(index)" class="p-1 hover:bg-red-100 text-red-600 rounded"
-                      title="Remove signer">
+                    <button @click="removeSigner(index)" class="p-1 hover:bg-red-100 text-red-600 rounded" title="Remove signer">
                       <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M6 18L18 6M6 6l12 12" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                       </svg>
                     </button>
                   </div>
@@ -1349,6 +1573,24 @@ onUnmounted(() => {
               </template>
             </draggable>
           </div>
+
+            <!-- ── Auto-Place ── -->
+          <div class="tutorial-target-download bg-green-50 border border-green-200 rounded-lg shadow p-4 mb-4">
+            <div class="flex flex-col items-center gap-2 mb-1.5">
+              <div class="flex items-center gap-2 mb-1.5"><svg class="w-6 h-6 text-green-600" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+              <path fill-rule="evenodd" d="M9 2.221V7H4.221a2 2 0 0 1 .365-.5L8.5 2.586A2 2 0 0 1 9 2.22ZM11 2v5a2 2 0 0 1-2 2H4v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2h-7Z" clip-rule="evenodd"/>
+            </svg>
+
+              <span class="text-sm font-bold text-green-800">Download Excel Files Guide</span></div>
+              <DownloadExcel
+  file-path="/excel/member.xlsx"
+  file-name="member.xlsx"
+  label="Download Member"
+/>
+            </div>
+           
+          </div>
+          
 
           <!-- ── Excel Import (normal mode) ── -->
           <div class="tutorial-target-excel bg-amber-50 border border-amber-200 rounded-lg shadow p-4 mb-4">
@@ -1360,9 +1602,7 @@ onUnmounted(() => {
               <span class="text-sm font-bold text-amber-800">Import Members from Excel</span>
             </div>
             <p class="text-xs text-amber-700 mb-2">Upload <strong>.xlsx</strong> with <code
-                class="bg-amber-100 px-1 rounded">name</code> &amp; <code
-                class="bg-amber-100 px-1 rounded">emplId</code>
-              columns.</p>
+                class="bg-amber-100 px-1 rounded">name</code> &amp; <code class="bg-amber-100 px-1 rounded">emplId</code> columns.</p>
 
             <label
               class="flex items-center justify-center gap-2 py-2 px-3 bg-amber-500 hover:bg-amber-600 text-white text-xs font-semibold rounded-lg cursor-pointer transition w-full mb-2">
@@ -1375,29 +1615,30 @@ onUnmounted(() => {
                 @change="handleExcelUpload" :disabled="excelImporting" />
             </label>
             <p v-if="excelError" class="text-xs text-red-600 font-medium mb-1">{{ excelError }}</p>
-            <!-- Invalid members warning -->
-<div v-if="invalidMembers.length > 0" class="mt-2 mb-3 bg-red-50 border border-red-200 rounded-lg p-2.5">
-  <div class="flex items-center gap-1.5 mb-1.5">
-    <svg class="w-3.5 h-3.5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-        d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-    </svg>
-    <span class="text-xs font-bold text-red-700">{{ invalidMembers.length }} member(s) not recognized</span>
-  </div>
-  <p class="text-[10px] text-red-600 mb-1.5">These entries could not be matched in the employee and were skipped:</p>
-  <div class="max-h-28 overflow-y-auto space-y-1">
-    <div v-for="(m, i) in invalidMembers" :key="i"
-      class="flex items-start gap-2 bg-white border border-red-100 rounded px-2 py-1.5 text-[10px]">
-      <svg class="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-      </svg>
-      <div class="min-w-0 flex-1">
-        <p class="font-semibold text-red-800 truncate">{{ m.name || '(no name)' }}</p>
-        <p class="text-red-400">Employee Id: {{ m.emplId || 'N/A' }} </p>
-      </div>
-    </div>
-  </div>
-</div>
+
+            <!-- Invalid members warning (normal mode) -->
+            <div v-if="invalidMembers.length > 0" class="mt-1 mb-3 bg-red-50 border border-red-200 rounded-lg p-2.5">
+              <div class="flex items-center gap-1.5 mb-1.5">
+                <svg class="w-3.5 h-3.5 text-red-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                </svg>
+                <span class="text-xs font-bold text-red-700">{{ invalidMembers.length }} member(s) not recognized</span>
+              </div>
+              <p class="text-[10px] text-red-600 mb-1.5">These entries could not be matched in the employee directory and were skipped:</p>
+              <div class="max-h-28 overflow-y-auto space-y-1">
+                <div v-for="(m, i) in invalidMembers" :key="i"
+                  class="flex items-start gap-2 bg-white border border-red-100 rounded px-2 py-1.5 text-[10px]">
+                  <svg class="w-3 h-3 text-red-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                  </svg>
+                  <div class="min-w-0 flex-1">
+                    <p class="font-semibold text-red-800 truncate">{{ m.name || '(no name)' }}</p>
+                    <p class="text-red-400">Employee ID: {{ m.emplId || 'N/A' }}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
 
             <!-- Imported members list -->
             <div v-if="importedMembers.length > 0 && showImportedList">
@@ -1405,8 +1646,7 @@ onUnmounted(() => {
                 <span class="text-xs font-bold text-amber-800">{{ importedMembers.length }} member(s) found</span>
                 <div class="flex gap-1.5">
                   <button @click="addAllImportedMembers"
-                    class="text-xs bg-blue-600 text-white px-2 py-0.5 rounded hover:bg-blue-700 transition font-semibold">+
-                    All</button>
+                    class="text-xs bg-blue-600 text-white px-2 py-0.5 rounded hover:bg-blue-700 transition font-semibold">+ All</button>
                   <button @click="showImportedList = false"
                     class="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded hover:bg-gray-300 transition">Hide</button>
                 </div>
@@ -1440,9 +1680,7 @@ onUnmounted(() => {
               </svg>
               <span class="text-sm font-bold text-purple-800">Auto-Place Signatures</span>
             </div>
-            <p class="text-xs text-purple-700 mb-3">Stack signature boxes vertically on a chosen page. Preview shows
-              layout
-              before placing.</p>
+            <p class="text-xs text-purple-700 mb-3">Stack signature boxes on a chosen page. Signed boxes are always preserved.</p>
             <button @click="openAutoPlaceModal" :disabled="signers.length === 0"
               class="w-full py-2 bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1450,8 +1688,7 @@ onUnmounted(() => {
               </svg>
               Auto-Place All Signers
               <span v-if="signers.length > 0"
-                class="ml-1 bg-purple-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">{{ signers.length
-                }}</span>
+                class="ml-1 bg-purple-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">{{ signers.length }}</span>
             </button>
           </div>
 
@@ -1481,19 +1718,22 @@ onUnmounted(() => {
                 </div>
               </div>
               <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-                <div class="flex items-center gap-2"><input type="checkbox" v-model="newBoxForm.hasDate" id="hasDate"
-                    class="rounded" /><label for="hasDate" class="text-sm font-medium text-gray-700">Date field</label>
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" v-model="newBoxForm.hasDate" id="hasDate" class="rounded" />
+                  <label for="hasDate" class="text-sm font-medium text-gray-700">Date field</label>
                 </div>
-                <div class="flex items-center gap-2"><input type="checkbox" v-model="newBoxForm.signatureLock"
-                    id="signatureLock" class="rounded" /><label for="signatureLock"
-                    class="text-sm font-medium text-gray-700">Signature Lock</label></div>
-                <div class="flex items-center gap-2"><input type="checkbox" v-model="newBoxForm.dateLock" id="dateLock"
-                    class="rounded" /><label for="dateLock" class="text-sm font-medium text-gray-700">Date Lock</label>
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" v-model="newBoxForm.signatureLock" id="signatureLock" class="rounded" />
+                  <label for="signatureLock" class="text-sm font-medium text-gray-700">Signature Lock</label>
                 </div>
-                <div class="flex items-center gap-2"><input type="checkbox" v-model="newBoxForm.showName"
-                    id="showNameOnBox" class="rounded" /><label for="showNameOnBox"
-                    class="text-sm font-medium text-gray-700">Show name on
-                    box</label></div>
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" v-model="newBoxForm.dateLock" id="dateLock" class="rounded" />
+                  <label for="dateLock" class="text-sm font-medium text-gray-700">Date Lock</label>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" v-model="newBoxForm.showName" id="showNameOnBox" class="rounded" />
+                  <label for="showNameOnBox" class="text-sm font-medium text-gray-700">Show name on box</label>
+                </div>
               </div>
             </div>
           </div>
@@ -1508,34 +1748,31 @@ onUnmounted(() => {
                 :class="selectedBoxId === box.id ? 'ring-2' : ''" @click="selectAndScrollToBox(box)">
                 <div class="flex items-start justify-between mb-1">
                   <p class="font-semibold text-gray-900 flex items-center gap-2">
-                    <span class="inline-block w-4 h-4 rounded border border-gray-300"
-                      :style="{ backgroundColor: box.color || '#3b82f6' }"></span>
+                    <span class="inline-block w-4 h-4 rounded border border-gray-300" :style="{ backgroundColor: box.color || '#3b82f6' }"></span>
                     {{ box.assignedTo }}
                     <span v-if="enforceSequentialOrder" class="text-xs px-1.5 py-0.5 rounded text-white font-bold"
                       :style="{ backgroundColor: box.color || '#3b82f6' }">#{{ box.approvalOrder }}</span>
                   </p>
                   <button @click.stop="deleteBox(index)" class="text-red-500 hover:text-red-700">🗑️</button>
                 </div>
-                <div class="text-xs text-gray-500">Page {{ box.page }}<span v-if="box.hasDate"
-                    class="text-green-600 ml-1">(+Date)</span></div>
-                <div class="text-xs text-gray-500">Has Name = <span
-                    :class="box.showName ? 'text-white rounded-lg bg-green-600 px-2' : 'text-white rounded-lg bg-red-600 px-2'">{{
-                      box.showName ? 'True' : 'False' }}</span></div>
+                <div class="text-xs text-gray-500">Page {{ box.page }}<span v-if="box.hasDate" class="text-green-600 ml-1">(+Date)</span></div>
+                <!-- isEmpty=false badge: shows this box is already signed and locked from auto-place -->
+                <div v-if="box.isEmpty === false" class="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-white bg-gray-500 px-2 py-0.5 rounded-full">
+                  ✍️ Signed — excluded from auto-place
+                </div>
+                <div v-else class="text-xs text-gray-500">Has Name = <span
+                    :class="box.showName ? 'text-white rounded-lg bg-green-600 px-2' : 'text-white rounded-lg bg-red-600 px-2'">{{ box.showName ? 'True' : 'False' }}</span></div>
                 <div class="text-xs text-gray-500">Signature Lock = <span
-                    :class="box.signatureLock ? 'text-white rounded-lg bg-green-600 px-2' : 'text-white rounded-lg bg-red-600 px-2'">{{
-                      box.signatureLock ? 'True' : 'False' }}</span></div>
+                    :class="box.signatureLock ? 'text-white rounded-lg bg-green-600 px-2' : 'text-white rounded-lg bg-red-600 px-2'">{{ box.signatureLock ? 'True' : 'False' }}</span></div>
                 <div class="text-xs text-gray-500">Date Lock = <span
-                    :class="box.dateLock ? 'text-white rounded-lg bg-green-600 px-2' : 'text-white rounded-lg bg-red-600 px-2'">{{
-                      box.dateLock ? 'True' : 'False' }}</span></div>
+                    :class="box.dateLock ? 'text-white rounded-lg bg-green-600 px-2' : 'text-white rounded-lg bg-red-600 px-2'">{{ box.dateLock ? 'True' : 'False' }}</span></div>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Mobile backdrop for sidebar -->
-        <div v-if="showSidebar" class="fixed inset-0 bg-black bg-opacity-20 z-20 sm:hidden"
-          @click="showSidebar = false">
-        </div>
+        <div v-if="showSidebar" class="fixed inset-0 bg-black bg-opacity-20 z-20 sm:hidden" @click="showSidebar = false"></div>
 
         <!-- Sidebar toggle -->
         <button v-if="!showSidebar" @click="showSidebar = true"
@@ -1545,11 +1782,8 @@ onUnmounted(() => {
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
           </svg>
           <div class="flex gap-0.5 text-xs">
-            <span v-if="signatureBoxes.length > 0" class="bg-green-500 px-1.5 py-0.5 rounded font-bold text-[10px]">{{
-              signatureBoxes.length }}</span>
-            <span v-if="signers.length > 0"
-              class="bg-white text-blue-600 px-1.5 py-0.5 rounded font-bold text-[10px]">{{
-                signers.length }}</span>
+            <span v-if="signatureBoxes.length > 0" class="bg-green-500 px-1.5 py-0.5 rounded font-bold text-[10px]">{{ signatureBoxes.length }}</span>
+            <span v-if="signers.length > 0" class="bg-white text-blue-600 px-1.5 py-0.5 rounded font-bold text-[10px]">{{ signers.length }}</span>
           </div>
         </button>
 
@@ -1565,8 +1799,7 @@ onUnmounted(() => {
               </svg>
               <span class="hidden sm:inline">Previous</span>
             </button>
-            <span class="text-xs sm:text-sm font-semibold text-gray-700">Page {{ currentViewPage }} / {{ totalPages
-              }}</span>
+            <span class="text-xs sm:text-sm font-semibold text-gray-700">Page {{ currentViewPage }} / {{ totalPages }}</span>
             <button @click="goToNextPage" :disabled="currentViewPage === totalPages"
               class="px-2 py-1.5 sm:px-4 sm:py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1 text-sm">
               <span class="hidden sm:inline">Next</span>
@@ -1626,8 +1859,7 @@ onUnmounted(() => {
                     :class="{ 'opacity-0 group-hover:opacity-100': !(isDragging && selectedBoxId === box.id), 'opacity-100 scale-105': isDragging && selectedBoxId === box.id }"
                     :style="{ backgroundColor: box.color || '#3b82f6' }">
                     {{ box.assignedTo }}
-                    <span v-if="enforceSequentialOrder" class="ml-1 px-1.5 py-0.5 bg-white bg-opacity-30 rounded">#{{
-                      box.approvalOrder }}</span>
+                    <span v-if="enforceSequentialOrder" class="ml-1 px-1.5 py-0.5 bg-white bg-opacity-30 rounded">#{{ box.approvalOrder }}</span>
                     <span v-if="box.signatureLock">🔒</span>
                   </div>
 
@@ -1644,44 +1876,32 @@ onUnmounted(() => {
 
                   <template v-if="box.isEmpty || box.isEmpty == null">
                     <template v-if="!box.signatureLock">
-                      <div
-                        class="absolute w-3 h-3 bg-white border-2 rounded-full -top-1.5 -left-1.5  cursor-nw-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                      <div class="absolute w-3 h-3 bg-white border-2 rounded-full -top-1.5 -left-1.5 cursor-nw-resize opacity-0 group-hover:opacity-100 transition-opacity"
                         :style="{ borderColor: box.color || '#3b82f6' }"
                         @mousedown.stop="startResizing($event, box.id, 'nw')"></div>
-                      <div
-                        class="absolute w-3 h-3 bg-white border-2 rounded-full -top-1.5 -right-1.5 cursor-ne-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                      <div class="absolute w-3 h-3 bg-white border-2 rounded-full -top-1.5 -right-1.5 cursor-ne-resize opacity-0 group-hover:opacity-100 transition-opacity"
                         :style="{ borderColor: box.color || '#3b82f6' }"
                         @mousedown.stop="startResizing($event, box.id, 'ne')"></div>
-                      <div
-                        class="absolute w-3 h-3 bg-white border-2 rounded-full -bottom-1.5 -left-1.5  cursor-sw-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                      <div class="absolute w-3 h-3 bg-white border-2 rounded-full -bottom-1.5 -left-1.5 cursor-sw-resize opacity-0 group-hover:opacity-100 transition-opacity"
                         :style="{ borderColor: box.color || '#3b82f6' }"
                         @mousedown.stop="startResizing($event, box.id, 'sw')"></div>
-                      <div
-                        class="absolute w-3 h-3 bg-white border-2 rounded-full -bottom-1.5 -right-1.5 cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                      <div class="absolute w-3 h-3 bg-white border-2 rounded-full -bottom-1.5 -right-1.5 cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity"
                         :style="{ borderColor: box.color || '#3b82f6' }"
                         @mousedown.stop="startResizing($event, box.id, 'se')"></div>
                     </template>
                     <div class="flex flex-col items-center justify-center h-full relative">
-                      <span class="text-xs font-bold opacity-50 italic z-10 px-1"
-                        :style="{ color: box.color || '#3b82f6' }">Signature Area</span>
-                      <div v-if="box.showName" class="absolute bottom-3 w-4/5 border-t border-gray-400 text-black pb-2">
-                      </div>
+                      <span class="text-xs font-bold opacity-50 italic z-10 px-1" :style="{ color: box.color || '#3b82f6' }">Signature Area</span>
+                      <div v-if="box.showName" class="absolute bottom-3 w-4/5 border-t border-gray-400 text-black pb-2"></div>
                       <span v-if="box.showName"
-                        class="absolute bottom-0 text-[11px] font-semibold tracking-wide text-center w-full text-black">{{
-                        box.assignedTo }}</span>
+                        class="absolute bottom-0 text-[11px] font-semibold tracking-wide text-center w-full text-black">{{ box.assignedTo }}</span>
                     </div>
                   </template>
                   <template v-else>
                     <div class="flex flex-col items-center justify-center h-full relative">
-                      <img v-if="box.imageSrc" :src="box.imageSrc" alt="Signature"
-                        class="w-full h-full object-contain z-10" />
-                      <span v-else class="text-xs font-bold opacity-50 italic z-10 bg-white px-1"
-                        :style="{ color: box.color || '#3b82f6' }">Signature Area</span>
-                      <div v-if="box.showName && box.isEmpty == true"
-                        class="absolute bottom-3 w-4/5 border-t border-gray-400 opacity-60"></div>
-                      <span v-if="box.showName"
-                        class="absolute bottom-0 text-[10px] font-semibold tracking-wide text-center w-full">{{
-                        box.assignedTo }}</span>
+                      <img v-if="box.imageSrc" :src="box.imageSrc" alt="Signature" class="w-full h-full object-contain z-10" />
+                      <span v-else class="text-xs font-bold opacity-50 italic z-10 bg-white px-1" :style="{ color: box.color || '#3b82f6' }">Signature Area</span>
+                      <div v-if="box.showName && box.isEmpty == true" class="absolute bottom-3 w-4/5 border-t border-gray-400 opacity-60"></div>
+                      <span v-if="box.showName" class="absolute bottom-0 text-[10px] font-semibold tracking-wide text-center w-full">{{ box.assignedTo }}</span>
                     </div>
                   </template>
                 </div>
@@ -1718,11 +1938,9 @@ onUnmounted(() => {
         </div>
         <div class="text-xs text-gray-600 sm:hidden">{{ signatureBoxes.length }} box(es)</div>
         <div class="flex gap-2 sm:gap-3 ml-auto sm:ml-0">
-          <button @click="emit('close')"
-            class="px-3 py-1.5 sm:px-4 sm:py-2 border rounded hover:bg-gray-50 text-sm">Cancel</button>
+          <button @click="emit('close')" class="px-3 py-1.5 sm:px-4 sm:py-2 border rounded hover:bg-gray-50 text-sm">Cancel</button>
           <button @click="saveSignatures"
-            class="tutorial-target-save px-4 py-1.5 sm:px-6 sm:py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold text-sm">Save
-            Output</button>
+            class="tutorial-target-save px-4 py-1.5 sm:px-6 sm:py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold text-sm">Save Output</button>
         </div>
       </div>
     </div>
@@ -1740,9 +1958,7 @@ onUnmounted(() => {
           <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-shrink-0">
             <div>
               <h3 class="text-base font-bold text-gray-900">⚡ Auto-Place Signatures</h3>
-              <p class="text-xs text-gray-400 mt-0.5">Configure layout direction, size &amp; spacing · live preview
-                before
-                placing</p>
+              <p class="text-xs text-gray-400 mt-0.5">Configure layout · signed boxes are always preserved</p>
             </div>
             <button @click="showAutoPlaceModal = false"
               class="w-8 h-8 flex items-center justify-center hover:bg-gray-100 rounded-full transition text-gray-400 hover:text-gray-700 text-lg font-light">✕</button>
@@ -1757,8 +1973,7 @@ onUnmounted(() => {
 
                 <!-- Starting Page -->
                 <div>
-                  <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">Starting
-                    Page</label>
+                  <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">Starting Page</label>
                   <div class="flex items-center gap-2">
                     <button @click="autoPlaceForm.startPage = totalPages"
                       class="px-3 py-2 text-xs font-semibold rounded-xl border-2 transition flex-shrink-0"
@@ -1770,8 +1985,7 @@ onUnmounted(() => {
                         class="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-gray-200 hover:border-purple-400 hover:bg-purple-50 text-gray-600 font-bold transition text-base">−</button>
                       <input type="number" v-model.number="autoPlaceForm.startPage" min="1" :max="totalPages"
                         class="flex-1 border-2 rounded-xl px-3 py-2 text-sm text-center font-bold focus:outline-none focus:border-purple-500 transition" />
-                      <button
-                        @click="autoPlaceForm.startPage = Math.min(totalPages, (autoPlaceForm.startPage || 1) + 1)"
+                      <button @click="autoPlaceForm.startPage = Math.min(totalPages, (autoPlaceForm.startPage || 1) + 1)"
                         class="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-gray-200 hover:border-purple-400 hover:bg-purple-50 text-gray-600 font-bold transition text-base">+</button>
                     </div>
                     <span class="text-xs text-gray-400 flex-shrink-0">/ {{ totalPages }}</span>
@@ -1780,19 +1994,15 @@ onUnmounted(() => {
 
                 <!-- Direction Toggle -->
                 <div>
-                  <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">Layout
-                    Direction</label>
+                  <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">Layout Direction</label>
                   <div class="grid grid-cols-2 gap-2">
                     <button @click="autoPlaceForm.direction = 'vertical'"
                       class="flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition"
                       :class="autoPlaceForm.direction === 'vertical' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'">
                       <svg class="w-8 h-8" viewBox="0 0 32 32" fill="none">
-                        <rect x="6" y="5" width="20" height="6" rx="2"
-                          :fill="autoPlaceForm.direction === 'vertical' ? '#7c3aed' : '#d1d5db'" />
-                        <rect x="6" y="13" width="20" height="6" rx="2"
-                          :fill="autoPlaceForm.direction === 'vertical' ? '#7c3aed' : '#d1d5db'" />
-                        <rect x="6" y="21" width="20" height="6" rx="2"
-                          :fill="autoPlaceForm.direction === 'vertical' ? '#7c3aed' : '#d1d5db'" />
+                        <rect x="6" y="5" width="20" height="6" rx="2" :fill="autoPlaceForm.direction === 'vertical' ? '#7c3aed' : '#d1d5db'" />
+                        <rect x="6" y="13" width="20" height="6" rx="2" :fill="autoPlaceForm.direction === 'vertical' ? '#7c3aed' : '#d1d5db'" />
+                        <rect x="6" y="21" width="20" height="6" rx="2" :fill="autoPlaceForm.direction === 'vertical' ? '#7c3aed' : '#d1d5db'" />
                       </svg>
                       <div class="text-center">
                         <p class="text-xs font-bold leading-tight">Vertical</p>
@@ -1803,12 +2013,9 @@ onUnmounted(() => {
                       class="flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition"
                       :class="autoPlaceForm.direction === 'horizontal' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'">
                       <svg class="w-8 h-8" viewBox="0 0 32 32" fill="none">
-                        <rect x="2" y="8" width="8" height="16" rx="2"
-                          :fill="autoPlaceForm.direction === 'horizontal' ? '#7c3aed' : '#d1d5db'" />
-                        <rect x="12" y="8" width="8" height="16" rx="2"
-                          :fill="autoPlaceForm.direction === 'horizontal' ? '#7c3aed' : '#d1d5db'" />
-                        <rect x="22" y="8" width="8" height="16" rx="2"
-                          :fill="autoPlaceForm.direction === 'horizontal' ? '#7c3aed' : '#d1d5db'" />
+                        <rect x="2" y="8" width="8" height="16" rx="2" :fill="autoPlaceForm.direction === 'horizontal' ? '#7c3aed' : '#d1d5db'" />
+                        <rect x="12" y="8" width="8" height="16" rx="2" :fill="autoPlaceForm.direction === 'horizontal' ? '#7c3aed' : '#d1d5db'" />
+                        <rect x="22" y="8" width="8" height="16" rx="2" :fill="autoPlaceForm.direction === 'horizontal' ? '#7c3aed' : '#d1d5db'" />
                       </svg>
                       <div class="text-center">
                         <p class="text-xs font-bold leading-tight">Horizontal</p>
@@ -1820,8 +2027,7 @@ onUnmounted(() => {
 
                 <!-- Box Size -->
                 <div>
-                  <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">Signature Box
-                    Size</label>
+                  <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">Signature Box Size</label>
                   <div class="space-y-3">
                     <div class="bg-gray-50 rounded-xl p-3">
                       <div class="flex items-center justify-between mb-1.5">
@@ -1833,29 +2039,26 @@ onUnmounted(() => {
                           <span class="text-xs text-gray-400">px</span>
                         </div>
                       </div>
-                      <input type="range" v-model.number="autoPlaceForm.sigWidth" min="60" max="400" step="5"
-                        class="w-full accent-purple-600" />
+                      <input type="range" v-model.number="autoPlaceForm.sigWidth" min="60" max="400" step="5" class="w-full accent-purple-600" />
                     </div>
                     <div class="bg-gray-50 rounded-xl p-3">
                       <div class="flex items-center justify-between mb-1.5">
                         <span class="text-xs font-semibold text-gray-600">Height</span>
                         <div class="flex items-center gap-1">
-                          <input type="number" v-model.number="autoPlaceForm.sigHeight" min="20" max="200"
+                          <input type="number" v-model.number="autoPlaceForm.sigHeight" min="30" max="200"
                             class="w-16 border rounded-lg px-2 py-1 text-xs text-center font-bold focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white transition"
                             :class="autoPlaceLayout.sigOverflowY ? 'border-red-400 bg-red-50 text-red-700' : 'border-gray-200'" />
                           <span class="text-xs text-gray-400">px</span>
                         </div>
                       </div>
-                      <input type="range" v-model.number="autoPlaceForm.sigHeight" min="20" max="150" step="5"
-                        class="w-full accent-purple-600" />
+                      <input type="range" v-model.number="autoPlaceForm.sigHeight" min="30" max="150" step="5" class="w-full accent-purple-600" />
                     </div>
                   </div>
                 </div>
 
                 <!-- Spacing -->
                 <div>
-                  <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">Spacing &amp;
-                    Margins</label>
+                  <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">Spacing &amp; Margins</label>
                   <div class="grid grid-cols-2 gap-2">
                     <div class="bg-gray-50 rounded-xl p-3">
                       <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">
@@ -1869,23 +2072,22 @@ onUnmounted(() => {
                     </div>
                     <div class="bg-gray-50 rounded-xl p-3">
                       <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Left margin</label>
-                      <input type="number" v-model.number="autoPlaceForm.marginX" min="0" max="200"
+                      <input type="number" v-model.number="autoPlaceForm.marginX" min="1" max="700" @input="autoPlaceForm.marginX = Math.max(1, Math.min(700, autoPlaceForm.marginX || 1))"
                         class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white" />
                     </div>
                     <div class="bg-gray-50 rounded-xl p-3">
                       <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Top margin</label>
-                      <input type="number" v-model.number="autoPlaceForm.marginY" min="0" max="200"
+                      <input type="number" v-model.number="autoPlaceForm.marginY" min="1" max="200" @input="autoPlaceForm.marginY = Math.max(1, Math.min(200, autoPlaceForm.marginY || 1))"
                         class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white" />
                     </div>
                     <div class="bg-gray-50 rounded-xl p-3">
                       <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Bottom margin</label>
-                      <input type="number" v-model.number="autoPlaceForm.marginB" min="0" max="200"
+                      <input type="number" v-model.number="autoPlaceForm.marginB" min="1" max="200" @input="autoPlaceForm.marginB = Math.max(1, Math.min(200, autoPlaceForm.marginB || 1))"
                         class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white" />
                     </div>
-                    <!-- Right margin — only in horizontal mode -->
                     <div v-if="autoPlaceForm.direction === 'horizontal'" class="bg-gray-50 rounded-xl p-3 col-span-2">
                       <label class="block text-[10px] font-bold text-gray-400 uppercase mb-1">Right margin</label>
-                      <input type="number" v-model.number="autoPlaceForm.marginR" min="0" max="200"
+                      <input type="number" v-model.number="autoPlaceForm.marginR" min="1" max="200" @input="autoPlaceForm.marginR = Math.max(1, Math.min(200, autoPlaceForm.marginR || 1))"
                         class="w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm text-center font-bold focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white" />
                     </div>
                   </div>
@@ -1917,20 +2119,72 @@ onUnmounted(() => {
                   </div>
                 </div>
 
+                <!-- Keep Existing Positions toggle -->
+                <div class="border-2 rounded-xl p-4 transition"
+                  :class="autoPlaceForm.keepExisting ? 'border-green-200 bg-green-50' : 'border-orange-200 bg-orange-50'">
+                  <label class="flex items-start gap-3 cursor-pointer">
+                    <input type="checkbox" v-model="autoPlaceForm.keepExisting"
+                      class="rounded accent-green-600 w-4 h-4 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p class="text-sm font-bold" :class="autoPlaceForm.keepExisting ? 'text-green-800' : 'text-orange-800'">
+                        {{ autoPlaceForm.keepExisting ? '🔒 Keep existing positions' : '🔄 Replace all positions' }}
+                      </p>
+                      <p class="text-[11px] mt-0.5 leading-relaxed"
+                        :class="autoPlaceForm.keepExisting ? 'text-green-700' : 'text-orange-700'">
+                        {{ autoPlaceForm.keepExisting
+                          ? 'Signers who already have empty boxes stay put. Only signers without a box will be auto-placed.'
+                          : 'All existing empty boxes are removed and replaced. Signed boxes are always kept regardless.' }}
+                      </p>
+                    </div>
+                  </label>
+
+                  <!-- Per-signer placement preview -->
+                  <div v-if="signers.length > 0" class="mt-3 pt-3 border-t space-y-1"
+                    :class="autoPlaceForm.keepExisting ? 'border-green-200' : 'border-orange-200'">
+                    <p class="text-[10px] font-bold uppercase tracking-widest mb-1.5"
+                      :class="autoPlaceForm.keepExisting ? 'text-green-700' : 'text-orange-700'">Signer status</p>
+                    <div v-for="s in signers" :key="s.emplId || s.name"
+                      class="flex items-center gap-2 text-[11px] px-2.5 py-1.5 rounded-lg"
+                      :class="
+                        autoPlaceSignedSigners.some(x => (x.emplId && x.emplId === s.emplId) || x.name === s.name)
+                          ? 'bg-gray-100 text-gray-500'
+                          : autoPlaceKeptSigners.some(x => (x.emplId && x.emplId === s.emplId) || x.name === s.name)
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-white border text-gray-800'
+                      ">
+                      <span class="w-2 h-2 rounded-full flex-shrink-0" :style="{ backgroundColor: s.color }"></span>
+                      <span class="flex-1 truncate font-medium">{{ s.name }}</span>
+                      <span class="flex-shrink-0 font-semibold text-[10px] px-1.5 py-0.5 rounded-full"
+                        :class="
+                          autoPlaceSignedSigners.some(x => (x.emplId && x.emplId === s.emplId) || x.name === s.name)
+                            ? 'bg-gray-300 text-gray-600'
+                            : autoPlaceKeptSigners.some(x => (x.emplId && x.emplId === s.emplId) || x.name === s.name)
+                              ? 'bg-green-200 text-green-800'
+                              : 'bg-purple-100 text-purple-700'
+                        ">
+                        {{
+                          autoPlaceSignedSigners.some(x => (x.emplId && x.emplId === s.emplId) || x.name === s.name)
+                            ? '✍️ signed — skipped'
+                            : autoPlaceKeptSigners.some(x => (x.emplId && x.emplId === s.emplId) || x.name === s.name)
+                              ? '✓ keeping'
+                              : '→ placing'
+                        }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
                 <!-- Options -->
                 <div>
-                  <label
-                    class="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">Options</label>
+                  <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">Options</label>
                   <div class="grid grid-cols-3 gap-2">
                     <label
                       v-for="opt in [{ key: 'sigLock', label: 'Sig Lock 🔒' }, { key: 'dateLock', label: 'Date Lock 🔒' }, { key: 'showName', label: 'Show Name' }]"
                       :key="opt.key"
                       class="flex flex-col items-center gap-1.5 bg-gray-50 rounded-xl px-3 py-3 cursor-pointer hover:bg-gray-100 transition border-2"
                       :class="autoPlaceForm[opt.key] ? 'border-purple-400 bg-purple-50' : 'border-transparent'">
-                      <input type="checkbox" v-model="autoPlaceForm[opt.key]"
-                        class="rounded accent-purple-600 w-4 h-4" />
-                      <span class="text-[11px] font-semibold text-gray-600 text-center leading-tight">{{ opt.label
-                        }}</span>
+                      <input type="checkbox" v-model="autoPlaceForm[opt.key]" class="rounded accent-purple-600 w-4 h-4" />
+                      <span class="text-[11px] font-semibold text-gray-600 text-center leading-tight">{{ opt.label }}</span>
                     </label>
                   </div>
                 </div>
@@ -1938,8 +2192,19 @@ onUnmounted(() => {
 
               <!-- RIGHT: Live Preview -->
               <div class="p-5 flex flex-col gap-4">
-                <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-widest">Live Page
-                  Preview</label>
+                <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-widest">Live Page Preview</label>
+
+                <!-- Signed signers notice -->
+                <div v-if="autoPlaceSignedSigners.length > 0"
+                  class="bg-gray-50 border border-gray-200 rounded-xl p-3 flex items-start gap-2">
+                  <span class="text-base flex-shrink-0">✍️</span>
+                  <div>
+                    <p class="text-xs font-bold text-gray-700">{{ autoPlaceSignedSigners.length }} signer(s) already signed</p>
+                    <p class="text-[11px] text-gray-500 mt-0.5">
+                      {{ autoPlaceSignedSigners.map(s => s.name.split(',')[0]).join(', ') }} — their boxes are preserved and excluded from auto-placement.
+                    </p>
+                  </div>
+                </div>
 
                 <!-- Overflow / Warning banners -->
                 <div v-if="autoPlaceLayout.hasOverflow"
@@ -1949,53 +2214,50 @@ onUnmounted(() => {
                     <span class="text-xs font-bold text-red-700">Box size causes overflow!</span>
                   </div>
                   <div class="space-y-1 text-xs text-red-600">
-                    <p v-if="autoPlaceLayout.sigOverflowX">↔ Width <strong>{{ autoPlaceForm.sigWidth }}px</strong>
-                      exceeds
-                      available space (<strong>{{ Math.round(autoPlaceLayout.CW - autoPlaceLayout.mX) }}px</strong>).
-                    </p>
-                    <p v-if="autoPlaceLayout.sigOverflowY">↕ Block height <strong>{{ autoPlaceLayout.blockH
-                        }}px</strong>
-                      exceeds usable vertical space (<strong>{{ Math.round(autoPlaceLayout.usableH) }}px</strong>).</p>
+                    <p v-if="autoPlaceLayout.sigOverflowX">↔ Width <strong>{{ autoPlaceForm.sigWidth }}px</strong> exceeds available space (<strong>{{ Math.round(autoPlaceLayout.CW - autoPlaceLayout.mX) }}px</strong>).</p>
+                    <p v-if="autoPlaceLayout.sigOverflowY">↕ Block height <strong>{{ autoPlaceLayout.blockH }}px</strong> exceeds usable vertical space (<strong>{{ Math.round(autoPlaceLayout.usableH) }}px</strong>).</p>
                   </div>
                   <button @click="applySuggestedSize"
                     class="mt-1 w-full py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded-lg transition">
-                    🔧 Auto-fix: resize to fit ({{ autoPlaceLayout.suggestedSigW }} × {{ autoPlaceLayout.suggestedSigH
-                    }}
-                    px)
+                    🔧 Auto-fix: resize to fit ({{ autoPlaceLayout.suggestedSigW }} × {{ autoPlaceLayout.suggestedSigH }} px)
                   </button>
                 </div>
 
-                <div v-else-if="autoPlaceLayout.exceedsDoc"
-                  class="bg-amber-50 border-2 border-amber-300 rounded-xl p-3">
+                <div v-else-if="autoPlaceLayout.exceedsDoc" class="bg-amber-50 border-2 border-amber-300 rounded-xl p-3">
                   <div class="flex items-center gap-2 mb-1">
                     <span class="text-amber-500">⚠️</span>
                     <span class="text-xs font-bold text-amber-700">Not enough pages in document!</span>
                   </div>
                   <p class="text-xs text-amber-600">
-                    Needs <strong>{{ autoPlaceLayout.pagesNeeded }}</strong> page(s) from page <strong>{{
-                      autoPlaceLayout.startPage }}</strong>
-                    but document only has <strong>{{ totalPages }}</strong> pages. Try a smaller starting page or
-                    increase
-                    box height to fit more per page.
+                    Needs <strong>{{ autoPlaceLayout.pagesNeeded }}</strong> page(s) from page <strong>{{ autoPlaceLayout.startPage }}</strong>
+                    but document only has <strong>{{ totalPages }}</strong> pages.
                   </p>
+                </div>
+
+                <div v-else-if="autoPlaceLayout.total === 0" class="bg-blue-50 border-2 border-blue-200 rounded-xl p-3 flex items-center gap-2">
+                  <span class="text-blue-500">ℹ️</span>
+                  <span class="text-xs font-semibold text-blue-700">
+                    {{ autoPlaceSignedSigners.length === signers.length
+                      ? 'All signers have already signed — nothing to place.'
+                      : 'All signers already have boxes. Uncheck "Keep existing positions" to re-place.' }}
+                  </span>
                 </div>
 
                 <div v-else class="bg-green-50 border-2 border-green-200 rounded-xl p-3 flex items-center gap-2">
                   <span class="text-green-500">✅</span>
-                  <span class="text-xs font-semibold text-green-700">All {{ autoPlaceLayout.total }} boxes fit across {{
-                    autoPlaceLayout.pagesNeeded }} page(s) — no overflow.</span>
+                  <span class="text-xs font-semibold text-green-700">
+                    {{ autoPlaceLayout.total }} box{{ autoPlaceLayout.total !== 1 ? 'es' : '' }} will be placed across {{ autoPlaceLayout.pagesNeeded }} page(s) — no overflow.
+                  </span>
                 </div>
 
                 <!-- Horizontal grid info pill -->
-                <div v-if="autoPlaceLayout.direction === 'horizontal' && !autoPlaceLayout.hasOverflow"
+                <div v-if="autoPlaceLayout.direction === 'horizontal' && !autoPlaceLayout.hasOverflow && autoPlaceLayout.total > 0"
                   class="bg-purple-50 border border-purple-200 rounded-xl px-3 py-2 flex items-center justify-center gap-2 text-xs text-purple-700 font-semibold">
                   <svg class="w-3.5 h-3.5 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                      d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
                   </svg>
                   {{ autoPlaceLayout.colsPerRow }} col{{ autoPlaceLayout.colsPerRow !== 1 ? 's' : '' }}
-                  &times; {{ autoPlaceLayout.rowsPerPage }} row{{ autoPlaceLayout.rowsPerPage !== 1 ? 's' : '' }} per
-                  page
+                  &times; {{ autoPlaceLayout.rowsPerPage }} row{{ autoPlaceLayout.rowsPerPage !== 1 ? 's' : '' }} per page
                 </div>
 
                 <!-- Stats row -->
@@ -2010,7 +2272,7 @@ onUnmounted(() => {
                   </div>
                   <div class="bg-gray-50 rounded-xl py-2.5 px-1">
                     <p class="text-lg font-black text-gray-800">{{ autoPlaceLayout.total }}</p>
-                    <p class="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">total boxes</p>
+                    <p class="text-[10px] text-gray-400 font-semibold uppercase tracking-wide">placing</p>
                   </div>
                 </div>
 
@@ -2034,60 +2296,96 @@ onUnmounted(() => {
                     </div>
 
                     <!-- Mini page canvas -->
-                    <div class="relative mx-3 my-2 rounded border border-gray-200 bg-gray-50 overflow-hidden"
-                      style="height:120px;">
-                      <div
-                        class="absolute inset-0 flex items-center justify-center text-[9px] text-gray-300 font-semibold uppercase tracking-widest select-none">
-                        PDF Page</div>
+<div class="relative mx-3 my-2 rounded border border-gray-200 bg-gray-50 overflow-hidden" style="height:120px;">
+  <div class="absolute inset-0 flex items-center justify-center text-[9px] text-gray-300 font-semibold uppercase tracking-widest select-none">PDF Page</div>
 
-                      <template v-if="!autoPlaceLayout.hasOverflow && !pg.overflow">
-                        <!-- Signature boxes drawn to scale -->
-                        <div v-for="(signer, si) in pg.signers" :key="si" class="absolute rounded" :style="autoPlaceLayout.direction === 'horizontal' ? (() => { const col = si % autoPlaceLayout.colsPerRow; const row = Math.floor(si / autoPlaceLayout.colsPerRow); return { left: ((autoPlaceLayout.mX + col * (autoPlaceLayout.sigW + autoPlaceLayout.gX)) / autoPlaceLayout.CW * 100) + '%', top: (((autoPlaceLayout.mY + row * (autoPlaceLayout.blockH + autoPlaceLayout.gY)) / autoPlaceLayout.CH) * 120) + 'px', width: ((autoPlaceLayout.sigW / autoPlaceLayout.CW) * 100) + '%', height: ((autoPlaceLayout.sigH / autoPlaceLayout.CH) * 120) + 'px', backgroundColor: (signer.color || '#8b5cf6') + '33', borderColor: signer.color || '#8b5cf6', borderWidth: '1.5px', borderStyle: 'solid' }; })() : {
-                          left: ((autoPlaceLayout.mX / autoPlaceLayout.CW) * 100) + '%',
-                          top: (((autoPlaceLayout.mY + si * (autoPlaceLayout.blockH + autoPlaceLayout.gY)) / autoPlaceLayout.CH) * 120) + 'px',
-                          width: ((autoPlaceLayout.sigW / autoPlaceLayout.CW) * 100) + '%',
-                          height: ((autoPlaceLayout.sigH / autoPlaceLayout.CH) * 120) + 'px',
-                          backgroundColor: (signer.color || '#8b5cf6') + '33',
-                          borderColor: signer.color || '#8b5cf6',
-                          borderWidth: '1.5px', borderStyle: 'solid',
-                        }">
-                          <span
-                            class="absolute inset-0 flex items-center justify-center text-[8px] font-bold truncate px-1"
-                            :style="{ color: signer.color || '#8b5cf6' }">
-                            {{ signer.name.split(' ')[0] }}
-                          </span>
-                        </div>
-                        <!-- Date bars -->
-                        <template v-if="autoPlaceForm.hasDate">
-                          <div v-for="(signer, si) in pg.signers" :key="'d' + si" class="absolute rounded-sm opacity-60"
-                            :style="autoPlaceLayout.direction === 'horizontal' ? (() => { const col = si % autoPlaceLayout.colsPerRow; const row = Math.floor(si / autoPlaceLayout.colsPerRow); return { left: ((autoPlaceLayout.mX + col * (autoPlaceLayout.sigW + autoPlaceLayout.gX)) / autoPlaceLayout.CW * 100) + '%', top: (((autoPlaceLayout.mY + row * (autoPlaceLayout.blockH + autoPlaceLayout.gY) + autoPlaceLayout.sigH + autoPlaceLayout.dateGp) / autoPlaceLayout.CH) * 120) + 'px', width: ((Math.min(autoPlaceForm.dateWidth, autoPlaceLayout.sigW) / autoPlaceLayout.CW) * 100) + '%', height: ((autoPlaceLayout.dateH / autoPlaceLayout.CH) * 120) + 'px', backgroundColor: signer.color || '#8b5cf6' }; })() : {
-                              left: ((autoPlaceLayout.mX / autoPlaceLayout.CW) * 100) + '%',
-                              top: (((autoPlaceLayout.mY + si * (autoPlaceLayout.blockH + autoPlaceLayout.gY) + autoPlaceLayout.sigH + autoPlaceLayout.dateGp) / autoPlaceLayout.CH) * 120) + 'px',
-                              width: ((Math.min(autoPlaceForm.dateWidth, autoPlaceLayout.sigW) / autoPlaceLayout.CW) * 100) + '%',
-                              height: ((autoPlaceLayout.dateH / autoPlaceLayout.CH) * 120) + 'px',
-                              backgroundColor: signer.color || '#8b5cf6',
-                            }">
-                          </div>
-                        </template>
-                      </template>
+  <template v-if="!autoPlaceLayout.hasOverflow && !pg.overflow">
 
-                      <!-- Overflow hatching -->
-                      <div v-else-if="autoPlaceLayout.hasOverflow"
-                        class="absolute inset-0 flex items-center justify-center"
-                        style="background:repeating-linear-gradient(45deg,transparent,transparent 6px,rgba(239,68,68,0.15) 6px,rgba(239,68,68,0.15) 12px);">
-                        <span class="text-xs font-bold text-red-500 bg-white px-2 py-1 rounded-lg shadow">Resize
-                          needed</span>
-                      </div>
-                    </div>
+    <!-- Existing boxes: signed ones always shown; empty ones only shown if keepExisting=true -->
+    <template v-for="existingBox in signatureBoxes.filter(b => {
+      if (b.page !== pg.pageNum) return false;
+      if (b.isEmpty === false) return true; // always show signed
+      if (!autoPlaceForm.keepExisting) return false; // replace mode: empty boxes are gone
+      // keepExisting: hide boxes that belong to eligible (being re-placed) signers
+      return !autoPlaceEligibleSigners.some(
+        s => (s.emplId && s.emplId === b.assignedEmplId) || s.name === b.assignedTo
+      );
+    })" :key="'e-' + existingBox.id">
+      <div class="absolute rounded pointer-events-none"
+        :style="{
+          left: ((existingBox.x / autoPlaceLayout.CW) * 100) + '%',
+          top: ((existingBox.y / autoPlaceLayout.CH) * 120) + 'px',
+          width: ((existingBox.width / autoPlaceLayout.CW) * 100) + '%',
+          height: ((existingBox.height / autoPlaceLayout.CH) * 120) + 'px',
+          backgroundColor: existingBox.isEmpty === false ? '#6b728055' : (existingBox.color || '#6b7280') + '33',
+          borderColor: existingBox.isEmpty === false ? '#6b7280' : (existingBox.color || '#6b7280'),
+          borderWidth: '1.5px',
+          borderStyle: existingBox.isEmpty === false ? 'solid' : 'dashed',
+        }">
+        <span class="absolute inset-0 flex items-center justify-center text-[7px] font-bold truncate px-0.5"
+          :style="{ color: existingBox.isEmpty === false ? '#6b7280' : (existingBox.color || '#6b7280') }">
+          {{ existingBox.isEmpty === false ? '✍️' : '📌' }} {{ existingBox.assignedTo.split(' ')[0] }}
+        </span>
+      </div>
+      <div v-if="existingBox.hasDate && existingBox.datePosition"
+        class="absolute rounded-sm opacity-50 pointer-events-none"
+        :style="{
+          left: ((existingBox.datePosition.x / autoPlaceLayout.CW) * 100) + '%',
+          top: ((existingBox.datePosition.y / autoPlaceLayout.CH) * 120) + 'px',
+          width: ((existingBox.datePosition.width / autoPlaceLayout.CW) * 100) + '%',
+          height: ((existingBox.datePosition.height / autoPlaceLayout.CH) * 120) + 'px',
+          backgroundColor: existingBox.isEmpty === false ? '#6b7280' : (existingBox.color || '#6b7280'),
+        }">
+      </div>
+    </template>
 
-                    <!-- Signer name chips -->
-                    <div class="flex flex-wrap gap-1 px-3 pb-2">
+    <!-- New boxes from autoPlacePreviewSlots (same logic as autoPlaceSignatures) -->
+    <template v-for="({ signer, x, y }, si) in (autoPlacePreviewSlots[pg.pageNum] || [])" :key="'n-' + si">
+      <div class="absolute rounded"
+        :style="{
+          left: ((x / autoPlaceLayout.CW) * 100) + '%',
+          top: ((y / autoPlaceLayout.CH) * 120) + 'px',
+          width: ((autoPlaceLayout.sigW / autoPlaceLayout.CW) * 100) + '%',
+          height: ((autoPlaceLayout.sigH / autoPlaceLayout.CH) * 120) + 'px',
+          backgroundColor: (signer.color || '#8b5cf6') + '33',
+          borderColor: signer.color || '#8b5cf6',
+          borderWidth: '1.5px',
+          borderStyle: 'solid',
+        }">
+        <span class="absolute inset-0 flex items-center justify-center text-[8px] font-bold truncate px-1"
+          :style="{ color: signer.color || '#8b5cf6' }">
+          {{ signer.name.split(' ')[0] }}
+        </span>
+      </div>
+      <div v-if="autoPlaceForm.hasDate" class="absolute rounded-sm opacity-60"
+        :style="{
+          left: ((Math.min(x, autoPlaceLayout.CW - autoPlaceForm.dateWidth) / autoPlaceLayout.CW) * 100) + '%',
+          top: (((y + autoPlaceLayout.sigH + autoPlaceLayout.dateGp) / autoPlaceLayout.CH) * 120) + 'px',
+          width: ((Math.min(autoPlaceForm.dateWidth, autoPlaceLayout.sigW) / autoPlaceLayout.CW) * 100) + '%',
+          height: ((autoPlaceLayout.dateH / autoPlaceLayout.CH) * 120) + 'px',
+          backgroundColor: signer.color || '#8b5cf6',
+        }">
+      </div>
+    </template>
+
+  </template>
+
+  <div v-else-if="autoPlaceLayout.hasOverflow"
+    class="absolute inset-0 flex items-center justify-center"
+    style="background:repeating-linear-gradient(45deg,transparent,transparent 6px,rgba(239,68,68,0.15) 6px,rgba(239,68,68,0.15) 12px);">
+    <span class="text-xs font-bold text-red-500 bg-white px-2 py-1 rounded-lg shadow">Resize needed</span>
+  </div>
+</div>
+
+                     <!-- Signer name chips -->
+                    <div v-if="pg.overflow" class="flex flex-wrap gap-1 px-3 pb-2">
                       <span v-for="s in pg.signers" :key="s.name"
-                        class="text-[9px] font-semibold px-1.5 py-0.5 rounded-full text-white truncate max-w-[80px]"
+                        class="text-[4px] font-semibold px-1.5 py-0.5 rounded-full text-white truncate max-w-[80px]"
                         :style="{ backgroundColor: s.color || '#8b5cf6' }">
                         {{ s.name.split(',')[0] || s.name }}
                       </span>
                     </div>
+                  
                   </div>
 
                   <!-- Empty state -->
@@ -2097,7 +2395,9 @@ onUnmounted(() => {
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
                         d="M17 20h5v-2a4 4 0 00-5.356-3.712M9 20H4v-2a4 4 0 015.356-3.712M15 7a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
-                    <p class="text-sm text-gray-400">Add signers to preview layout</p>
+                    <p class="text-sm text-gray-400">
+                      {{ signers.length === 0 ? 'Add signers to preview layout' : 'No new boxes to place' }}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -2108,12 +2408,17 @@ onUnmounted(() => {
           <div class="flex gap-3 px-6 py-4 border-t bg-gray-50 rounded-b-2xl flex-shrink-0">
             <button @click="showAutoPlaceModal = false"
               class="flex-1 py-2.5 border-2 border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-100 transition font-semibold">Cancel</button>
-            <button @click="autoPlaceSignatures" :disabled="autoPlaceHasBlocker || signers.length === 0"
+            <button @click="autoPlaceSignatures"
+              :disabled="autoPlaceHasBlocker || autoPlaceLayout.total === 0"
               class="flex-1 py-2.5 rounded-xl text-sm font-bold transition shadow-md"
-              :class="autoPlaceHasBlocker || signers.length === 0 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700 text-white'">
+              :class="autoPlaceHasBlocker || autoPlaceLayout.total === 0 ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700 text-white'">
               <span v-if="autoPlaceLayout.hasOverflow">⚠️ Fix overflow to continue</span>
               <span v-else-if="autoPlaceLayout.exceedsDoc">⚠️ Not enough pages</span>
-              <span v-else>⚡ Place {{ autoPlaceLayout.total }} Box{{ autoPlaceLayout.total !== 1 ? 'es' : '' }}</span>
+              <span v-else-if="autoPlaceLayout.total === 0">Nothing to place</span>
+              <span v-else>
+                ⚡ Place {{ autoPlaceLayout.total }} Box{{ autoPlaceLayout.total !== 1 ? 'es' : '' }}
+                {{ autoPlaceForm.keepExisting ? '(new only)' : '' }}
+              </span>
             </button>
           </div>
         </div>
@@ -2131,12 +2436,9 @@ onUnmounted(() => {
         <input type="text" v-model="query.search" @keydown.enter.prevent="handleEnterKey"
           @keydown.down.prevent="moveDown" @keydown.up.prevent="moveUp" placeholder="Please enter user's name..."
           class="w-full h-11 p-4 rounded border border-gray-600 focus:outline-none" />
-        <button @click="getEmployeesForSigner"
-          class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700">
-          <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none"
-            viewBox="0 0 24 24">
-            <path stroke="currentColor" stroke-linecap="round" stroke-width="2"
-              d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
+        <button @click="getEmployeesForSigner" class="py-3 px-4 bg-blue-500 h-11 text-white rounded-md hover:bg-blue-700">
+          <svg class="w-6 h-6" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+            <path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z" />
           </svg>
         </button>
       </div>
@@ -2151,8 +2453,7 @@ onUnmounted(() => {
           </thead>
           <tbody>
             <tr v-for="(user, index) in availableApprovers" :key="index" @click="selectUser(user)"
-              class="cursor-pointer hover:bg-gray-200" :class="{ 'bg-gray-200 font-bold': index === approverIndex }"
-              data-approver>
+              class="cursor-pointer hover:bg-gray-200" :class="{ 'bg-gray-200 font-bold': index === approverIndex }" data-approver>
               <td class="px-4 py-2 border-b">{{ formatUserName(user) }}</td>
               <td class="px-4 py-2 border-b">{{ user.branchname }}</td>
               <td class="px-4 py-2 border-b">{{ user.positionname }}</td>

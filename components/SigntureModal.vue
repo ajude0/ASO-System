@@ -86,7 +86,7 @@ const tutorialStepsNormal = [
     title: '💾 Step 7 – Save with "Done"',
     body: 'When you\'ve signed all your boxes, click <strong>Done</strong>. Nothing is saved until you press this button.',
     target: '.tutorial-target-done-btn',
-    position: 'top',
+    position: 'center',
   },
 ];
 
@@ -208,10 +208,40 @@ const navBarVisible = ref(true);
 const lastScrollTop = ref(0);
 const isZooming     = ref(false);
 
+let scrollTimer = null;
+const SCROLL_THRESHOLD = 30;
+
 const handleCanvasScroll = (e) => {
   const st = e.target.scrollTop;
-  navBarVisible.value = st < lastScrollTop.value || st <= 10;
+
+  // Always show bar when near the top
+  if (st <= 10) {
+    lastScrollTop.value = st;
+    navBarVisible.value = true;
+    if (scrollTimer) { clearTimeout(scrollTimer); scrollTimer = null; }
+    return;
+  }
+
+  // Update lastScrollTop immediately so delta is always fresh
+  const delta = st - lastScrollTop.value;
   lastScrollTop.value = st;
+
+  // Ignore tiny jitter
+  if (Math.abs(delta) < SCROLL_THRESHOLD) return;
+
+  // Hide immediately on fast scroll down, debounce showing on scroll up
+  if (delta > 0) {
+    // Scrolling DOWN — hide immediately, no debounce
+    navBarVisible.value = false;
+    if (scrollTimer) { clearTimeout(scrollTimer); scrollTimer = null; }
+  } else {
+    // Scrolling UP — debounce to avoid flicker
+    if (scrollTimer) clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      navBarVisible.value = true;
+      scrollTimer = null;
+    }, 80);
+  }
 };
 
 const userZoom    = ref(1.0);
@@ -502,6 +532,23 @@ const getCanvasForSig = (sig) => canvasRefs.value[sig.page - 1];
 const handleFreeSignPageClick = async (e, pageNum) => {
   if (e.target.closest('.sig-overlay') || e.target.closest('.date-overlay')) return;
   if (!userSignatureSrc.value) { alert('Please upload your signature first!'); return; }
+
+  // Sequential order check for freeSign mode
+  if (isSequentialOrderEnforced.value) {
+    const mySig = localSignatures[mySignatureIndex.value];
+    if (mySig) {
+      const myOrder = Number(mySig.approvalOrder || 1);
+      const pendingBefore = localSignatures.filter(s => {
+        const order = Number(s.approvalOrder || 1);
+        return order < myOrder && s.isEmpty === true;
+      });
+      if (pendingBefore.length > 0) {
+        const pendingNames = [...new Set(pendingBefore.map(s => s.assignedTo))].join(', ');
+        addToast(`Not your turn yet. Waiting for: ${pendingNames}`, 'warning', 5000);
+        return;
+      }
+    }
+  }
 
   let imgSrc = userSignatureBase64.value;
   if (!imgSrc) {
@@ -801,12 +848,21 @@ const setupPageObserver = () => {
 const handleDone = () => {
   let signaturesToSave = [];
 
-  if (props.freeSign) {
-    const sig = mySignature.value;
-    if (!sig || sig.isEmpty) {
-      addToast('Please place your signature before saving.', 'warning');
-      return;
+   if (props.freeSign && isSequentialOrderEnforced.value) {
+    const mySig = mySignature.value;
+    if (mySig) {
+      const myOrder = Number(mySig.approvalOrder || 1);
+      const pendingBefore = localSignatures.filter(s => {
+        const order = Number(s.approvalOrder || 1);
+        return order < myOrder && s.isEmpty === true;
+      });
+      if (pendingBefore.length > 0) {
+        const pendingNames = [...new Set(pendingBefore.map(s => s.assignedTo))].join(', ');
+        addToast(`Not your turn yet. Waiting for: ${pendingNames}`, 'warning', 5000);
+        return;
+      }
     }
+  
     const canvas  = canvasRefs.value[sig.page - 1];
     const canvasW = canvas ? canvas.width  / scaleFactor.value : 595;
     const canvasH = canvas ? canvas.height / scaleFactor.value : 842;
@@ -951,7 +1007,14 @@ onUnmounted(async () => {
             <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
             </svg>
-            <span v-if="!mySignature || mySignature.isEmpty">Click anywhere on any page to place your signature</span>
+            <span v-if="!mySignature || mySignature.isEmpty">
+  <template v-if="isSequentialOrderEnforced && getCurrentRequiredOrder !== null && (mySignature?.approvalOrder || 1) > getCurrentRequiredOrder">
+    🔄 Waiting for {{ getNextSignerInfo?.name }} (#{{ getNextSignerInfo?.order }}) to sign first
+  </template>
+  <template v-else>
+    Click anywhere on any page to place your signature
+  </template>
+</span>
             <span v-else>✓ Signature placed on page {{ mySignature.page }} — click any other page to move it there</span>
           </div>
           <div v-else class="mt-1 flex items-center gap-1">

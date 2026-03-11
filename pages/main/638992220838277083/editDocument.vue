@@ -17,6 +17,7 @@ import { fetchDocumentTitle, title, isLiveView, isFreeSign } from "~/js/fetchDoc
 import { checkDocumentSignature } from "~/js/checkdocumentsignature";
 import { emailsignaturereminder } from "~/js/emailsignaturereminder";
 import LoadingModal from "~/components/modal/LoadingModal.vue";
+import { getMaxlength, maxlength } from "~/js/getmaxlength";
 
 // State
 const { $swal } = useNuxtApp();
@@ -28,8 +29,61 @@ const strDocId = ref("");
 const currentEmplId = ref();
 const pdfTitle = ref();
 const loading = ref(true);
+const isEditingTitle = ref(false)
+const titleInput = ref(null)
 
+function toggleEditTitle() {
+  isEditingTitle.value = !isEditingTitle.value
+  if (isEditingTitle.value) {
+    nextTick(() => titleInput.value?.focus())
+  }
+}
 
+const saveEditTitle = async () => {
+  const token = getToken();
+  const documentid = getDocumentId();
+  try {
+
+    isLoading.value = true;
+    const newtitlename = pdfTitle.value;
+    console.log(newtitlename);
+
+    const data = await $fetch(
+      `${API_BASE_URL}/api/DocumentUpload/updateTitle/${documentid}`,
+      {
+        method: "POST",
+        headers: {
+          token: token,
+        },
+        body: JSON.stringify(newtitlename)
+      }
+    );
+
+    if (data.success) {
+      isEditingTitle.value = false;
+
+      await $swal.fire({
+        icon: "success",
+        title: "Success",
+        text: "Document title updated successfully",
+        confirmButtonColor: "#3085d6",
+        timer: 2000, // closes after 2 seconds
+        showConfirmButton: false
+
+      });
+    }
+
+  } catch (error) {
+    $swal.fire({
+      icon: "error",
+      title: "Error",
+      text: error?.data?.message || "Failed to update document title",
+      confirmButtonColor: "#d33"
+    });
+  } finally {
+    isLoading.value = false;
+  }
+};
 const toggleLiveView = async () => {
   const newValue = !isLiveView.value;
 
@@ -136,6 +190,7 @@ const resendEmail = (emplId) => {
 
 // Save signature boxes from placement modal
 const handleSaveSignatures = async (boxes) => {
+  loading.value = true;
   const token = getToken();
   const docId = getDocumentId();
   console.log(boxes);
@@ -234,6 +289,8 @@ const handleSaveSignatures = async (boxes) => {
         showConfirmButton: false,
       });
     }
+  } finally {
+    loading.value = false;
   }
 };
 
@@ -433,21 +490,21 @@ const createSignature = async (text) => {
     customClass: { popup: 'sig-swal-web' },
 
     didOpen: () => {
-      const canvas        = document.getElementById('signature-pad');
-      const hint          = document.getElementById('sig-hint');
-      const thickSlider   = document.getElementById('thickness-slider');
-      const uploadInput   = document.getElementById('signature-upload');
+      const canvas = document.getElementById('signature-pad');
+      const hint = document.getElementById('sig-hint');
+      const thickSlider = document.getElementById('thickness-slider');
+      const uploadInput = document.getElementById('signature-upload');
       const uploadPreview = document.getElementById('upload-preview');
-      const agreeChk      = document.getElementById('agree-terms');
-      const openTerms     = document.getElementById('open-terms');
-      const drawWrapper   = document.getElementById('draw-wrapper');
+      const agreeChk = document.getElementById('agree-terms');
+      const openTerms = document.getElementById('open-terms');
+      const drawWrapper = document.getElementById('draw-wrapper');
       const uploadWrapper = document.getElementById('upload-wrapper');
-      const lblDraw       = document.getElementById('lbl-draw');
-      const lblUpload     = document.getElementById('lbl-upload');
-      const colorBtns     = document.querySelectorAll('[data-color]');
+      const lblDraw = document.getElementById('lbl-draw');
+      const lblUpload = document.getElementById('lbl-upload');
+      const colorBtns = document.querySelectorAll('[data-color]');
 
       const rect = canvas.getBoundingClientRect();
-      canvas.width  = rect.width;
+      canvas.width = rect.width;
       canvas.height = rect.height;
 
       const signaturePad = new SignaturePad(canvas, {
@@ -473,7 +530,7 @@ const createSignature = async (text) => {
         btn.addEventListener('click', () => {
           signaturePad.penColor = btn.dataset.color;
           colorBtns.forEach(b => { b.style.border = '2px solid #e2e8f0'; b.style.transform = 'scale(1)'; });
-          btn.style.border    = '3px solid #2563eb';
+          btn.style.border = '3px solid #2563eb';
           btn.style.transform = 'scale(1.15)';
         });
         btn.addEventListener('mouseenter', () => { btn.style.transform = 'scale(1.1)'; });
@@ -485,15 +542,15 @@ const createSignature = async (text) => {
       document.querySelectorAll('input[name="sigType"]').forEach(radio => {
         radio.closest('label').addEventListener('click', () => {
           if (radio.value === 'draw') {
-            drawWrapper.style.display   = 'block';
+            drawWrapper.style.display = 'block';
             uploadWrapper.style.display = 'none';
-            lblDraw.style.background    = '#2563eb'; lblDraw.style.color    = '#fff';
-            lblUpload.style.background  = 'transparent'; lblUpload.style.color = '#64748b';
+            lblDraw.style.background = '#2563eb'; lblDraw.style.color = '#fff';
+            lblUpload.style.background = 'transparent'; lblUpload.style.color = '#64748b';
           } else {
-            drawWrapper.style.display   = 'none';
+            drawWrapper.style.display = 'none';
             uploadWrapper.style.display = 'block';
-            lblUpload.style.background  = '#2563eb'; lblUpload.style.color  = '#fff';
-            lblDraw.style.background    = 'transparent'; lblDraw.style.color = '#64748b';
+            lblUpload.style.background = '#2563eb'; lblUpload.style.color = '#fff';
+            lblDraw.style.background = 'transparent'; lblDraw.style.color = '#64748b';
             signaturePad.clear();
             hint.style.display = 'flex';
           }
@@ -555,9 +612,9 @@ const createSignature = async (text) => {
 
     preConfirm: () => {
       const signaturePad = window.signaturePadInstance;
-      const agree        = document.getElementById('agree-terms');
-      const uploadInput  = document.getElementById('signature-upload');
-      const sigType      = document.querySelector('input[name="sigType"]:checked')?.value;
+      const agree = document.getElementById('agree-terms');
+      const uploadInput = document.getElementById('signature-upload');
+      const sigType = document.querySelector('input[name="sigType"]:checked')?.value;
 
       if (!agree.checked) {
         $swal.showValidationMessage('Please agree to the Electronic Signature Terms & Conditions.');
@@ -669,7 +726,7 @@ const handleSaveAllSignatures = async (updatedSignatures) => {
 
     await checkDocumentSignature(docId);
   } catch (error) {
-     await getsignaturepositons(docId);
+    await getsignaturepositons(docId);
     let errorMessage = "Something went wrong. Please try again later.";
     if (error?.data?.message) {
       errorMessage = error.data.message;
@@ -680,7 +737,7 @@ const handleSaveAllSignatures = async (updatedSignatures) => {
         showConfirmButton: false,
       });
     }
-  } finally{
+  } finally {
     loading.value = false;
   }
 };
@@ -898,6 +955,7 @@ const saveFinalPdf = async () => {
 onMounted(async () => {
   loading.value = true;
   await getProfile();
+  await getMaxlength($swal, 'AsoDocumentUpload')
   signatureFile.value = await getusersignature($swal);
   currentEmplId.value = user.value.empid;
   currentUserName.value = user.value.requestorname;
@@ -932,30 +990,77 @@ onMounted(async () => {
         <div class="lg:col-span-2 space-y-6">
 
           <!-- Document Title + Live View Toggle Card -->
-          <div class="bg-white rounded-2xl border border-zinc-100 shadow-sm px-5 py-4 flex items-center justify-between gap-4">
+          <div class="bg-white rounded-2xl border border-zinc-100 shadow-sm px-5 py-4 flex gap-4 w-full
+         flex-col items-start sm:flex-row sm:justify-between" :class="isEditingTitle ? 'flex-col items-start' : ''">
 
             <!-- Title -->
-            <div class="flex items-center gap-3 min-w-0">
+            <div class="flex items-center gap-3 min-w-0" :class="isEditingTitle ? 'w-full' : ''">
               <div class="w-9 h-9 rounded-lg bg-zinc-100 flex items-center justify-center shrink-0">
-                <svg class="w-4 h-4 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                  <polyline points="14,2 14,8 20,8"/>
+                <svg class="w-4 h-4 text-zinc-500" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14,2 14,8 20,8" />
                 </svg>
               </div>
-              <h2 class="text-base font-semibold text-zinc-800 truncate tracking-tight">{{ pdfTitle }}</h2>
-            </div>
 
+              <!-- Display mode -->
+              <div v-if="!isEditingTitle" class="flex items-center gap-2 min-w-0">
+                <h2 class="text-base font-semibold text-zinc-800 truncate tracking-tight">{{ pdfTitle }}</h2>
+                <button
+                  class="shrink-0 p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 transition-all duration-200"
+                  @click="toggleEditTitle">
+                  <svg class="w-6 h-6 text-blue-500 hover:text-blue-800" aria-hidden="true"
+                    xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="m14.304 4.844 2.852 2.852M7 7H4a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-4.5m2.409-9.91a2.017 2.017 0 0 1 0 2.853l-6.844 6.844L8 14l.713-3.565 6.844-6.844a2.015 2.015 0 0 1 2.852 0Z" />
+                  </svg>
+
+                </button>
+              </div>
+
+              <!-- Edit mode -->
+              <div v-else class="flex items-center gap-2 min-w-0 flex-1">
+                <div class="flex-1 relative mb-2">
+
+                  <input v-model="pdfTitle" @keyup.enter="saveEditTitle" @keyup.esc="saveEditTitle"
+                    :maxlength="maxlength.Title" ref="titleInput"
+                    class="text-base font-semibold text-zinc-800 tracking-tight bg-zinc-50 border border-zinc-200 rounded-lg px-2.5 py-1 outline-none w-full focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all duration-200 relative" />
+                  <div class="absolute right-0 text-xs text-gray-500 mt-1 mb-1 text-right">
+                    {{ pdfTitle?.length || 0 }}/{{ maxlength.Title }}
+                  </div>
+                </div>
+
+                <!-- Cancel -->
+                <button @click="isEditingTitle = false"
+                  class="shrink-0 p-1.5 rounded-lg hover:bg-zinc-100 text-zinc-400 hover:text-zinc-600 transition-all duration-200"
+                  title="Cancel">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                  </svg>
+                </button>
+                <!-- Confirm -->
+                <button @click="saveEditTitle"
+                  class="shrink-0 flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-all duration-200 shadow-sm"
+                  title="Save">
+                  <svg class="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polyline points="20,6 9,17 4,12" />
+                  </svg>
+                  Save
+                </button>
+              </div>
+            </div>
             <!-- Enhanced Live View Toggle -->
             <div
               class="flex items-center justify-between p-3 rounded-xl border transition-all duration-300 shrink-0 min-w-[220px]"
-              :class="isLiveView ? 'border-blue-300 bg-blue-50' : 'border-zinc-200 bg-zinc-50'"
-            >
+              :class="[
+                isLiveView ? 'border-blue-300 bg-blue-50' : 'border-zinc-200 bg-zinc-50',
+                isEditingTitle ? 'w-full' : ''
+              ]">
               <div class="flex items-center gap-2.5">
                 <!-- Icon -->
-                <div
-                  class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300 shrink-0"
-                  :class="isLiveView ? 'bg-blue-600' : 'bg-zinc-300'"
-                >
+                <div class="w-8 h-8 rounded-lg flex items-center justify-center transition-colors duration-300 shrink-0"
+                  :class="isLiveView ? 'bg-blue-600' : 'bg-zinc-300'">
                   <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M15 10l4.553-2.069A1 1 0 0121 8.868v6.264a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
@@ -964,28 +1069,21 @@ onMounted(async () => {
                 <!-- Label -->
                 <div>
                   <p class="text-sm font-semibold text-zinc-700 leading-none mb-0.5">Live View</p>
-                  <p
-                    class="text-[11px] transition-colors duration-300 leading-none"
-                    :class="isLiveView ? 'text-blue-500' : 'text-zinc-400'"
-                  >
+                  <p class="text-[11px] transition-colors duration-300 leading-none"
+                    :class="isLiveView ? 'text-blue-500' : 'text-zinc-400'">
                     {{ isLiveView ? 'Visible on dashboard' : 'Hidden from dashboard' }}
                   </p>
                 </div>
               </div>
 
               <!-- Toggle Switch -->
-              <button
-                type="button"
-                @click="toggleLiveView"
+              <button type="button" @click="toggleLiveView"
                 class="relative inline-flex h-6 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ml-3 shrink-0"
-                :class="isLiveView ? 'bg-blue-600' : 'bg-zinc-300'"
-                style="width: 44px;"
-              >
+                :class="isLiveView ? 'bg-blue-600' : 'bg-zinc-300'" style="width: 44px;">
                 <span class="sr-only">Toggle Live View</span>
                 <span
                   class="inline-block h-4 w-4 transform rounded-full bg-white shadow-md transition-transform duration-300 ease-in-out"
-                  :style="isLiveView ? 'transform: translateX(24px)' : 'transform: translateX(4px)'"
-                />
+                  :style="isLiveView ? 'transform: translateX(24px)' : 'transform: translateX(4px)'" />
               </button>
             </div>
           </div>
@@ -993,26 +1091,26 @@ onMounted(async () => {
           <!-- Step 1: Place Signature Boxes -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <div class="flex items-center gap-2 mb-4">
-              <div
-                class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold"
-              >
+              <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
                 1
               </div>
-              <h2 class="text-xl font-semibold">Place Signature Boxes</h2>
+              <h2 class="text-xl font-semibold"> {{ isFreeSign ? "Add Member" : "Place Signature Boxes" }}</h2>
             </div>
             <p class="text-sm text-gray-600 mb-4">
-              Draw boxes on the PDF where each person should sign
+               {{isFreeSign ? "Add members who will sign this document" :"Draw boxes on the PDF where each person should sign"}}
             </p>
-            <button
-              @click="openPlacementModal"
-              :disabled="!pdfFile"
-              class="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-2"
-            >
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                  d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Place Signature Boxes
+            <button @click="openPlacementModal" :disabled="!pdfFile"
+              class="w-full px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold flex items-center justify-center gap-2">
+              <div v-if="!isFreeSign" class="flex gap-1 items-center">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            Place Signature Boxes
+                            </div>
+                            <div v-else>
+                                Add Member/s
+                            </div>
             </button>
             <p v-if="prePlacedSignatures.length > 0" class="text-sm text-green-600 mt-2 text-center">
               ✓ {{ prePlacedSignatures.length }} box(es) placed
@@ -1022,23 +1120,16 @@ onMounted(async () => {
           <!-- Step 2: Sign -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <div class="flex items-center gap-2 mb-4">
-              <div
-                class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold"
-              >
+              <div class="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold">
                 2
               </div>
               <h2 class="text-xl font-semibold">Sign</h2>
             </div>
 
             <!-- No Signature Warning -->
-            <div
-              v-if="!signatureFile"
-              class="mb-6 p-4 bg-gray-50 rounded-xl shadow-md flex flex-col items-center"
-            >
-              <button
-                @click="createSignature"
-                class="flex items-center justify-center w-full max-w-xs px-4 py-3 bg-green-600 text-white font-semibold rounded-lg shadow hover:bg-green-700 active:bg-green-800 transition-colors duration-200 gap-2"
-              >
+            <div v-if="!signatureFile" class="mb-6 p-4 bg-gray-50 rounded-xl shadow-md flex flex-col items-center">
+              <button @click="createSignature"
+                class="flex items-center justify-center w-full max-w-xs px-4 py-3 bg-green-600 text-white font-semibold rounded-lg shadow hover:bg-green-700 active:bg-green-800 transition-colors duration-200 gap-2">
                 Create Signature
               </button>
               <p class="mt-3 text-center text-sm text-red-600 bg-red-100 rounded-md px-3 py-2 w-full shadow-sm">
@@ -1047,11 +1138,8 @@ onMounted(async () => {
             </div>
 
             <!-- Sign Button -->
-            <button
-              @click="openSigningModal"
-              :disabled="!pdfFile || !signatureFile || prePlacedSignatures.length === 0"
-              class="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-bold text-lg flex items-center justify-center gap-2"
-            >
+            <button @click="openSigningModal" :disabled="!pdfFile || !signatureFile || prePlacedSignatures.length === 0"
+              class="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-bold text-lg flex items-center justify-center gap-2">
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                   d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -1064,11 +1152,8 @@ onMounted(async () => {
           <div class="bg-white rounded-lg shadow-md p-6">
             <h2 class="text-xl font-semibold mb-4">Actions</h2>
             <div class="flex flex-wrap gap-3">
-              <button
-                @click="saveFinalPdf"
-                :disabled="getStats().signed === 0"
-                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold"
-              >
+              <button @click="saveFinalPdf" :disabled="getStats().signed === 0"
+                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold">
                 💾 Download PDF
               </button>
             </div>
@@ -1101,10 +1186,9 @@ onMounted(async () => {
 
               <div class="mt-4 pt-4 border-t">
                 <div class="w-full bg-gray-200 rounded-full h-4">
-                  <div
-                    class="bg-green-600 h-4 rounded-full transition-all duration-300"
-                    :style="{ width: `${getStats().total > 0 ? (getStats().signed / getStats().total) * 100 : 0}%` }"
-                  ></div>
+                  <div class="bg-green-600 h-4 rounded-full transition-all duration-300"
+                    :style="{ width: `${getStats().total > 0 ? (getStats().signed / getStats().total) * 100 : 0}%` }">
+                  </div>
                 </div>
                 <p class="text-xs text-gray-500 text-center mt-1">
                   {{ getStats().total > 0 ? Math.round((getStats().signed / getStats().total) * 100) : 0 }}% Complete
@@ -1122,14 +1206,11 @@ onMounted(async () => {
                 </div>
               </div>
 
-              <p
-                class="text-sm text-center mt-3 font-medium"
-                :class="{
-                  'text-green-700': getStats().signed === getStats().total,
-                  'text-orange-700': getStats().pending === 1,
-                  'text-gray-600': getStats().waiting > 0 && getStats().pending === 0,
-                }"
-              >
+              <p class="text-sm text-center mt-3 font-medium" :class="{
+                'text-green-700': getStats().signed === getStats().total,
+                'text-orange-700': getStats().pending === 1,
+                'text-gray-600': getStats().waiting > 0 && getStats().pending === 0,
+              }">
                 <template v-if="getStats().signed === getStats().total">
                   ✅ All signatures completed.
                 </template>
@@ -1152,16 +1233,11 @@ onMounted(async () => {
             </div>
 
             <div v-else class="space-y-2 max-h-96 overflow-y-auto">
-              <div
-                v-for="sig in signatureStatuses"
-                :key="sig.assignedEmplId"
-                class="p-3 border rounded text-sm"
-                :class="{
-                  'border-green-300 bg-green-50': sig.pending === 0 && sig.waiting === 0,
-                  'border-blue-300 bg-blue-50': sig.pending > 0,
-                  'border-gray-300 bg-gray-50': sig.pending === 0 && sig.waiting > 0,
-                }"
-              >
+              <div v-for="sig in signatureStatuses" :key="sig.assignedEmplId" class="p-3 border rounded text-sm" :class="{
+                'border-green-300 bg-green-50': sig.pending === 0 && sig.waiting === 0,
+                'border-blue-300 bg-blue-50': sig.pending > 0,
+                'border-gray-300 bg-gray-50': sig.pending === 0 && sig.waiting > 0,
+              }">
                 <div class="flex justify-between items-start">
                   <div>
                     <p class="font-semibold">{{ sig.assignedTo }}</p>
@@ -1177,11 +1253,8 @@ onMounted(async () => {
                     <span v-else-if="sig.waiting > 0" class="text-gray-500 text-xs font-bold">⏳ Waiting</span>
                     <span v-else class="text-green-600 text-xs font-bold">✓ Completed</span>
 
-                    <button
-                      v-if="sig.pending > 0"
-                      @click="resendEmail(sig.assignedEmplId)"
-                      class="mt-2 flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700 transition-all duration-200"
-                    >
+                    <button v-if="sig.pending > 0" @click="resendEmail(sig.assignedEmplId)"
+                      class="mt-2 flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-700 transition-all duration-200">
                       Resend
                     </button>
                   </div>
@@ -1194,32 +1267,19 @@ onMounted(async () => {
     </div>
 
     <!-- Signature Box Placement Modal -->
-    <SignatureBoxPlacement
-      :is-open="isPlacementModalOpen"
-      :pdf-file="pdfFile"
-      :free-sign="isFreeSign"
-      :existingSignatures="prePlacedSignatures"
-      @close="closePlacementModal"
-      @save-signatures="handleSaveSignatures"
-    />
+    <SignatureBoxPlacement :is-open="isPlacementModalOpen" :pdf-file="pdfFile" :free-sign="isFreeSign"
+      :existingSignatures="prePlacedSignatures" @close="closePlacementModal" @save-signatures="handleSaveSignatures" />
 
     <!-- Signing Modal -->
-    <SigntureModal
-      :is-open="isSigningModalOpen"
-      :pdf-file="pdfFile"
-      :signature-file="signatureFile"
-      :current-user-name="currentUserName"
-      :current-empl-id="currentEmplId"
-      :documentId="strDocId"
-      :pre-placed-signatures="prePlacedSignatures"
-      :free-sign="isFreeSign"
-      @close="closeSigningModal"
-      @save-all-signatures="handleSaveAllSignatures"
-    />
+    <SigntureModal :is-open="isSigningModalOpen" :pdf-file="pdfFile" :signature-file="signatureFile"
+      :current-user-name="currentUserName" :current-empl-id="currentEmplId" :documentId="strDocId"
+      :pre-placed-signatures="prePlacedSignatures" :free-sign="isFreeSign" @close="closeSigningModal"
+      @save-all-signatures="handleSaveAllSignatures" />
   </div>
 </template>
 
 <script>
 import SignatureBoxPlacement from "~/components/SignatureBoxPlacement.vue";
 import SigntureModal from "~/components/SigntureModal.vue";
+import { isLoading } from "~/js/fetchTransactions";
 </script>

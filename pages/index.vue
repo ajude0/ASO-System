@@ -195,9 +195,9 @@ const handleLogin = async () => {
       method: "POST",
       body: JSON.stringify(formData.value),
     });
-  document.cookie = `user_token_aso=${response.stringParam1}; path=/; max-age=${60*60*24}; secure; samesite=strict`
-document.cookie = `app_config_state=${config.public.appConfigState}; path=/; max-age=${60*60*24}; secure; samesite=strict`
-document.cookie = `app_pref_state=${config.public.appPrefState}; path=/; max-age=${60*60*24}; secure; samesite=strict`
+//   document.cookie = `user_token_aso=${response.stringParam1}; path=/; max-age=${60*60*24}; secure; samesite=strict`
+// document.cookie = `app_config_state=${config.public.appConfigState}; path=/; max-age=${60*60*24}; secure; samesite=strict`
+// document.cookie = `app_pref_state=${config.public.appPrefState}; path=/; max-age=${60*60*24}; secure; samesite=strict`
 
     localStorage.setItem("user_token_aso", encryptData(response.stringParam1));
     const transactionId = localStorage.getItem("aso_urltransactionId");
@@ -236,7 +236,7 @@ watch(sysdescription, (newTitle) => {
   if (newTitle) {
     useHead({
       title: newTitle,
-      meta: [{ name: "ASO", content: newTitle }],
+      meta: [{ name: "ASO", content: newTitle } ],
       link: [
         {
           rel: "icon",

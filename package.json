@@ -48,6 +48,7 @@
     "pdfjs-dist": "^5.4.394",
     "signature_pad": "^5.1.0",
     "sweetalert2": "^11.17.2",
-    "vuedraggable": "^4.1.0"
+    "vuedraggable": "^4.1.0",
+    "xlsx": "^0.18.5"
   }
 }
