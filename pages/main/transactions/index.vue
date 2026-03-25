@@ -6,6 +6,7 @@
   <div v-else class="w-full bg-white shadow-lg rounded-lg p-6 relative max-h-[90vh]">
     <div class="flex items-center pb-3 border-b border-gray-300">
       <h3 class="text-gray-800 text-xl font-bold flex-1">Transactions</h3>
+        <button @click="getViewPdf(urltransactionId)" class="py-2 px-4 bg-green-600 tracking-wide hover:bg-green-800 text-white rounded-lg"> View Docs</button>
     </div>
     <div class="overflow-auto max-h-[60vh]">
       <div v-if="isTxLoading">
@@ -319,6 +320,7 @@ import { checkusersignature, hasSignature } from "~/js/checkusersignature";
 import { postusersignature } from "~/js/usersignature";
 import ThankYouPage from "~/components/ThankYouPage.vue";
 import { getusersignature } from "~/js/checkusersignature";
+import { viewPdf } from "~/js/viewPdf";
 
 const urltransactionId = ref();
 const showThankUPage = ref(false);
@@ -635,6 +637,12 @@ const removeWhiteBackground = (file) => {
     };
   });
 };
+const getViewPdf = async (id) =>{
+  isTxLoading.value = true;
+  await viewPdf(id);
+  isTxLoading.value = false;
+}
+
 
 const createSignature = async (text) => {
   const { value: result, isConfirmed } = await $swal.fire({

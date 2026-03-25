@@ -789,7 +789,7 @@ const filteredSymbols = (index) => {
 // Optional: close when clicking outside
 
 const backButton = () => {
-  router.push("/main/638802127387670470");
+  router.push("/main/maintenance/638802127387670470");
 };
 
 const validateForm = () => {

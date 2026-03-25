@@ -216,7 +216,7 @@ const handleSaveSignatures = async (boxes) => {
             timer: 1000,
             showConfirmButton: false,
         });
-        navigateTo("/main/638992220838277083");
+        navigateTo("/main/activity/638992220838277083");
     } catch (error) {
         let errorMessage = "Something went wrong. Please try again later.";
         if (error?.data?.message) {

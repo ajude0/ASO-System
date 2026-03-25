@@ -183,7 +183,7 @@ const { $swal } = useNuxtApp();
 
 async function viewDocument(id) {
   localStorage.setItem("signDocumentId", encryptData(id));
-  router.push("/main/639077386549154313/mobileSignDocument");
+  router.push("/main/639098620889818896/mobileSignDocument");
 }
 
 function clearSearch() {

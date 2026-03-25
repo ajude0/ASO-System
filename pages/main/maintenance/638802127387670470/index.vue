@@ -589,7 +589,7 @@ function clearStatus() {
 
 const editForm = async (id) => {
   localStorage.setItem("formId", encryptData(id));
-  router.push("/main/638802127387670470/editForm");
+  router.push("/main/maintenance/638802127387670470/editForm");
 };
 
 const softDeleted = async (id) => {
@@ -614,7 +614,7 @@ const softDeleted = async (id) => {
 };
 
 const goToCreateRequest = async () => {
-  router.push("/main/638802127387670470/createForm");
+  router.push("/main/maintenance/638802127387670470/createForm");
 };
 
 const handlePageInput = () => {

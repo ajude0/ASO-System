@@ -246,7 +246,7 @@ const isViewModalOpen = ref(false);
 
 async function viewDocument(id){
     localStorage.setItem("signDocumentId", encryptData(id));
-    router.push("/main/638992220838277083/signDocument")
+    router.push("/main/639098620889818896/signDocument")
 }
 
 function clearSearch() {

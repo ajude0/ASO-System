@@ -485,7 +485,7 @@ const capsSettings = ref({});
 const objecttype = ref();
 
 const backButton = () => {
-  router.push("/main/638799853882007798");
+  router.push("/main/activity/638799853882007798");
 };
 
 
@@ -786,7 +786,7 @@ const saveForm = async () => {
       showConfirmButton: false,
     });
 
-    router.push("/main/638799853882007798");
+    router.push("/main/activity/638799853882007798");
   } catch (error) {
     console.error("Failed to save form:", error);
 

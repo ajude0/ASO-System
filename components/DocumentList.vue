@@ -1,4 +1,7 @@
 <template>
+    <div v-if="isLoadingModal">
+    <LoadingModal/>
+    </div>
     <div class="flex mb-5 me-4">
         <button v-if="canAdd" @click="goToCreateDocument"
             class="flex px-3 py-3 bg-green-500 text-white rounded-lg hover:bg-green-700 place-items-center gap-1 font-medium">
@@ -329,25 +332,29 @@ import ViewSignatureBoxPlacement from "./ViewSignatureBoxPlacement.vue";
 import { getsignaturepositons, prePlacedSignatures } from "~/js/fetchsignatureposition";
 import { fetchDocumentPdf, pdfFile } from "~/js/fetchDocumentPdf";
 import { fetchDocumentTitle, title } from "~/js/fetchDocumentTitle";
+import LoadingModal from "./modal/LoadingModal.vue";
 
 const router = useRouter();
 const paramid = ref();
 const { $swal } = useNuxtApp();
 const isViewModalOpen = ref(false);
+const isLoadingModal = ref(false);
 
 function goToCreateDocument() {
-    router.push("/main/638992220838277083/addDocument");
+    router.push("/main/activity/638992220838277083/addDocument");
 }
 function editDocumnet(id) {
     localStorage.setItem("documentId", encryptData(id));
-    router.push("/main/638992220838277083/editDocument")
+    router.push("/main/activity/638992220838277083/editDocument")
 
 }
 async function viewDocument(id){
+    isLoadingModal.value = true;
     await fetchDocumentTitle(id);
     await getsignaturepositons(id);
     await fetchDocumentPdf(id);
     isViewModalOpen.value = true;
+    isLoadingModal.value = false;
 }
 
 async function softDeleted(id) {
@@ -376,11 +383,13 @@ function clearSearch() {
     getListOfDocuments();
 }
 onMounted(() => {
+    isLoadingModal.value = true;
     getListOfDocuments();
     const hash = window.location.hash;
     const parts = hash.split("/");
     paramid.value = parts[parts.length - 1];
     fetchCanAccess(paramid.value);
+      isLoadingModal.value = false;
 });
 
 </script>

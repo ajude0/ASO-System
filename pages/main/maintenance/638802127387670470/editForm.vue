@@ -1,4 +1,5 @@
 <template>
+  <div class="p-4">
   <BreadCrumbs :nenunames="nenunames" />
 
   <button
@@ -1080,6 +1081,7 @@
       </div>
     </div>
   </div>
+  </div>
 </template>
 
 <script setup>
@@ -1129,7 +1131,7 @@ const draggableOptions = ref({
 });
 
 const backButton = () => {
-  router.push("/main/638802127387670470");
+  router.push("/main/maintenance/638802127387670470");
 };
 
 function handleFileChange(event) {
@@ -1901,7 +1903,7 @@ const saveFormObjects = async () => {
       timer: 1000, // auto-close after 2 seconds
       showConfirmButton: false,
     });
-    router.push("/main/638802127387670470");
+    router.push("/main/maintenance/638802127387670470");
   } catch (error) {
     console.error("Failed to save form:", error);
     await $swal.fire({

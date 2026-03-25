@@ -1,4 +1,6 @@
 <template>
+<div v-if="isLoading"> <LoadingModal/></div>
+<div v-else>
     <div v-if="showThankYouPage">
         <ThankYouPage :transaction-id="documentId" :transaction-name="title" type-name="Document" @refresh="refreshThankYou"/>
     </div>
@@ -52,6 +54,7 @@
                 @close="isViewingModalopen = false" />
         </div>
     </div>
+    </div>
 </template>
 
 <script setup>
@@ -68,6 +71,7 @@ import { getusersignature } from "~/js/checkusersignature";
 import { checkDocumentSignature } from '~/js/checkdocumentsignature';
 import ViewSignatureBoxPlacement from '~/components/ViewSignatureBoxPlacement.vue';
 import ThankYouPage from '~/components/ThankYouPage.vue';
+import LoadingModal from '~/components/modal/LoadingModal.vue';
 
 const { $swal } = useNuxtApp();
 const documentId = ref();
@@ -80,6 +84,7 @@ const isViewingModalopen = ref(false);
 const canViewPage = ref(false);
 const showThankYouPage = ref(false);
 const strDocId = ref("");
+const isLoading = ref(false);
 
 const refreshThankYou = async() => {
     showThankYouPage.value = false;
@@ -518,6 +523,8 @@ const createSignature = async (text) => {
 // Handle signature application
 const handleSaveAllSignatures = async (updatedSignatures) => {
 
+    isLoading.value = true;
+
     const token = getToken();
     const form = new FormData()
 
@@ -588,6 +595,8 @@ const handleSaveAllSignatures = async (updatedSignatures) => {
                 showConfirmButton: false,
             });
         }
+    } finally{
+        isLoading.value = false;
     }
 
 };
@@ -600,6 +609,7 @@ definePageMeta({
 });
 
 onMounted(async () => {
+    isLoading.value = true;
     await getProfile();
 
     currentEmplId.value = user.value.empid;
@@ -633,6 +643,7 @@ onMounted(async () => {
     }
     pdfTitle.value = title.value;
     signatureFile.value = await getusersignature($swal);
+    isLoading.value = false;
 });
 
 </script>

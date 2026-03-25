@@ -1,4 +1,6 @@
 <template>
+  <div v-if="isLoading"><LoadingModal/></div>
+  <div v-else>
   <div class="flex mb-5 me-4">
     <button @click="goToCreateRequest"
       class="flex px-3 py-3 bg-green-500 text-white rounded-lg hover:bg-green-700 place-items-center gap-1 font-medium">
@@ -433,9 +435,13 @@
     class="fixed inset-0 p-4 flex flex-wrap justify-center items-center w-full h-full z-[1000] before:fixed before:inset-0 before:w-full before:h-full before:bg-[rgba(0,0,0,0.5)] overflow-auto font-[sans-serif]">
     <div class="w-full max-w-7xl bg-white shadow-lg rounded-lg p-6 max-h-[90vh] relative">
       <div class="flex items-center pb-3 border-b border-gray-300">
+        
         <h3 class="text-gray-800 text-xl font-bold flex-1">
           Transaction - {{ id }}
         </h3>
+
+        <button @click="getViewPdf(id, 'hey')" class="py-2 px-4 bg-green-600 tracking-wide hover:bg-green-800 text-white rounded-lg mr-2"> View Docs</button>
+     
         <svg @click="showModal = false" xmlns="http://www.w3.org/2000/svg"
           class="w-3 ml-2 cursor-pointer shrink-0 fill-gray-400 hover:fill-red-500" viewBox="0 0 320.591 320.591">
           <path
@@ -471,6 +477,7 @@
           <h1 class="text-2xl font-bold text-gray-800 mb-6 border-b pb-2 pt-10">
             {{ transactions.formTitle }}
           </h1>
+          
 
           <div v-for="(item, index) in transactions?.formObjects" :key="index" class="mb-6">
             <div v-if="item.objectType !== 'LABEL' && item.objectType !== 'DYNAMICSIGNATORY'"
@@ -727,12 +734,14 @@
         </div>
       </div>
       <div class="border-t border-gray-300 pt-6 flex justify-end gap-4">
+         
         <button type="button" @click="showModal = false"
           class="px-4 py-2 rounded-lg text-gray-800 text-sm border-none outline-none tracking-wide bg-gray-200 hover:bg-gray-300 active:bg-gray-200">
           Close
         </button>
       </div>
     </div>
+  </div>
   </div>
 </template>
 
@@ -752,6 +761,7 @@ import {
   softDeleteTransaction,
   sortBy,
   changePageSize,
+  isLoading,
 } from "~/js/fetchTransactions";
 import LoadingModal from "./modal/LoadingModal.vue";
 import { encryptData } from "~/js/cryptoToken";
@@ -763,6 +773,7 @@ import { postusersignature } from "~/js/usersignature";
 import { checkusersignature, hasSignature } from "~/js/checkusersignature";
 import { API_BASE_URL } from "~/config";
 import { pendingEmailReminder } from "~/js/pendingEmailReminder";
+import { viewPdf } from "~/js/viewPdf";
 import SortIcon from "./SortIcon.vue";
 
 const showModal = ref(false);
@@ -771,6 +782,15 @@ const { $swal } = useNuxtApp();
 const router = useRouter();
 const showAllApprovers = ref({});
 const id = ref();
+
+const getViewPdf = async (id) =>{
+  isLoading.value = true;
+  isTxLoading.value = true;
+  await viewPdf(id);
+  isLoading.value = false;
+  isTxLoading.value = false;
+}
+
 
 const sortAllSignatories = (groups) => {
   if (!groups || !Array.isArray(groups)) return [];
@@ -794,12 +814,12 @@ const sortAllSignatories = (groups) => {
 };
 
 function goToCreateRequest() {
-  router.push("/main/638799853882007798/addRequest");
+  router.push("/main/activity/638799853882007798/addRequest");
 }
 
 const editTransaction = async (id) => {
   localStorage.setItem("transactionId", encryptData(id));
-  router.push("/main/638799853882007798/editRequest");
+  router.push("/main/activity/638799853882007798/editRequest");
 };
 
 const getDisplayedApprovers = (transaction, index) => {
@@ -830,6 +850,7 @@ const viewTransaction = async (transactionId) => {
   showModal.value = true;
   id.value = transactionId;
   getTransaction(transactionId);
+
 };
 
 const softDelete = async (id) => {

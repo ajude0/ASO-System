@@ -560,7 +560,7 @@ const index = ref();
 const inputRef = ref(null);
 const capsSettings = ref({});
 const backButton = () => {
-  router.push("/main/638799853882007798");
+  router.push("/main/activity/638799853882007798");
 };
 
 const toggleDropdown = () => {

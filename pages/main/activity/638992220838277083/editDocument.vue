@@ -990,8 +990,8 @@ onMounted(async () => {
         <div class="lg:col-span-2 space-y-6">
 
           <!-- Document Title + Live View Toggle Card -->
-          <div class="bg-white rounded-2xl border border-zinc-100 shadow-sm px-5 py-4 flex gap-4 w-full
-         flex-col items-start sm:flex-row sm:justify-between" :class="isEditingTitle ? 'flex-col items-start' : ''">
+          <div class="bg-white rounded-2xl border border-zinc-100 shadow-sm px-5 py-4 gap-4"
+                :class="isEditingTitle ? 'flex-row' :'flex flex-col sm:flex-row justify-between'">
 
             <!-- Title -->
             <div class="flex items-center gap-3 min-w-0" :class="isEditingTitle ? 'w-full' : ''">
@@ -1020,7 +1020,7 @@ onMounted(async () => {
 
               <!-- Edit mode -->
               <div v-else class="flex items-center gap-2 min-w-0 flex-1">
-                <div class="flex-1 relative mb-2">
+                <div class="flex-1 relative">
 
                   <input v-model="pdfTitle" @keyup.enter="saveEditTitle" @keyup.esc="saveEditTitle"
                     :maxlength="maxlength.Title" ref="titleInput"
@@ -1052,10 +1052,10 @@ onMounted(async () => {
             </div>
             <!-- Enhanced Live View Toggle -->
             <div
-              class="flex items-center justify-between p-3 rounded-xl border transition-all duration-300 shrink-0 min-w-[220px]"
+              class="flex items-center justify-between p-3 rounded-xl border transition-all duration-300 shrink-0"
               :class="[
                 isLiveView ? 'border-blue-300 bg-blue-50' : 'border-zinc-200 bg-zinc-50',
-                isEditingTitle ? 'w-full' : ''
+                isEditingTitle ? 'mt-6 w-full' : 'min-w-[220px]'
               ]">
               <div class="flex items-center gap-2.5">
                 <!-- Icon -->

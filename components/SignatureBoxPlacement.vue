@@ -255,7 +255,7 @@ const handleExcelUpload = async (event) => {
     }
     console.log(members);
 
-    const validationResult = await $fetch(`https://localhost:7182/api/excel/validate-excel-members`, {
+    const validationResult = await $fetch(`https://apps.fastlogistics.com.ph/digifastapi/api/excel/validate-excel-members`, {
       method: 'POST',
       body: members
     });
@@ -1573,6 +1573,51 @@ onUnmounted(() => {
               </template>
             </draggable>
           </div>
+           <!-- Add Box Form -->
+          <div class="tutorial-target-newbox bg-white rounded-lg shadow p-4 mb-4">
+            <button @click="showAddForm = !showAddForm"
+              class="w-full flex items-center justify-between text-left font-semibold mb-2">
+              <span>📝 New Signature Box</span>
+              <svg class="w-5 h-5 transition-transform" :class="showAddForm ? 'rotate-180' : ''" fill="none"
+                stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div v-show="showAddForm" class="space-y-3 pt-2 border-t">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Assign To *</label>
+                <div class="flex gap-2 items-center">
+                  <div class="flex-1 flex items-center gap-2 border rounded px-3 py-2 text-sm bg-gray-50"
+                    :style="newBoxForm.assignedColor ? { borderColor: newBoxForm.assignedColor, borderWidth: '2px' } : {}">
+                    <span v-if="newBoxForm.assignedColor" class="inline-block w-3 h-3 rounded flex-shrink-0"
+                      :style="{ backgroundColor: newBoxForm.assignedColor }"></span>
+                    <input v-model="newBoxForm.assignedTo" type="text" placeholder="Enter user name..."
+                      class="flex-1 bg-transparent border-none outline-none w-5" disabled />
+                  </div>
+                  <button @click="handleAssignUser"
+                    class="px-2 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Search</button>
+                </div>
+              </div>
+              <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" v-model="newBoxForm.hasDate" id="hasDate" class="rounded" />
+                  <label for="hasDate" class="text-sm font-medium text-gray-700">Date field</label>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" v-model="newBoxForm.signatureLock" id="signatureLock" class="rounded" />
+                  <label for="signatureLock" class="text-sm font-medium text-gray-700">Signature Lock</label>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" v-model="newBoxForm.dateLock" id="dateLock" class="rounded" />
+                  <label for="dateLock" class="text-sm font-medium text-gray-700">Date Lock</label>
+                </div>
+                <div class="flex items-center gap-2">
+                  <input type="checkbox" v-model="newBoxForm.showName" id="showNameOnBox" class="rounded" />
+                  <label for="showNameOnBox" class="text-sm font-medium text-gray-700">Show name on box</label>
+                </div>
+              </div>
+            </div>
+          </div>
 
             <!-- ── Auto-Place ── -->
           <div class="tutorial-target-download bg-green-50 border border-green-200 rounded-lg shadow p-4 mb-4">
@@ -1692,51 +1737,6 @@ onUnmounted(() => {
             </button>
           </div>
 
-          <!-- Add Box Form -->
-          <div class="tutorial-target-newbox bg-white rounded-lg shadow p-4 mb-4">
-            <button @click="showAddForm = !showAddForm"
-              class="w-full flex items-center justify-between text-left font-semibold mb-2">
-              <span>📝 New Signature Box</span>
-              <svg class="w-5 h-5 transition-transform" :class="showAddForm ? 'rotate-180' : ''" fill="none"
-                stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-            <div v-show="showAddForm" class="space-y-3 pt-2 border-t">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Assign To *</label>
-                <div class="flex gap-2 items-center">
-                  <div class="flex-1 flex items-center gap-2 border rounded px-3 py-2 text-sm bg-gray-50"
-                    :style="newBoxForm.assignedColor ? { borderColor: newBoxForm.assignedColor, borderWidth: '2px' } : {}">
-                    <span v-if="newBoxForm.assignedColor" class="inline-block w-3 h-3 rounded flex-shrink-0"
-                      :style="{ backgroundColor: newBoxForm.assignedColor }"></span>
-                    <input v-model="newBoxForm.assignedTo" type="text" placeholder="Enter user name..."
-                      class="flex-1 bg-transparent border-none outline-none w-5" disabled />
-                  </div>
-                  <button @click="handleAssignUser"
-                    class="px-2 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">Search</button>
-                </div>
-              </div>
-              <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-                <div class="flex items-center gap-2">
-                  <input type="checkbox" v-model="newBoxForm.hasDate" id="hasDate" class="rounded" />
-                  <label for="hasDate" class="text-sm font-medium text-gray-700">Date field</label>
-                </div>
-                <div class="flex items-center gap-2">
-                  <input type="checkbox" v-model="newBoxForm.signatureLock" id="signatureLock" class="rounded" />
-                  <label for="signatureLock" class="text-sm font-medium text-gray-700">Signature Lock</label>
-                </div>
-                <div class="flex items-center gap-2">
-                  <input type="checkbox" v-model="newBoxForm.dateLock" id="dateLock" class="rounded" />
-                  <label for="dateLock" class="text-sm font-medium text-gray-700">Date Lock</label>
-                </div>
-                <div class="flex items-center gap-2">
-                  <input type="checkbox" v-model="newBoxForm.showName" id="showNameOnBox" class="rounded" />
-                  <label for="showNameOnBox" class="text-sm font-medium text-gray-700">Show name on box</label>
-                </div>
-              </div>
-            </div>
-          </div>
 
           <!-- Boxes List -->
           <div class="tutorial-target-boxeslist bg-white rounded-lg shadow p-3 sm:p-4">
@@ -1992,39 +1992,53 @@ onUnmounted(() => {
                   </div>
                 </div>
 
-                <!-- Direction Toggle -->
-                <div>
-                  <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">Layout Direction</label>
-                  <div class="grid grid-cols-2 gap-2">
-                    <button @click="autoPlaceForm.direction = 'vertical'"
-                      class="flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition"
-                      :class="autoPlaceForm.direction === 'vertical' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'">
-                      <svg class="w-8 h-8" viewBox="0 0 32 32" fill="none">
-                        <rect x="6" y="5" width="20" height="6" rx="2" :fill="autoPlaceForm.direction === 'vertical' ? '#7c3aed' : '#d1d5db'" />
-                        <rect x="6" y="13" width="20" height="6" rx="2" :fill="autoPlaceForm.direction === 'vertical' ? '#7c3aed' : '#d1d5db'" />
-                        <rect x="6" y="21" width="20" height="6" rx="2" :fill="autoPlaceForm.direction === 'vertical' ? '#7c3aed' : '#d1d5db'" />
-                      </svg>
-                      <div class="text-center">
-                        <p class="text-xs font-bold leading-tight">Vertical</p>
-                        <p class="text-[10px] opacity-70 leading-tight mt-0.5">Stack top → bottom</p>
-                      </div>
-                    </button>
-                    <button @click="autoPlaceForm.direction = 'horizontal'"
-                      class="flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition"
-                      :class="autoPlaceForm.direction === 'horizontal' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'">
-                      <svg class="w-8 h-8" viewBox="0 0 32 32" fill="none">
-                        <rect x="2" y="8" width="8" height="16" rx="2" :fill="autoPlaceForm.direction === 'horizontal' ? '#7c3aed' : '#d1d5db'" />
-                        <rect x="12" y="8" width="8" height="16" rx="2" :fill="autoPlaceForm.direction === 'horizontal' ? '#7c3aed' : '#d1d5db'" />
-                        <rect x="22" y="8" width="8" height="16" rx="2" :fill="autoPlaceForm.direction === 'horizontal' ? '#7c3aed' : '#d1d5db'" />
-                      </svg>
-                      <div class="text-center">
-                        <p class="text-xs font-bold leading-tight">Horizontal</p>
-                        <p class="text-[10px] opacity-70 leading-tight mt-0.5">Spread left → right</p>
-                      </div>
-                    </button>
-                  </div>
-                </div>
+               <!-- Direction Toggle -->
+<div>
+  <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">Layout Direction</label>
+  <div class="grid grid-cols-2 gap-2">
+    <button @click="autoPlaceForm.direction = 'vertical'"
+      class="flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition"
+      :class="autoPlaceForm.direction === 'vertical' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'">
+      <svg class="w-8 h-8" viewBox="0 0 32 32" fill="none">
+        <rect x="6" y="5" width="20" height="6" rx="2" :fill="autoPlaceForm.direction === 'vertical' ? '#7c3aed' : '#d1d5db'" />
+        <rect x="6" y="13" width="20" height="6" rx="2" :fill="autoPlaceForm.direction === 'vertical' ? '#7c3aed' : '#d1d5db'" />
+        <rect x="6" y="21" width="20" height="6" rx="2" :fill="autoPlaceForm.direction === 'vertical' ? '#7c3aed' : '#d1d5db'" />
+      </svg>
+      <!-- Vertical arrows (up + down) -->
+      <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none">
+        <!-- Up arrow -->
+        <path d="M8 1L4.5 5.5H7V8H9V5.5H11.5L8 1Z" :fill="autoPlaceForm.direction === 'vertical' ? '#7c3aed' : '#d1d5db'" />
+        <!-- Down arrow -->
+        <path d="M8 15L11.5 10.5H9V8H7V10.5H4.5L8 15Z" :fill="autoPlaceForm.direction === 'vertical' ? '#7c3aed' : '#d1d5db'" />
+      </svg>
+      <div class="text-center">
+        <p class="text-xs font-bold leading-tight">Vertical</p>
+        <p class="text-[10px] opacity-70 leading-tight mt-0.5">Stack top → bottom</p>
+      </div>
+    </button>
 
+    <button @click="autoPlaceForm.direction = 'horizontal'"
+      class="flex flex-col items-center gap-2 py-3 px-2 rounded-xl border-2 transition"
+      :class="autoPlaceForm.direction === 'horizontal' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-200 text-gray-400 hover:border-gray-300 hover:text-gray-600'">
+      <svg class="w-8 h-8" viewBox="0 0 32 32" fill="none">
+        <rect x="2" y="8" width="8" height="16" rx="2" :fill="autoPlaceForm.direction === 'horizontal' ? '#7c3aed' : '#d1d5db'" />
+        <rect x="12" y="8" width="8" height="16" rx="2" :fill="autoPlaceForm.direction === 'horizontal' ? '#7c3aed' : '#d1d5db'" />
+        <rect x="22" y="8" width="8" height="16" rx="2" :fill="autoPlaceForm.direction === 'horizontal' ? '#7c3aed' : '#d1d5db'" />
+      </svg>
+      <!-- Horizontal arrows (left + right) -->
+      <svg class="w-4 h-4" viewBox="0 0 16 16" fill="none">
+        <!-- Left arrow -->
+        <path d="M1 8L5.5 4.5V7H8V9H5.5V11.5L1 8Z" :fill="autoPlaceForm.direction === 'horizontal' ? '#7c3aed' : '#d1d5db'" />
+        <!-- Right arrow -->
+        <path d="M15 8L10.5 11.5V9H8V7H10.5V4.5L15 8Z" :fill="autoPlaceForm.direction === 'horizontal' ? '#7c3aed' : '#d1d5db'" />
+      </svg>
+      <div class="text-center">
+        <p class="text-xs font-bold leading-tight">Horizontal</p>
+        <p class="text-[10px] opacity-70 leading-tight mt-0.5">Spread left → right</p>
+      </div>
+    </button>
+  </div>
+</div>
                 <!-- Box Size -->
                 <div>
                   <label class="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2">Signature Box Size</label>
@@ -2200,9 +2214,7 @@ onUnmounted(() => {
                   <span class="text-base flex-shrink-0">✍️</span>
                   <div>
                     <p class="text-xs font-bold text-gray-700">{{ autoPlaceSignedSigners.length }} signer(s) already signed</p>
-                    <p class="text-[11px] text-gray-500 mt-0.5">
-                      {{ autoPlaceSignedSigners.map(s => s.name.split(',')[0]).join(', ') }} — their boxes are preserved and excluded from auto-placement.
-                    </p>
+                    
                   </div>
                 </div>
 

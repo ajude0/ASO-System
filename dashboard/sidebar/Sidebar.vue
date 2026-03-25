@@ -1,312 +1,158 @@
 <script setup>
-import { sidebarOpen } from "../store";
-import { fetchUserMenu, menuList,loading } from "~/js/fetchMenu";
-import LoadingModal from "~/components/modal/LoadingModal.vue";
-const router = useRouter();
+import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter } from 'vue-router'
+import { sidebarOpen } from "../store"
+import SidebarItems from './SidebarItems.vue';
+
+const router = useRouter()
 
 defineProps({
   mobileOrientation: {
     type: String,
     default: "end",
+    validator: (value) => ["start", "end"].includes(value),
   },
-});
-onBeforeUnmount(async() => {
-  document.removeEventListener("click", handleClickOutside);
-  await fetchUserMenu();
-});
+})
 
-onMounted(async() => {
-  document.addEventListener("click", handleClickOutside);
-  await fetchUserMenu();
-});
+const menu = ref(null)
 
+// Mobile sidebar handling
+const isMobile = ref(false)
+const checkMobile = () => {
+  isMobile.value = window.innerWidth < 1024
+}
 
+onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
+  document.addEventListener("click", handleClickOutside)
+})
 
-
-const isActive = ref(true);
-const open = ref([]);
-const menu = ref(null);
-
-const style = {
-  mobileOrientation: {
-    start: "left-0",
-    end: "right-0 lg:left-0",
-  },
-};
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', checkMobile)
+  document.removeEventListener("click", handleClickOutside)
+})
 
 const handleClickOutside = (event) => {
-  if (!sidebarOpen.value && menu.value && !menu.value.contains(event.target)) {
-    open.value = false;
-  }
-};
-
-const toggleOpen = (index) => {
-  open.value = open.value === index ? null : index;
-};
-
-function dashboard() {
-  router.push("/main/dashboard");
-}
-
-function handleChildMenuClick(menuCode) {
-  router.push(`/main/${menuCode}`);
-  if (!sidebarOpen.value){
-  open.value = false;
+  if (isMobile.value && !sidebarOpen.value && menu.value && !menu.value.contains(event.target)) {
+    sidebarOpen.value = false
   }
 }
 
-
+const mobileOrientationClasses = {
+  start: "left-0",
+  end: "right-0 lg:left-0",
+}
 </script>
 
 <template>
   <div class="app">
+    <!-- Backdrop for mobile -->
+    <Transition name="fade">
+      <div 
+        v-if="sidebarOpen && isMobile"
+        class="fixed inset-0 z-30 bg-black opacity-50 lg:hidden"
+        @click="sidebarOpen = false"
+      />
+    </Transition>
+
     <aside
-      class="sidebar-item sidebar scrollbar flex flex-col h-screen px-5 py-8 overflow-y-auto bg-white border-r rtl:border-r-0 rtl:border-l lg:relative lg:z-40 lg:block shadow-lg"
-      :class="{
-        'relative z-40 w-8/12 sm:w-5/12 md:w-64 transition-all duration-300 ease-in overflow-y-auto visible':
-          sidebarOpen,
-        'hidden lg:w-20 transition-all duration-300 ease-out': !sidebarOpen,
-        [style.mobileOrientation[mobileOrientation]]: true,
-      }"
+      ref="menu"
+      class="sidebar bg-white border-r border-gray-100 shadow-lg flex flex-col h-screen fixed lg:sticky top-0 z-40 transition-all duration-300 ease-in-out"
+      :class="[
+        mobileOrientationClasses[mobileOrientation],
+        sidebarOpen 
+          ? 'w-64 translate-x-0' 
+          : '-translate-x-full lg:translate-x-0 lg:w-20',
+      ]"
     >
-      <!-- <a class="flex ">
-        <p v-if="sidebarOpen" dir="ltr" @click="dashboard()" class="cursor-pointer text-white bg-cyan-400 p-2 flex-shrink">LOGO</p><p dir="rtl" class="bg-cyan-400 text-white p-2 flex-shrink">TEST</p>
-      </a> -->
-
-      <div class="flex justify-center">
-        <img
-          v-if="sidebarOpen"
-          src="/static/images/logo.png"
-          class="mr-3 h-20 w-auto"
-          alt="DatabridgeLogo"
-        />
+      <!-- Logo Section -->
+      <div class="px-4 py-5 flex justify-center items-center border-b border-gray-100">
+        <NuxtLink
+          to="/dashboard"
+          class="flex items-center justify-center transition-all duration-300 hover:bg-gray-50 rounded-lg p-2"
+        >
+          <img
+            src="/static/images/sbulogo.png"
+            alt="IRA Automation V3 Logo"
+            :class="[
+              'transition-all duration-300 object-contain',
+              sidebarOpen ? 'w-24' : 'w-10',
+            ]"
+          />
+        </NuxtLink>
       </div>
-      <div v-if="loading">
-        <LoadingModal/>
-        <div class="mt-5 mr-0 w-64 space-y-2">
-          <div class="h-5 bg-gray-300 rounded animate-pulse w-10"></div>
-        <div class="h-8 bg-gray-300 rounded animate-pulse w-52"></div>
-        <div class="h-8 bg-gray-300 rounded animate-pulse w-52"></div>
-        <div class="h-8 bg-gray-300 rounded animate-pulse w-52"></div>
-        
-      </div>
-      </div>
-      <div v-else class="flex flex-col justify-between flex-1 mt-6">
-        <nav class="-mx-3 space-y-6">
-          <div class="space-y-3">
-            <label
-              :class="sidebarOpen ? 'label-normal' : 'label-small'"
-              class="px-3 text-xs text-black uppercase"
-              >Menu</label
-            >
-            <div
-              class="sidebar-dropdown"
-              v-for="(parent, index) in menuList"
-              :key="index"
-            >
-              <div v-if="parent">
-                <a
-                  href="#"
-                  @click.prevent="toggleOpen(index)"
-                  class="cursor-pointer flex items-center px-3 py-2 text-gray-600 transition-colors duration-300 transform rounded-lg dark:black-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-200 hover:text-gray-700"
-                  :class="{ '': isActive || open === index }"
-                  role="button"
-                  aria-haspopup="true"
-                  :aria-expanded="open === index || isActive ? 'true' : 'false'"
-                >
-                  <span aria-hidden="false">
-                    <svg
-                      v-if="parent && parent.name === 'Maintenance'"
-                      xmlns="http://www.w3.org/2000/svg"
-                      width="1.2em"
-                      height="1.2em"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        d="m14 23l6-6m1-3a2 2 0 1 0 2 2M17 4h1v1h-1zm-7 19H3V1h18v10M3 13h14M3 18h10M3 8h18"
-                      />
-                    </svg>
-                    <svg
-                      v-else
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="1.5"
-                      stroke="currentColor"
-                      class="size-6"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z"
-                      />
-                    </svg>
-                  </span>
 
-                  <span v-if="sidebarOpen" class="mx-2 text-sm font-medium">
-                    {{ parent.name }}
-                  </span>
-
-                  <span aria-hidden="true" class="ml-auto">
-                    <svg
-                      class="w-4 h-4 transition-transform transform"
-                      :class="{ 'rotate-180': open === index }"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M19 9l-7 7-7-7"
-                      />
-                    </svg>
-                  </span>
-                </a>
-
-                <div
-                  v-if="open === index"
-                  v-show="sidebarOpen || open === index"
-                  :class="[
-                    'mt-2 space-y-2 px-7',
-                    { 'child-dropdown mt-2 space-y-2': !sidebarOpen },
-                  ]"
-                  role="menu"
-                  aria-label="Dropdown Menu"
-                >
-                  <a
-                    v-for="(child, childIndex) in parent.pages"
-                    :key="childIndex"
-                     :href="`#/main/${child.stage}`"
-                    @click="handleChildMenuClick(child.stage)"
-                    :class="[
-                      'cursor-pointer flex items-center px-3 py-2 text-gray-600 transition-colors duration-300 transform rounded-lg dark:black-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 dark:hover:text-gray-200 hover:text-gray-700',
-                      {
-                        'bg-gray-200 text-black':
-                          $route.path === `/main/${child.stage}`,
-                      },
-                    ]"
-                  >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke-width="1.5"
-                      stroke="currentColor"
-                      class="size-6"
-                    >
-                      <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"
-                      />
-                    </svg>
-                    <span
-                      v-if="sidebarOpen || open === index"
-                      class="mx-2 text-sm font-medium"
-                    >
-                      {{ child.name }}
-                    </span>
-                  </a>
-                </div>
-              </div>
-            </div>
+      <!-- Menu Content -->
+      <div class="flex-1 flex flex-col overflow-y-auto custom-scrollbar px-3 py-4">
+        <!-- Menu Label -->
+        <Transition name="fade-slide" mode="out-in">
+          <div v-if="sidebarOpen" class="px-3 mb-2">
+            <span class="text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Menus
+            </span>
           </div>
-        </nav>
+        </Transition>
+
+        <!-- Menu Items -->
+        <SidebarItems />
       </div>
     </aside>
   </div>
 </template>
 
 <style scoped>
-.scrollbar::-webkit-scrollbar {
-  width: 0;
+/* Custom scrollbar */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 2px;
 }
 
-.hidden {
-  padding-right: -20px;
-  transition: width 0.3s ease-out, opacity 0.3s ease-out;
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #a0aec0;
 }
 
-.visible {
-  opacity: 1;
-  transition: width 0.3s ease-in, opacity 0.3s ease-in;
+/* Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
 }
 
-.label-normal {
-  font-size: 0.75rem;
-  padding-left: 0.75rem;
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 
-.label-small {
-  font-size: 0.65rem;
-  padding-left: 0.01rem;
+.fade-slide-enter-active {
+  transition: all 0.3s ease-out;
+}
+
+.fade-slide-leave-active {
+  transition: all 0.2s ease-in;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-10px);
 }
 
 .sidebar {
-  position: relative;
-  overflow: visible;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
 }
 
-.child-dropdown {
-  position: absolute;
-  top: 0;
-  left: calc(100% + 10px);
-  background-color: #f7f7f7;
-  width: 200px;
-  padding: 10px;
-  box-shadow: 0 0 15 px rgba(0, 0, 0, 0.1);
-  z-index: 9999;
-}
-
-.sidebar-item {
-  position: relative;
-}
-
-.sidebar-dropdown {
-  position: relative;
-}
-
-.sidebar-item .child-dropdown {
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-@media (max-width: 768px) {
-  .sidebar-item {
-    position: relative;
-    width: 250px;
-  }
-
+@media (max-width: 1023px) {
   .sidebar {
-    position: relative;
-    overflow: visible;
-    padding-right: 20px;
-  }
-
-  .sidebar-open {
-    display: block;
-  }
-
-  .sidebar-closed {
-    display: none;
-  }
-
-  .child-dropdown {
-    position: absolute;
-    left: 0;
-    width: 100%;
+    width: 16rem;
   }
 }
 </style>
