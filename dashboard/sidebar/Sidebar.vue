@@ -73,11 +73,11 @@ const mobileOrientationClasses = {
           class="flex items-center justify-center transition-all duration-300 hover:bg-gray-50 rounded-lg p-2"
         >
           <img
-            src="/static/images/sbulogo.png"
+            src="/static/images/logo.png"
             alt="IRA Automation V3 Logo"
             :class="[
               'transition-all duration-300 object-contain',
-              sidebarOpen ? 'w-24' : 'w-10',
+              sidebarOpen ? 'w-40' : 'w-10',
             ]"
           />
         </NuxtLink>

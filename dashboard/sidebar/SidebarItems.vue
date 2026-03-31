@@ -416,7 +416,7 @@ watch(searchQuery, (val) => {
             <li v-for="(sub, i2) in item.submenu" :key="i2">
               <button
                 @click="navigateToMenu(sub)"
-                class="flex flex-col w-full items-center rounded-md px-3 py-2 text-sm transition-colors duration-150"
+                class="flex flex-col w-full justify-start items-start text-left break-words rounded-md px-3 py-2 text-sm transition-colors duration-150"
                 :class="[
                   sub.isclick
                     ? 'bg-gray-100 text-primary-600 font-medium '

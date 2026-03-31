@@ -917,73 +917,62 @@ const email = async () => {
 
 // 🔹 Function just for creating a new signature
 const removeWhiteBackground = (file) => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const reader = new FileReader();
+    return new Promise((resolve) => {
+        const img = new Image();
+        const reader = new FileReader();
 
-    reader.onload = () => (img.src = reader.result);
-    reader.readAsDataURL(file);
+        reader.onload = () => (img.src = reader.result);
+        reader.readAsDataURL(file);
 
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
 
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
+            canvas.width = img.width;
+            canvas.height = img.height;
 
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
+            // 1. Draw the image
+            ctx.drawImage(img, 0, 0);
 
-      // Remove white / near-white pixels
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
 
-        if (r > 245 && g > 245 && b > 245) {
-          data[i + 3] = 0;
-        }
-      }
+            // 2. High-Contrast Logic
+            // We want to find the "middle ground" and push everything 
+            // darker than it to BLACK and everything lighter to TRANSPARENT.
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                
+                // Get brightness (0-255)
+                const v = (r * 0.299 + g * 0.587 + b * 0.114);
 
-      ctx.putImageData(imageData, 0, 0);
+                // ADJUST THESE TWO NUMBERS IF NEEDED:
+                // Lower 'blackPoint' = thinner signature
+                // Higher 'whitePoint' = removes more background
+                const blackPoint = 130; 
+                const whitePoint = 170;
 
-      // --- Find bounding box of non-transparent pixels ---
-      let minX = canvas.width, minY = canvas.height, maxX = 0, maxY = 0;
+                if (v <= blackPoint) {
+                    // Definitely Ink -> Pure Black
+                    data[i] = 0; data[i+1] = 0; data[i+2] = 0;
+                    data[i+3] = 255;
+                } else if (v >= whitePoint) {
+                    // Definitely Background -> Transparent
+                    data[i+3] = 0;
+                } else {
+                    // In-between (Edges) -> Smooth transition
+                    const a = 1 - (v - blackPoint) / (whitePoint - blackPoint);
+                    data[i] = 0; data[i+1] = 0; data[i+2] = 0;
+                    data[i+3] = a * 255;
+                }
+            }
 
-      for (let y = 0; y < canvas.height; y++) {
-        for (let x = 0; x < canvas.width; x++) {
-          const alpha = data[(y * canvas.width + x) * 4 + 3];
-          if (alpha > 0) {
-            if (x < minX) minX = x;
-            if (x > maxX) maxX = x;
-            if (y < minY) minY = y;
-            if (y > maxY) maxY = y;
-          }
-        }
-      }
-
-      const sigWidth = maxX - minX + 1;
-      const sigHeight = maxY - minY + 1;
-
-      // --- Draw centered onto a new canvas of the same original size ---
-      const centeredCanvas = document.createElement("canvas");
-      centeredCanvas.width = canvas.width;
-      centeredCanvas.height = canvas.height;
-      const centeredCtx = centeredCanvas.getContext("2d");
-
-      const offsetX = Math.floor((canvas.width - sigWidth) / 2);
-      const offsetY = Math.floor((canvas.height - sigHeight) / 2);
-
-      centeredCtx.drawImage(
-        canvas,
-        minX, minY, sigWidth, sigHeight,     // source: cropped sig
-        offsetX, offsetY, sigWidth, sigHeight // destination: centered
-      );
-
-      centeredCanvas.toBlob((blob) => resolve(blob), "image/png", 1);
-    };
-  });
+            ctx.putImageData(imageData, 0, 0);
+            canvas.toBlob((blob) => resolve(blob), "image/png", 1);
+        };
+    });
 };
 const createSignature = async (text) => {
   const { value: result, isConfirmed } = await $swal.fire({
@@ -1208,20 +1197,29 @@ const createSignature = async (text) => {
       });
 
       // ── Upload preview ───────────────────────────────────────
-      uploadInput.addEventListener('change', async e => {
-  const file = e.target.files[0];
-  if (!file) return;
+     uploadInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
 
-  // Process: remove background + center the signature
-  const processedBlob = await removeWhiteBackground(file);
+                try {
+                    // 1. Process the image to remove the background
+                    const processedBlob = await removeWhiteBackground(file);
 
-  const reader = new FileReader();
-  reader.onload = () => {
-    uploadPreview.src = reader.result;
-    uploadPreview.style.display = 'block';
-  };
-  reader.readAsDataURL(processedBlob); // <-- use the processed blob, not the raw file
-});
+                    // 2. Create a URL for the processed image
+                    const imageUrl = URL.createObjectURL(processedBlob);
+
+                    // 3. Update the preview
+                    uploadPreview.src = imageUrl;
+                    uploadPreview.style.display = 'block';
+
+                    // Optional: Clean up the URL when the image is loaded to save memory
+                    uploadPreview.onload = () => {
+                        URL.revokeObjectURL(imageUrl);
+                    };
+                } catch (error) {
+                    console.error("Error processing image:", error);
+                }
+            });
 
       // ── Terms modal ──────────────────────────────────────────
       const showTermsModal = () => {

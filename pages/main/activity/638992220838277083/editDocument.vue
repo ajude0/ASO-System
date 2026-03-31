@@ -320,38 +320,62 @@ const openSigningModal = () => {
 };
 
 const removeWhiteBackground = (file) => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const reader = new FileReader();
+    return new Promise((resolve) => {
+        const img = new Image();
+        const reader = new FileReader();
 
-    reader.onload = () => (img.src = reader.result);
-    reader.readAsDataURL(file);
+        reader.onload = () => (img.src = reader.result);
+        reader.readAsDataURL(file);
 
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
 
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
+            canvas.width = img.width;
+            canvas.height = img.height;
 
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
+            // 1. Draw the image
+            ctx.drawImage(img, 0, 0);
 
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
 
-        if (r > 245 && g > 245 && b > 245) {
-          data[i + 3] = 0;
-        }
-      }
+            // 2. High-Contrast Logic
+            // We want to find the "middle ground" and push everything 
+            // darker than it to BLACK and everything lighter to TRANSPARENT.
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                
+                // Get brightness (0-255)
+                const v = (r * 0.299 + g * 0.587 + b * 0.114);
 
-      ctx.putImageData(imageData, 0, 0);
-      canvas.toBlob((blob) => resolve(blob), "image/png", 1);
-    };
-  });
+                // ADJUST THESE TWO NUMBERS IF NEEDED:
+                // Lower 'blackPoint' = thinner signature
+                // Higher 'whitePoint' = removes more background
+                const blackPoint = 130; 
+                const whitePoint = 170;
+
+                if (v <= blackPoint) {
+                    // Definitely Ink -> Pure Black
+                    data[i] = 0; data[i+1] = 0; data[i+2] = 0;
+                    data[i+3] = 255;
+                } else if (v >= whitePoint) {
+                    // Definitely Background -> Transparent
+                    data[i+3] = 0;
+                } else {
+                    // In-between (Edges) -> Smooth transition
+                    const a = 1 - (v - blackPoint) / (whitePoint - blackPoint);
+                    data[i] = 0; data[i+1] = 0; data[i+2] = 0;
+                    data[i+3] = a * 255;
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+            canvas.toBlob((blob) => resolve(blob), "image/png", 1);
+        };
+    });
 };
 
 const createSignature = async (text) => {
@@ -557,13 +581,29 @@ const createSignature = async (text) => {
         });
       });
 
-      uploadInput.addEventListener('change', e => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => { uploadPreview.src = reader.result; uploadPreview.style.display = 'block'; };
-        reader.readAsDataURL(file);
-      });
+      uploadInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                try {
+                    // 1. Process the image to remove the background
+                    const processedBlob = await removeWhiteBackground(file);
+
+                    // 2. Create a URL for the processed image
+                    const imageUrl = URL.createObjectURL(processedBlob);
+
+                    // 3. Update the preview
+                    uploadPreview.src = imageUrl;
+                    uploadPreview.style.display = 'block';
+
+                    // Optional: Clean up the URL when the image is loaded to save memory
+                    uploadPreview.onload = () => {
+                        URL.revokeObjectURL(imageUrl);
+                    };
+                } catch (error) {
+                    console.error("Error processing image:", error);
+                }
+            });
 
       const showTermsModal = () => {
         if (document.getElementById('terms-popup')) return;

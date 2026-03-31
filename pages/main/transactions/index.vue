@@ -6,7 +6,8 @@
   <div v-else class="w-full bg-white shadow-lg rounded-lg p-6 relative max-h-[90vh]">
     <div class="flex items-center pb-3 border-b border-gray-300">
       <h3 class="text-gray-800 text-xl font-bold flex-1">Transactions</h3>
-        <button @click="getViewPdf(urltransactionId)" class="py-2 px-4 bg-green-600 tracking-wide hover:bg-green-800 text-white rounded-lg"> View Docs</button>
+      <button @click="getViewPdf(urltransactionId)"
+        class="py-2 px-4 bg-green-600 tracking-wide hover:bg-green-800 text-white rounded-lg"> View Docs</button>
     </div>
     <div class="overflow-auto max-h-[60vh]">
       <div v-if="isTxLoading">
@@ -598,46 +599,65 @@ const postSigned = async () => {
   }
 }
 const removeWhiteBackground = (file) => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    const reader = new FileReader();
+    return new Promise((resolve) => {
+        const img = new Image();
+        const reader = new FileReader();
 
-    reader.onload = () => (img.src = reader.result);
-    reader.readAsDataURL(file);
+        reader.onload = () => (img.src = reader.result);
+        reader.readAsDataURL(file);
 
-    img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
+        img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
 
-      canvas.width = img.width;
-      canvas.height = img.height;
-      ctx.drawImage(img, 0, 0);
+            canvas.width = img.width;
+            canvas.height = img.height;
 
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const data = imageData.data;
+            // 1. Draw the image
+            ctx.drawImage(img, 0, 0);
 
-      // Remove white / near-white pixels
-      for (let i = 0; i < data.length; i += 4) {
-        const r = data[i];
-        const g = data[i + 1];
-        const b = data[i + 2];
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
 
-        if (r > 245 && g > 245 && b > 245) {
-          data[i + 3] = 0; // transparent
-        }
-      }
+            // 2. High-Contrast Logic
+            // We want to find the "middle ground" and push everything 
+            // darker than it to BLACK and everything lighter to TRANSPARENT.
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                
+                // Get brightness (0-255)
+                const v = (r * 0.299 + g * 0.587 + b * 0.114);
 
-      ctx.putImageData(imageData, 0, 0);
+                // ADJUST THESE TWO NUMBERS IF NEEDED:
+                // Lower 'blackPoint' = thinner signature
+                // Higher 'whitePoint' = removes more background
+                const blackPoint = 130; 
+                const whitePoint = 170;
 
-      canvas.toBlob(
-        (blob) => resolve(blob),
-        "image/png",
-        1
-      );
-    };
-  });
+                if (v <= blackPoint) {
+                    // Definitely Ink -> Pure Black
+                    data[i] = 0; data[i+1] = 0; data[i+2] = 0;
+                    data[i+3] = 255;
+                } else if (v >= whitePoint) {
+                    // Definitely Background -> Transparent
+                    data[i+3] = 0;
+                } else {
+                    // In-between (Edges) -> Smooth transition
+                    const a = 1 - (v - blackPoint) / (whitePoint - blackPoint);
+                    data[i] = 0; data[i+1] = 0; data[i+2] = 0;
+                    data[i+3] = a * 255;
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+            canvas.toBlob((blob) => resolve(blob), "image/png", 1);
+        };
+    });
 };
-const getViewPdf = async (id) =>{
+
+const getViewPdf = async (id) => {
   isTxLoading.value = true;
   await viewPdf(id);
   isTxLoading.value = false;
@@ -789,22 +809,22 @@ const createSignature = async (text) => {
     customClass: { popup: 'sig-swal-web' },
 
     didOpen: () => {
-      const canvas        = document.getElementById('signature-pad');
-      const hint          = document.getElementById('sig-hint');
-      const thickSlider   = document.getElementById('thickness-slider');
-      const uploadInput   = document.getElementById('signature-upload');
+      const canvas = document.getElementById('signature-pad');
+      const hint = document.getElementById('sig-hint');
+      const thickSlider = document.getElementById('thickness-slider');
+      const uploadInput = document.getElementById('signature-upload');
       const uploadPreview = document.getElementById('upload-preview');
-      const agreeChk      = document.getElementById('agree-terms');
-      const openTerms     = document.getElementById('open-terms');
-      const drawWrapper   = document.getElementById('draw-wrapper');
+      const agreeChk = document.getElementById('agree-terms');
+      const openTerms = document.getElementById('open-terms');
+      const drawWrapper = document.getElementById('draw-wrapper');
       const uploadWrapper = document.getElementById('upload-wrapper');
-      const lblDraw       = document.getElementById('lbl-draw');
-      const lblUpload     = document.getElementById('lbl-upload');
-      const colorBtns     = document.querySelectorAll('[data-color]');
+      const lblDraw = document.getElementById('lbl-draw');
+      const lblUpload = document.getElementById('lbl-upload');
+      const colorBtns = document.querySelectorAll('[data-color]');
 
       // ── Resize canvas to its rendered size before SignaturePad init ──
       const rect = canvas.getBoundingClientRect();
-      canvas.width  = rect.width;
+      canvas.width = rect.width;
       canvas.height = rect.height;
 
       // ── SignaturePad init ────────────────────────────────────
@@ -817,7 +837,7 @@ const createSignature = async (text) => {
       signaturePad.addEventListener('beginStroke', () => { hint.style.display = 'none'; });
 
       // Hide hint on first stroke
-      canvas.addEventListener('mousedown',  () => { hint.style.display = 'none'; }, { once: true });
+      canvas.addEventListener('mousedown', () => { hint.style.display = 'none'; }, { once: true });
       canvas.addEventListener('touchstart', () => { hint.style.display = 'none'; }, { once: true });
 
       // ── Clear ────────────────────────────────────────────────
@@ -838,7 +858,7 @@ const createSignature = async (text) => {
         btn.addEventListener('click', () => {
           signaturePad.penColor = btn.dataset.color;
           colorBtns.forEach(b => { b.style.border = '2px solid #e2e8f0'; b.style.transform = 'scale(1)'; });
-          btn.style.border    = '3px solid #2563eb';
+          btn.style.border = '3px solid #2563eb';
           btn.style.transform = 'scale(1.15)';
         });
         btn.addEventListener('mouseenter', () => { btn.style.transform = 'scale(1.1)'; });
@@ -851,15 +871,15 @@ const createSignature = async (text) => {
       document.querySelectorAll('input[name="sigType"]').forEach(radio => {
         radio.closest('label').addEventListener('click', () => {
           if (radio.value === 'draw') {
-            drawWrapper.style.display   = 'block';
+            drawWrapper.style.display = 'block';
             uploadWrapper.style.display = 'none';
-            lblDraw.style.background    = '#2563eb'; lblDraw.style.color    = '#fff';
-            lblUpload.style.background  = 'transparent'; lblUpload.style.color = '#64748b';
+            lblDraw.style.background = '#2563eb'; lblDraw.style.color = '#fff';
+            lblUpload.style.background = 'transparent'; lblUpload.style.color = '#64748b';
           } else {
-            drawWrapper.style.display   = 'none';
+            drawWrapper.style.display = 'none';
             uploadWrapper.style.display = 'block';
-            lblUpload.style.background  = '#2563eb'; lblUpload.style.color  = '#fff';
-            lblDraw.style.background    = 'transparent'; lblDraw.style.color = '#64748b';
+            lblUpload.style.background = '#2563eb'; lblUpload.style.color = '#fff';
+            lblDraw.style.background = 'transparent'; lblDraw.style.color = '#64748b';
             signaturePad.clear();
             hint.style.display = 'flex';
           }
@@ -867,13 +887,29 @@ const createSignature = async (text) => {
       });
 
       // ── Upload preview ───────────────────────────────────────
-      uploadInput.addEventListener('change', e => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => { uploadPreview.src = reader.result; uploadPreview.style.display = 'block'; };
-        reader.readAsDataURL(file);
-      });
+      uploadInput.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                try {
+                    // 1. Process the image to remove the background
+                    const processedBlob = await removeWhiteBackground(file);
+
+                    // 2. Create a URL for the processed image
+                    const imageUrl = URL.createObjectURL(processedBlob);
+
+                    // 3. Update the preview
+                    uploadPreview.src = imageUrl;
+                    uploadPreview.style.display = 'block';
+
+                    // Optional: Clean up the URL when the image is loaded to save memory
+                    uploadPreview.onload = () => {
+                        URL.revokeObjectURL(imageUrl);
+                    };
+                } catch (error) {
+                    console.error("Error processing image:", error);
+                }
+            });
 
       // ── Terms modal ──────────────────────────────────────────
       const showTermsModal = () => {
@@ -924,9 +960,9 @@ const createSignature = async (text) => {
 
     preConfirm: () => {
       const signaturePad = window.signaturePadInstance;
-      const agree        = document.getElementById('agree-terms');
-      const uploadInput  = document.getElementById('signature-upload');
-      const sigType      = document.querySelector('input[name="sigType"]:checked')?.value;
+      const agree = document.getElementById('agree-terms');
+      const uploadInput = document.getElementById('signature-upload');
+      const sigType = document.querySelector('input[name="sigType"]:checked')?.value;
 
       if (!agree.checked) {
         $swal.showValidationMessage('Please agree to the Electronic Signature Terms & Conditions.');

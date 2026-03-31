@@ -1,16 +1,12 @@
 import { useRoute, useRouter } from "vue-router";
 import { API_BASE_URL } from "~/config";
 import { getToken } from "~/js/cryptoToken";
+import { clearAsoStorage } from "~/js/cryptoToken";
 
  
 export const useMenuService = () => {
   const fetchMenuList = async () => {
-    const route = useRoute();
-    const router = useRouter();
-   
- 
-    // const token = decrypt(localStorage.getItem("user_lor2"));
- 
+
     try {
         const token = getToken();
       const response = await $fetch(`${API_BASE_URL}/api/Menu/get-user-menu`, {
@@ -43,9 +39,8 @@ export const useMenuService = () => {
       }));
     } catch (error) {
       console.error("Error fetching menu:", error);
-      /* alert("Unauthorized!");
-     
-      return navigateTo("/"); */
+      clearAsoStorage();
+      return navigateTo("/"); 
     } finally {
 
     }
