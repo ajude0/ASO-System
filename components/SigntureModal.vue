@@ -398,7 +398,7 @@ const setupResizeObserver = () => {
     for (const entry of entries) {
       if (!pdfDocument.value) return;
       const page         = await pdfDocument.value.getPage(1);
-      const baseViewport = page.getViewport({ scale: BASE_SCALE, rotation: 0 });
+const baseViewport = page.getViewport({ scale: BASE_SCALE, rotation: page.rotate ?? 0 });  // ✅
       const newScale     = (entry.contentRect.width - 48) < baseViewport.width
         ? Math.max(0.4, ((entry.contentRect.width - 48) / baseViewport.width) * BASE_SCALE)
         : BASE_SCALE;
@@ -443,9 +443,9 @@ const renderPage = async (pageNum) => {
   try {
     const page = await pdfDocument.value.getPage(pageNum);
     if (renderTasks[pageNum]) { renderTasks[pageNum].cancel(); }
-    let viewport = page.getViewport({ scale: displayScale.value, rotation: 0 });
-    const rotation = viewport.width > viewport.height ? 90 : 0;
-    viewport = page.getViewport({ scale: displayScale.value, rotation });
+    // ✅ Respect the page's own rotation metadata — don't force any rotation
+    const rotation = page.rotate ?? 0;
+    const viewport = page.getViewport({ scale: displayScale.value, rotation });
     const canvas = canvasRefs.value[pageNum - 1];
     if (!canvas) return;
     canvas.width  = viewport.width;

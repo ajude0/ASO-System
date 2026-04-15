@@ -964,11 +964,12 @@ const renderPage = async (pageNum) => {
   try {
     const page = await pdfDocument.value.getPage(pageNum);
     if (renderTasks[pageNum]) { renderTasks[pageNum].cancel(); }
-    let rotation = page.rotate ?? 0;
-    let viewport = page.getViewport({ scale: displayScale.value, rotation: 0 });
-    const isLandscape = viewport.width > viewport.height;
-    rotation = isLandscape ? 90 : 0;
-    viewport = page.getViewport({ scale: displayScale.value, rotation });
+
+    // Respect the PDF's own rotation (0, 90, 180, 270).
+    // Do NOT force-override it — this is what broke landscape PDFs.
+    const rotation = page.rotate ?? 0;
+    const viewport = page.getViewport({ scale: displayScale.value, rotation });
+
     const canvas = canvasRefs.value[pageNum - 1];
     if (!canvas) return;
     const ctx = canvas.getContext('2d');

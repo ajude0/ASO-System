@@ -263,7 +263,8 @@ const renderPage = async (pageNum) => {
     const page = await pdfDocument.value.getPage(pageNum);
     if (renderTasks[pageNum]) { renderTasks[pageNum].cancel(); }
 
-    const viewport = page.getViewport({ scale: displayScale.value });
+    const rotation = page.rotate ?? 0;
+const viewport = page.getViewport({ scale: displayScale.value, rotation });
     const canvas   = canvasRefs.value[pageNum - 1];
     if (!canvas) return;
     const ctx = canvas.getContext('2d');

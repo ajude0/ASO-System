@@ -91,10 +91,9 @@ const renderPage = async (pageNum) => {
     try {
         const page = await pdfDocument.value.getPage(pageNum);
         if (renderTasks[pageNum]) { renderTasks[pageNum].cancel(); }
-        let rotation = page.rotate ?? 0;
-        let viewport = page.getViewport({ scale: displayScale.value, rotation: 0 });
-        if (viewport.width > viewport.height) { rotation = 90; }
-        viewport = page.getViewport({ scale: displayScale.value, rotation });
+        // ✅ Respect the page's own rotation metadata — don't force any rotation
+        const rotation = page.rotate ?? 0;
+        const viewport = page.getViewport({ scale: displayScale.value, rotation });
         const canvas = canvasRefs.value[pageNum - 1];
         if (!canvas) return;
         const ctx = canvas.getContext('2d');

@@ -11,6 +11,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { API_BASE_URL } from '~/config'
 
 const props = defineProps({
   /**
@@ -43,7 +44,7 @@ const isDownloading = ref(false)
 async function handleDownload() {
   isDownloading.value = true
   try {
-    const res = await fetch(props.filePath)
+    const res = await fetch(`https://apps.fastlogistics.com.ph/digifast/excel/member.xlsx`)
     if (!res.ok) throw new Error(`File not found: ${props.filePath}`)
     const blob = await res.blob()
     const url = URL.createObjectURL(blob)
