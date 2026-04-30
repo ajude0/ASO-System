@@ -1224,22 +1224,45 @@ onUnmounted(async () => {
                   <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
                   <p v-if="!isSmallSignatureBox(sig)" class="text-xs text-gray-400 text-center">Pending</p>
                 </div>
-                <div v-else class="relative w-full h-full flex flex-col">
-                  <template v-if="sig.showName">
-                    <div class="flex flex-col items-center justify-end pb-1 px-1 h-full">
-                      <div class="flex items-end justify-center" style="margin-bottom: -8px;">
-                        <img :src="sig.imageSrc" class="select-none pointer-events-none object-contain"
-                          :style="{ maxWidth: Math.max(sc(sig.width) - 12, (sig.signedBy || '').length * 8) + 'px', maxHeight: (sc(sig.height) - 24) + 'px' }" />
-                      </div>
-                      <div class="text-center pointer-events-none pt-0.5 text-xs"
-                        :style="{ minWidth: Math.max(80, (sig.signedBy || '').length * 7) + 'px' }">
-                        <div class="font-medium text-gray-800 truncate">{{ sig.signedBy }}</div>
-                      </div>
+                <div v-else class="relative w-full h-full flex flex-col ">
+                     <template v-if="sig.assignedEmplId !== currentEmplId">
+            <div class="flex flex-col items-center justify-center w-full h-full px-1 gap-0.5">
+                <svg class="flex-shrink-0 text-gray-400"
+                    :style="{ width: Math.max(10, Math.min(16, sc(sig.height) * 0.28)) + 'px',
+                              height: Math.max(10, Math.min(16, sc(sig.height) * 0.28)) + 'px' }"
+                    fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                </svg>
+                <div class="text-center leading-tight w-full overflow-hidden">
+                    <div class="font-semibold text-gray-700 truncate"
+                        :style="{ fontSize: Math.max(7, Math.min(11, sc(sig.height) * 0.22)) + 'px' }">
+                        {{ sig.signedBy || sig.assignedTo }}
                     </div>
-                  </template>
-                  <template v-else>
-                    <img :src="sig.imageSrc" class="w-full h-full object-contain select-none pointer-events-none" />
-                  </template>
+                    <div class="text-gray-400"
+                        :style="{ fontSize: Math.max(6, Math.min(9, sc(sig.height) * 0.17)) + 'px' }">
+                        Signed ✓
+                    </div>
+                </div>
+            </div>
+        </template>
+
+  <!-- Current user's own signature: full image -->
+  <template v-else-if="sig.showName">
+    <div class="flex flex-col items-center justify-end pb-1 px-1 h-full">
+      <div class="flex items-end justify-center" style="margin-bottom: -8px;">
+        <img :src="sig.imageSrc" class="select-none pointer-events-none object-contain"
+          :style="{ maxWidth: Math.max(sc(sig.width) - 12, (sig.signedBy || '').length * 8) + 'px', maxHeight: (sc(sig.height) - 24) + 'px' }" />
+      </div>
+      <div class="text-center pointer-events-none pt-0.5 text-xs"
+        :style="{ minWidth: Math.max(80, (sig.signedBy || '').length * 7) + 'px' }">
+        <div class="font-medium text-gray-800 truncate">{{ sig.signedBy }}</div>
+      </div>
+    </div>
+  </template>
+  <template v-else>
+    <img :src="sig.imageSrc" class="w-full h-full object-contain select-none pointer-events-none" />
+  </template>
 
                   <div v-if="canUserEdit(sig)" class="absolute top-0 left-0 right-0 text-white text-xs px-1 py-0.5 text-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" :class="sig.signatureLock?'bg-red-500':'bg-blue-500'">
                     <span v-if="!sig.signatureLock">{{ !isSmallSignatureBox(sig)?'Drag to Move':'' }}</span>

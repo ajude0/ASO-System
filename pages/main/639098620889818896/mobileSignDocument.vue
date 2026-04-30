@@ -1,6 +1,7 @@
-
 <template>
-    <div v-if="loading"><LoadingModal/></div>
+    <div v-if="loading">
+        <LoadingModal />
+    </div>
     <div v-else>
         <button @click="backButton" type="button"
             class="flex items-center ms-6 mt-8 text-gray-700 hover:text-blue-600 transition-colors duration-200">
@@ -20,11 +21,9 @@
                 </div>
 
                 <!-- Sign Button (always shown, disabled while loading modal flow) -->
-                <button
-                    @click="openSigningModal"
+                <button @click="openSigningModal"
                     :disabled="!pdfFile || prePlacedSignatures.length === 0 || autoFlowBusy"
-                    class="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-bold text-lg flex items-center justify-center gap-2"
-                >
+                    class="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-bold text-lg flex items-center justify-center gap-2">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -33,24 +32,12 @@
                 </button>
             </div>
 
-            <MobileSignModal
-                :is-open="isSigningModalOpen"
-                :pdf-file="pdfFile"
-                :signature-file="signatureFile"
-                :current-user-name="currentUserName"
-                :current-empl-id="currentEmplId"
-                :pre-placed-signatures="prePlacedSignatures"
-                @close="closeSigningModal"
-                :free-sign="isFreeSign"
-                @save-all-signatures="handleSaveAllSignatures"
-                :documentId="strDocId"
-            />
-            <ViewSignatureBoxPlacement
-                :isOpen="isViewingModalopen"
-                :pdfFile="pdfFile"
-                :signatures="prePlacedSignatures"
-                @close="isViewingModalopen = false"
-            />
+            <MobileSignModal :is-open="isSigningModalOpen" :pdf-file="pdfFile" :signature-file="signatureFile"
+                :current-user-name="currentUserName" :current-empl-id="currentEmplId"
+                :pre-placed-signatures="prePlacedSignatures" @close="closeSigningModal" :free-sign="isFreeSign"
+                @save-all-signatures="handleSaveAllSignatures" :documentId="strDocId" />
+            <ViewSignatureBoxPlacement :isOpen="isViewingModalopen" :pdfFile="pdfFile" :signatures="prePlacedSignatures"
+                :currentUserEmplId="currentEmplId" @close="isViewingModalopen = false" />
         </div>
     </div>
 </template>
@@ -61,14 +48,14 @@ import { getToken, getSignDocumentId } from '~/js/cryptoToken';
 import { postusersignature } from "~/js/usersignature";
 import { API_BASE_URL } from "~/config";
 import { getProfile, user } from "~/js/fetchUserProfile";
-import { getsignaturepositons, prePlacedSignatures } from '~/js/fetchsignatureposition';
 import { fetchDocumentPdf, pdfFile } from "~/js/fetchDocumentPdf";
-import { fetchDocumentTitle, title,isFreeSign } from "~/js/fetchDocumentTitle";
+import { fetchDocumentTitle, title, isFreeSign } from "~/js/fetchDocumentTitle";
 import { getusersignature } from "~/js/checkusersignature";
 import { checkDocumentSignature } from '~/js/checkdocumentsignature';
 import ViewSignatureBoxPlacement from '~/components/ViewSignatureBoxPlacement.vue';
 import LoadingModal from '~/components/modal/LoadingModal.vue';
 import MobileSignModal from '~/components/MobileSignModal.vue';
+import { getspecificsignaturepositons, prePlacedSignatures } from '~/js/fetchspecificsignature';
 
 const { $swal } = useNuxtApp();
 const documentId = ref();
@@ -203,37 +190,37 @@ const createSignature = async () => {
         customClass: { popup: 'sig-swal-popup' },
 
         didOpen: () => {
-            const canvas     = document.getElementById("signature-pad");
-            const hint       = document.getElementById("sig-hint");
+            const canvas = document.getElementById("signature-pad");
+            const hint = document.getElementById("sig-hint");
             const thickSlider = document.getElementById("thickness-slider");
             const uploadInput = document.getElementById("signature-upload");
             const uploadPreview = document.getElementById("upload-preview");
             const agreeCheckbox = document.getElementById("agree-terms");
-            const openTerms     = document.getElementById("open-terms");
-            const drawWrapper   = document.getElementById("draw-wrapper");
+            const openTerms = document.getElementById("open-terms");
+            const drawWrapper = document.getElementById("draw-wrapper");
             const uploadWrapper = document.getElementById("upload-wrapper");
-            const lblDraw   = document.getElementById("lbl-draw");
+            const lblDraw = document.getElementById("lbl-draw");
             const lblUpload = document.getElementById("lbl-upload");
             const colorBtns = document.querySelectorAll("[data-color]");
 
             // ── Size the canvas backing store to match physical pixels ──
             const rect = canvas.getBoundingClientRect();
-            const dpr  = window.devicePixelRatio || 1;
-            canvas.width  = Math.round(rect.width  * dpr);
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = Math.round(rect.width * dpr);
             canvas.height = Math.round(rect.height * dpr);
             const ctx = canvas.getContext("2d");
             ctx.scale(dpr, dpr);          // all drawing coords now in CSS px
-            ctx.lineCap     = "round";
-            ctx.lineJoin    = "round";
+            ctx.lineCap = "round";
+            ctx.lineJoin = "round";
             ctx.strokeStyle = "#000000";
-            ctx.lineWidth   = 3;
+            ctx.lineWidth = 3;
 
-            let drawing   = false;
-            let lastX     = 0;
-            let lastY     = 0;
-            let isEmpty   = true;
-            let penColor  = "#000000";
-            let penWidth  = 3;
+            let drawing = false;
+            let lastX = 0;
+            let lastY = 0;
+            let isEmpty = true;
+            let penColor = "#000000";
+            let penWidth = 3;
 
             // ── Map any pointer/touch event to CSS-px coords on canvas ──
             const getPos = (e) => {
@@ -246,50 +233,50 @@ const createSignature = async () => {
             };
 
             const startDraw = (e) => {
-    e.preventDefault();
-    drawing = true;
-    const { x, y } = getPos(e);
-    lastX = x; lastY = y;
-    ctx.beginPath();
-    ctx.moveTo(x, y);  // start path
-    isEmpty = false;
-    hint.style.display = "none";
+                e.preventDefault();
+                drawing = true;
+                const { x, y } = getPos(e);
+                lastX = x; lastY = y;
+                ctx.beginPath();
+                ctx.moveTo(x, y);  // start path
+                isEmpty = false;
+                hint.style.display = "none";
 
-    // Draw a dot for single tap
-    ctx.arc(x, y, penWidth / 2, 0, Math.PI * 2);
-    ctx.fillStyle = penColor;
-    ctx.fill();
-};
+                // Draw a dot for single tap
+                ctx.arc(x, y, penWidth / 2, 0, Math.PI * 2);
+                ctx.fillStyle = penColor;
+                ctx.fill();
+            };
 
-const draw = (e) => {
-    if (!drawing) return;
-    e.preventDefault();
-    const { x, y } = getPos(e);
+            const draw = (e) => {
+                if (!drawing) return;
+                e.preventDefault();
+                const { x, y } = getPos(e);
 
-    // Draw a smooth line from last point to current
-    ctx.lineTo(x, y);
-    ctx.strokeStyle = penColor;
-    ctx.lineWidth   = penWidth;
-    ctx.stroke();
+                // Draw a smooth line from last point to current
+                ctx.lineTo(x, y);
+                ctx.strokeStyle = penColor;
+                ctx.lineWidth = penWidth;
+                ctx.stroke();
 
-    lastX = x; lastY = y;
-};
+                lastX = x; lastY = y;
+            };
 
-const stopDraw = (e) => {
-    if (!drawing) return;
-    e.preventDefault();
-    drawing = false;
-    ctx.closePath();
-};
+            const stopDraw = (e) => {
+                if (!drawing) return;
+                e.preventDefault();
+                drawing = false;
+                ctx.closePath();
+            };
 
             // ── Attach both mouse and touch listeners ──
-            canvas.addEventListener("mousedown",  startDraw, { passive: false });
-            canvas.addEventListener("mousemove",  draw,      { passive: false });
-            canvas.addEventListener("mouseup",    stopDraw,  { passive: false });
-            canvas.addEventListener("mouseleave", stopDraw,  { passive: false });
+            canvas.addEventListener("mousedown", startDraw, { passive: false });
+            canvas.addEventListener("mousemove", draw, { passive: false });
+            canvas.addEventListener("mouseup", stopDraw, { passive: false });
+            canvas.addEventListener("mouseleave", stopDraw, { passive: false });
             canvas.addEventListener("touchstart", startDraw, { passive: false });
-            canvas.addEventListener("touchmove",  draw,      { passive: false });
-            canvas.addEventListener("touchend",   stopDraw,  { passive: false });
+            canvas.addEventListener("touchmove", draw, { passive: false });
+            canvas.addEventListener("touchend", stopDraw, { passive: false });
 
             // ── Clear button ──
             document.getElementById("clear-signature").addEventListener("click", () => {
@@ -319,19 +306,19 @@ const stopDraw = (e) => {
             radios.forEach(radio => {
                 radio.closest("label").addEventListener("click", () => {
                     if (radio.value === "draw") {
-                        drawWrapper.style.display  = "block";
+                        drawWrapper.style.display = "block";
                         uploadWrapper.style.display = "none";
-                        lblDraw.style.background   = "#2563eb";
-                        lblDraw.style.color        = "#fff";
+                        lblDraw.style.background = "#2563eb";
+                        lblDraw.style.color = "#fff";
                         lblUpload.style.background = "#fff";
-                        lblUpload.style.color      = "#374151";
+                        lblUpload.style.color = "#374151";
                     } else {
-                        drawWrapper.style.display  = "none";
+                        drawWrapper.style.display = "none";
                         uploadWrapper.style.display = "block";
                         lblUpload.style.background = "#2563eb";
-                        lblUpload.style.color      = "#fff";
-                        lblDraw.style.background   = "#fff";
-                        lblDraw.style.color        = "#374151";
+                        lblUpload.style.color = "#fff";
+                        lblDraw.style.background = "#fff";
+                        lblDraw.style.color = "#374151";
                     }
                 });
             });
@@ -397,9 +384,9 @@ const stopDraw = (e) => {
         },
 
         preConfirm: () => {
-            const agree      = document.getElementById("agree-terms");
+            const agree = document.getElementById("agree-terms");
             const uploadInput = document.getElementById("signature-upload");
-            const sigType    = document.querySelector('input[name="sigType"]:checked')?.value;
+            const sigType = document.querySelector('input[name="sigType"]:checked')?.value;
 
             if (!agree.checked) {
                 $swal.showValidationMessage("Please agree to the Electronic Signature Terms & Conditions.");
@@ -472,28 +459,28 @@ const removeWhiteBackground = (file) => {
                 const r = data[i];
                 const g = data[i + 1];
                 const b = data[i + 2];
-                
+
                 // Get brightness (0-255)
                 const v = (r * 0.299 + g * 0.587 + b * 0.114);
 
                 // ADJUST THESE TWO NUMBERS IF NEEDED:
                 // Lower 'blackPoint' = thinner signature
                 // Higher 'whitePoint' = removes more background
-                const blackPoint = 130; 
+                const blackPoint = 130;
                 const whitePoint = 170;
 
                 if (v <= blackPoint) {
                     // Definitely Ink -> Pure Black
-                    data[i] = 0; data[i+1] = 0; data[i+2] = 0;
-                    data[i+3] = 255;
+                    data[i] = 0; data[i + 1] = 0; data[i + 2] = 0;
+                    data[i + 3] = 255;
                 } else if (v >= whitePoint) {
                     // Definitely Background -> Transparent
-                    data[i+3] = 0;
+                    data[i + 3] = 0;
                 } else {
                     // In-between (Edges) -> Smooth transition
                     const a = 1 - (v - blackPoint) / (whitePoint - blackPoint);
-                    data[i] = 0; data[i+1] = 0; data[i+2] = 0;
-                    data[i+3] = a * 255;
+                    data[i] = 0; data[i + 1] = 0; data[i + 2] = 0;
+                    data[i + 3] = a * 255;
                 }
             }
 
@@ -577,7 +564,7 @@ const handleSaveAllSignatures = async (updatedSignatures) => {
         });
         await $swal.fire({ title: "Signed Successfully!", text: "The request has been signed successfully.", icon: "success", timer: 1000, showConfirmButton: false });
         await checkDocumentSignature(documentId.value);
-        await getsignaturepositons(documentId.value);
+        await getspecificsignaturepositons(documentId.value, currentEmplId.value, false);
     } catch (error) {
         const errorMessage = error?.data?.message || "Something went wrong. Please try again later.";
         showToast({ message: errorMessage, type: "error", timer: 1000, showConfirmButton: false });
@@ -601,7 +588,7 @@ onMounted(async () => {
     currentUserName.value = user.value.requestorname;
     documentId.value = await getSignDocumentId();
     strDocId.value = documentId.value?.toString();
-    await getsignaturepositons(documentId.value);
+    await getspecificsignaturepositons(documentId.value, currentEmplId.value, false)
     await fetchDocumentPdf(documentId.value);
     await fetchDocumentTitle(documentId.value);
     pdfTitle.value = title.value;

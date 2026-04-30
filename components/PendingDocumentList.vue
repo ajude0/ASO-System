@@ -56,7 +56,7 @@
                                     <th @click="sortBy('Form')"
                                         class="p-5 text-left text-sm font-semibold text-gray-900 capitalize cursor-pointer select-none">
                                         <div class="flex items-center gap-1">
-                                            <span>Form</span>
+                                            <span>Document</span>
                                             <SortIcon :active="query.SortBy === 'Form'"
                                                 :descending="query.IsDescending" />
                                         </div>
@@ -118,7 +118,7 @@
                                     <td class="flex p-5 items-center gap-0.5">
                                         <button @click="viewDocument(form.id)"
                                             class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-green-600 flex item-center"
-                                            title="View Transaction">
+                                            title="View Document">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
                                                 fill="currentColor" width="20" height="20">
                                                 <path class="fill-green-600 group-hover:fill-white"

@@ -7,6 +7,9 @@ const props = defineProps({
     isOpen: Boolean,
     pdfTitle: String,
     pdfFile: File,
+    currentUserEmplId: null,
+    canViewAll: false,
+    canDownload: false,
     signatures: { type: Array, default: () => [] }
 });
 const emit = defineEmits(['close']);
@@ -370,7 +373,7 @@ onUnmounted(() => { if (resizeObserver) resizeObserver.disconnect(); });
                                 <div class="flex items-center gap-2">
                                     <span v-if="isSequentialOrder()"
                                         :class="['flex-shrink-0 w-5 h-5 rounded-full text-white text-xs font-bold flex items-center justify-center', group.status === 'signed' ? 'bg-green-500' : group.status === 'pending' ? 'bg-orange-500' : 'bg-gray-400']">{{
-                                        group.approvalOrder }}</span>
+                                            group.approvalOrder }}</span>
                                     <span class="inline-block w-3 h-3 rounded flex-shrink-0"
                                         :style="{ backgroundColor: group.color }"></span>
                                     <span class="font-medium text-xs truncate">{{ group.name }}</span>
@@ -392,7 +395,7 @@ onUnmounted(() => { if (resizeObserver) resizeObserver.disconnect(); });
                         </div>
                     </div>
 
-              
+
                 </div>
 
                 <!-- Mobile backdrop -->
@@ -410,11 +413,11 @@ onUnmounted(() => { if (resizeObserver) resizeObserver.disconnect(); });
                     <div class="flex gap-0.5">
                         <span v-if="getSignedSignatures().length > 0"
                             class="bg-green-500 px-1.5 py-0.5 rounded font-bold text-[10px] text-white">{{
-                            getSignedSignatures().length
+                                getSignedSignatures().length
                             }}</span>
                         <span v-if="getSignerGroups().filter(g => g.status !== 'signed').length > 0"
                             class="bg-orange-400 px-1.5 py-0.5 rounded font-bold text-[10px] text-white">{{
-                                getSignerGroups().filter(g => g.status!=='signed').length }}</span>
+                                getSignerGroups().filter(g => g.status !== 'signed').length}}</span>
                     </div>
                 </button>
 
@@ -433,7 +436,7 @@ onUnmounted(() => { if (resizeObserver) resizeObserver.disconnect(); });
                         </button>
                         <span class="text-xs sm:text-sm font-semibold text-gray-700">Page {{ currentViewPage }} / {{
                             totalPages
-                            }}</span>
+                        }}</span>
                         <button @click="goToNextPage" :disabled="currentViewPage === totalPages"
                             class="px-2 py-1.5 sm:px-4 sm:py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-1 text-sm">
                             <span class="hidden sm:inline">Next</span>
@@ -479,20 +482,55 @@ onUnmounted(() => { if (resizeObserver) resizeObserver.disconnect(); });
                             <template v-for="sig in getCurrentPageSignatures()" :key="sig.id + '-' + overlayKey">
                                 <div class="absolute pointer-events-none" :style="getBoxVisualStyle(sig)">
                                     <div class="flex flex-col items-center justify-center h-full relative">
-                                        <img v-if="sig.imageSrc" :src="sig.imageSrc" alt="Signature"
-                                            class="w-full h-full object-contain z-10" />
-                                        <span v-else
-                                            class="text-sm font-bold text-gray-700 italic z-10">[Signature]</span>
-                                        <span v-if="sig.showName"
-                                            class="absolute bottom-0 text-[10px] font-semibold tracking-wide text-center w-full text-gray-700">{{
-                                            sig.assignedTo }}</span>
+
+                                        <!-- Other users: hide signature image, show name only -->
+                                        <template v-if="sig.assignedEmplId !== currentUserEmplId && !canViewAll">
+                                            <div
+                                                class="flex flex-col items-center justify-center w-full h-full px-1 gap-0.5">
+                                                <svg class="flex-shrink-0 text-gray-400" :style="{
+                                                    width: Math.max(10, Math.min(16, sc(sig.height) * 0.28)) + 'px',
+                                                    height: Math.max(10, Math.min(16, sc(sig.height) * 0.28)) + 'px'
+                                                }" fill="none"
+                                                    stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
+                                                        stroke-width="2"
+                                                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                                </svg>
+                                                <div class="text-center leading-tight w-full overflow-hidden">
+                                                    <div class="font-semibold text-gray-700 truncate"
+                                                        :style="{ fontSize: Math.max(7, Math.min(11, sc(sig.height) * 0.22)) + 'px' }">
+                                                        {{ sig.signedBy || sig.assignedTo }}
+                                                    </div>
+                                                    <div class="text-gray-400"
+                                                        :style="{ fontSize: Math.max(6, Math.min(9, sc(sig.height) * 0.17)) + 'px' }">
+                                                        Signed ✓
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </template>
+
+                                        <!-- Current user: show full signature image -->
+                                        <template v-else>
+                                            <img v-if="sig.imageSrc" :src="sig.imageSrc" alt="Signature"
+                                                class="w-full h-full object-contain z-10" />
+                                            <span v-else class="font-bold text-gray-700 italic z-10"
+                                                :style="{ fontSize: Math.max(8, Math.min(14, sc(sig.height) * 0.25)) + 'px' }">
+                                                [Signature]
+                                            </span>
+                                            <span v-if="sig.showName"
+                                                class="absolute bottom-0 font-semibold tracking-wide text-center w-full text-gray-700"
+                                                :style="{ fontSize: Math.max(6, Math.min(10, sc(sig.height) * 0.15)) + 'px' }">
+                                                {{ sig.assignedTo }}
+                                            </span>
+                                        </template>
+
                                     </div>
                                 </div>
                                 <div v-if="sig.hasDate && sig.datePosition"
                                     class="absolute px-1 py-0.5 text-xs font-semibold rounded pointer-events-none flex items-center justify-center"
                                     :style="getDateVisualStyle(sig)">
                                     {{ sig.signedDate || sig.datePosition?.dateText || new
-                                    Date().toLocaleDateString('en-US') }}
+                                        Date().toLocaleDateString('en-US') }}
                                 </div>
                             </template>
                         </div>
@@ -503,13 +541,14 @@ onUnmounted(() => { if (resizeObserver) resizeObserver.disconnect(); });
             <!-- FOOTER -->
             <div class="flex items-center justify-between p-2 sm:p-3 border-t bg-gray-50 flex-shrink-0">
                 <div class="text-xs sm:text-sm text-gray-600">
-                    {{ getSignedSignatures().length }} completed signature{{ getSignedSignatures().length !== 1 ? 's' : '' }}
+                    {{ getSignedSignatures().length }} completed signature{{ getSignedSignatures().length !== 1 ? 's' :
+                    '' }}
                     <span v-if="isSequentialOrder()" class="ml-2 text-blue-600 font-semibold hidden sm:inline">•
                         Sequential
                         Signing</span>
                 </div>
                 <div class="flex gap-2">
-                    <button @click="downloadPdf"
+                    <button v-if="canDownload" @click="downloadPdf"
                         class="px-3 py-1.5 sm:px-6 sm:py-2 bg-green-600 text-white rounded hover:bg-green-700 font-semibold text-sm">Download
                         PDF</button>
                     <button @click="emit('close')"

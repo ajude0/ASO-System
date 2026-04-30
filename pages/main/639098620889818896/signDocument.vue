@@ -55,7 +55,7 @@
                 :current-user-name="currentUserName" :current-empl-id="currentEmplId"
                 :pre-placed-signatures="prePlacedSignatures" @close="closeSigningModal"
                 @save-all-signatures="handleSaveAllSignatures" :documentId="strDocId" :free-sign="isFreeSign"/>
-            <ViewSignatureBoxPlacement :isOpen="isViewingModalopen" :pdfFile="pdfFile" :signatures="prePlacedSignatures"
+            <ViewSignatureBoxPlacement :isOpen="isViewingModalopen" :pdfFile="pdfFile" :signatures="prePlacedSignatures" :currentUserEmplId="currentEmplId"
                 @close="isViewingModalopen = false" />
         </div>
     </div>
@@ -68,7 +68,7 @@ import { getToken, getSignDocumentId } from '~/js/cryptoToken';
 import { postusersignature } from "~/js/usersignature";
 import { API_BASE_URL } from "~/config";
 import { getProfile, user } from "~/js/fetchUserProfile";
-import { getsignaturepositons, prePlacedSignatures } from '~/js/fetchsignatureposition';
+// import { getspecificsignaturepositons, prePlacedSignatures } from '~/js/fetchsignatureposition';
 import { fetchDocumentPdf, pdfFile } from "~/js/fetchDocumentPdf";
 import { fetchDocumentTitle, isFreeSign, title } from "~/js/fetchDocumentTitle";
 import { getusersignature } from "~/js/checkusersignature";
@@ -76,6 +76,7 @@ import { checkDocumentSignature } from '~/js/checkdocumentsignature';
 import ViewSignatureBoxPlacement from '~/components/ViewSignatureBoxPlacement.vue';
 import ThankYouPage from '~/components/ThankYouPage.vue';
 import LoadingModal from '~/components/modal/LoadingModal.vue';
+import { getspecificsignaturepositons,prePlacedSignatures } from '~/js/fetchspecificsignature';
 
 const { $swal } = useNuxtApp();
 const documentId = ref();
@@ -643,7 +644,7 @@ const handleSaveAllSignatures = async (updatedSignatures) => {
             showConfirmButton: false,
         });
         await checkDocumentSignature(documentId.value);
-        await getsignaturepositons(documentId.value);
+        await getspecificsignaturepositons(documentId.value,currentEmplId.value,false);
     } catch (error) {
         let errorMessage = "Something went wrong. Please try again later.";
 
@@ -689,7 +690,9 @@ onMounted(async () => {
     currentUserName.value = user.value.requestorname;
     documentId.value = await getSignDocumentId();
     strDocId.value = documentId.value?.toString();
-    await getsignaturepositons(documentId.value);
+    await getspecificsignaturepositons(documentId.value,currentEmplId.value,false);
+    console.log("hey",prePlacedSignatures.value);
+    console.log("here",prePlacedSignatures.value);
     await fetchDocumentPdf(documentId.value);
     await fetchDocumentTitle(documentId.value);
     pdfTitle.value = title.value;

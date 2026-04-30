@@ -95,7 +95,7 @@
                                     <th @click="sortBy('Form')"
                                         class="p-5 text-left text-sm font-semibold text-gray-900 capitalize cursor-pointer select-none">
                                         <div class="flex items-center gap-1">
-                                            <span>Form</span>
+                                            <span>Document</span>
                                             <SortIcon :active="query.SortBy === 'Form'"
                                                 :descending="query.IsDescending" />
                                         </div>
@@ -183,7 +183,7 @@
                                     <td class="flex p-5 items-center gap-0.5">
                                         <button @click="viewDocument(form.id)"
                                             class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-green-600 flex item-center"
-                                            title="View Transaction">
+                                            title="View Document">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
                                                 fill="currentColor" width="20" height="20">
                                                 <path class="fill-green-600 group-hover:fill-white"
@@ -195,7 +195,7 @@
                                         </button>
                                         <button v-if="canEdit" @click="editDocumnet(form.id)"
                                             class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-yellow-600 flex item-center"
-                                            title="Edit Form">
+                                            title="Edit Document">
                                             <svg class="w-6 h-6 text-yellow-400" aria-hidden="true"
                                                 xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none"
                                                 viewBox="0 0 24 24">
@@ -206,7 +206,7 @@
                                         </button>
                                         <button v-if="canDelete" @click="softDeleted(form.id)"
                                             class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-red-100 flex item-center"
-                                            title="Delete Form">
+                                            title="Delete Document">
                                             <svg class="" width="20" height="20" viewBox="0 0 20 20" fill="none"
                                                 xmlns="http://www.w3.org/2000/svg">
                                                 <path class="fill-red-600"
@@ -312,6 +312,8 @@
             :isOpen="isViewModalOpen"
             :pdfTitle="title"
             :pdfFile="pdfFile"
+            :canDownload="true"
+            :canViewAll ="true"
             :signatures="prePlacedSignatures"
             @close="isViewModalOpen = false"
         />

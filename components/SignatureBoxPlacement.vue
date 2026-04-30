@@ -895,7 +895,7 @@ watch(() => props.isOpen, async (newVal) => {
     showImportedList.value = false;
     excelError.value = '';
 
-    if (!props.freeSign && props.pdfFile) await loadPdf();
+    await loadPdf();
 
     if (props.existingSignatures && props.existingSignatures.length > 0) {
       for (const sig of props.existingSignatures)
@@ -1222,10 +1222,24 @@ const selectAndScrollToBox = async (box) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // Save
 // ─────────────────────────────────────────────────────────────────────────────
-const saveSignatures = () => {
+const saveSignatures = async () => {
   if (props.freeSign) {
     if (signers.value.length === 0) { alert('Please add at least one signer!'); return; }
-    const CANVAS_W = 595, CANVAS_H = 842, SIG_W = 160, SIG_H = 60, DATE_W = 120, DATE_H = 28, DATE_GAP = 6, MARGIN_X = 20, MARGIN_B = 20, GAP_X = 16;
+
+    let CANVAS_W = 595;
+    let CANVAS_H = 842;
+    let lastPageNum = totalPages.value > 0 ? totalPages.value : -1;
+
+   if (pdfDocument.value && totalPages.value > 0) {
+      try {
+        const lastPage = await pdfDocument.value.getPage(totalPages.value);
+        const rotation = lastPage.rotate ?? 0;
+        const viewport = lastPage.getViewport({ scale: BASE_SCALE, rotation });
+        CANVAS_W = Math.round(viewport.width / scaleFactor.value);
+        CANVAS_H = Math.round(viewport.height / scaleFactor.value);
+      } catch (e) { console.warn('Could not read PDF page dimensions', e); }
+    }
+    const SIG_W = 160, SIG_H = 60, DATE_W = 120, DATE_H = 28, DATE_GAP = 6, MARGIN_X = 20, MARGIN_B = 20, GAP_X = 16;
     const total = signers.value.length;
     const totalWidth = total * SIG_W + (total - 1) * GAP_X;
     let startX = Math.max(MARGIN_X, (CANVAS_W - totalWidth) / 2);
@@ -1233,17 +1247,49 @@ const saveSignatures = () => {
     const sigY = dateY - DATE_GAP - SIG_H;
 
     const formattedData = signers.value.map((signer) => {
-      const x = startX; startX += SIG_W + GAP_X;
-      const pdfLibY = Math.round(CANVAS_H - sigY - SIG_H);
-      return {
-        id: generateId(), assignedTo: signer.name, assignedEmplId: signer.emplId || '',
-        page: -1, x: Math.round(x), y: Math.round(sigY), width: SIG_W, height: SIG_H,
-        canvasWidth: CANVAS_W, canvasHeight: CANVAS_H, pdfLibY, imageSrc: null, isEmpty: true, signedBy: null, hasDate: false,
-        datePosition: { x: Math.round(x), y: Math.round(dateY), width: DATE_W, height: DATE_H, canvasWidth: CANVAS_W, canvasHeight: CANVAS_H, dateText: new Date().toLocaleDateString('en-US') },
-        showName: false, color: signer.color, signatureLock: false, dateLock: false,
-        approvalOrder: Number(signer.approvalOrder || 1), enforceSequentialOrder: enforceSequentialOrder.value, freeSign: true,
-      };
-    });
+  const x = startX; startX += SIG_W + GAP_X;
+  const pdfLibY = Math.round(CANVAS_H - sigY - SIG_H);
+
+  // Carry over existing signature data (id, imageSrc, isEmpty, signedBy) if available
+  const existing = props.existingSignatures?.find(sig =>
+    (signer.emplId && sig.assignedEmplId === signer.emplId) || sig.assignedTo === signer.name
+  );
+
+  return {
+    id: existing?.id || generateId(),
+    assignedTo: signer.name,
+    assignedEmplId: signer.emplId || '',
+    page: lastPageNum,
+    x: Math.round(x),
+    y: Math.round(sigY),
+    width: SIG_W,
+    height: SIG_H,
+    canvasWidth: CANVAS_W,
+    canvasHeight: CANVAS_H,
+    pdfLibY,
+    imageSrc: existing?.imageSrc || null,
+    isEmpty: existing?.isEmpty ?? true,
+    signedBy: existing?.signedBy || null,
+    hasDate: false,
+    datePosition: {
+      x: Math.round(x),
+      y: Math.round(dateY),
+      width: DATE_W,
+      height: DATE_H,
+      canvasWidth: CANVAS_W,
+      canvasHeight: CANVAS_H,
+      dateText: new Date().toLocaleDateString('en-US'),
+    },
+    showName: false,
+    color: signer.color,
+    signatureLock: false,
+    dateLock: false,
+    approvalOrder: Number(signer.approvalOrder || 1),
+    enforceSequentialOrder: enforceSequentialOrder.value,
+    freeSign: true,
+  };
+});
+
     emit('save-signatures', formattedData);
     emit('close'); resetForm(); return;
   }
