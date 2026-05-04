@@ -31,6 +31,11 @@ export const getDocumentId = () => {
   return encryptedToken ? decryptData(encryptedToken) : null;
 };
 
+export const getShareDocumentId = () => {
+  const encryptedToken = localStorage.getItem("sharedocumentId");
+  return encryptedToken ? decryptData(encryptedToken) : null;
+};
+
 export const getUrlTransactionId = () => {
   const encryptedToken = localStorage.getItem("aso_urltransactionId");
   return encryptedToken ? decryptData(encryptedToken) : null;
@@ -55,7 +60,8 @@ export const clearAsoStorage = () => {
     "aso_urltransactionId",
     "documenturlid",
     "signDocumentId",
-    "user_token_aso"
+    "user_token_aso",
+    "sharedocumentId"
   ];
     // Delete cookie
   document.cookie = "_sys_pref_cache=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";
