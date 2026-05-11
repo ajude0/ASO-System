@@ -240,14 +240,14 @@ const getUserStats = (userName) => {
             </div>
           </div>
 
-          <!-- Sign Document Button -->
+          <!-- View Document Button -->
           <div class="bg-white rounded-lg shadow-md p-6">
             <button
               @click="openSigningModal"
               :disabled="!pdfFile || !signatureFile"
               class="w-full px-6 py-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:bg-gray-300 disabled:cursor-not-allowed font-bold text-lg"
             >
-              🖊️ Sign Document
+              🖊️ View Document
             </button>
             <p class="text-xs text-gray-500 mt-2 text-center">
               {{ getUserStats(currentUserName).pending }} signature(s) pending for you

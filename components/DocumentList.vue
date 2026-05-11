@@ -57,6 +57,8 @@
                     <option value="" selected hidden>Select Status</option>
                     <option value="1">Pending</option>
                     <option value="2">Signed</option>
+                    <option value="3">Cancelled</option>
+
                 </select>
                 <div v-if="query.Status"
                     class="absolute inset-y-0 right-2 flex items-center text-gray-500 hover:text-gray-700">
@@ -162,6 +164,14 @@
                                                 <circle cx="2.5" cy="3" r="2.5" fill="#16A34A"></circle>
                                             </svg>
                                             <span class="font-medium text-xs text-green-600">Signed</span>
+                                        </div>
+                                        <div v-if="form.status == '3'"
+                                            class="py-1.5 px-2.5 bg-gray-50 rounded-full flex items-center justify-center w-20 gap-1">
+                                            <svg width="5" height="6" viewBox="0 0 5 6" fill="none"
+                                                xmlns="http://www.w3.org/2000/svg">
+                                                <circle cx="2.5" cy="3" r="2.5" fill="#16A34A"></circle>
+                                            </svg>
+                                            <span class="font-medium text-xs text-gray-600">Cancelled</span>
                                         </div>
                                     </td>
                                     <td class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">

@@ -14,6 +14,7 @@ import {
   title,
   isLiveView,
   isFreeSign,
+  isCancelled
 } from "~/js/fetchDocumentTitle";
 import { emailsignaturereminder } from "~/js/emailsignaturereminder";
 import LoadingModal from "~/components/modal/LoadingModal.vue";
@@ -267,6 +268,20 @@ onMounted(async () => {
   await getsignaturepositons(documentid);
   await fetchDocumentPdf(documentid);
   await fetchDocumentTitle(documentid);
+     if (isCancelled.value) {
+        const result = await $swal.fire({
+            title: "Document Unavailable",
+            text: "This document is unavailable because it has been cancelled.",
+            icon: "error",
+            confirmButtonText: "Close",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+        });
+
+        if (result.isConfirmed) {
+            navigateTo("/main/Activity/639134769128106649");
+        }
+      }
   pdfTitle.value = title.value;
   loading.value = false;
 });

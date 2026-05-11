@@ -47,7 +47,7 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                     </svg>
-                    {{ userSignatures.length == 0 ? "View Document" : "Sign Document" }}
+                    {{ userSignatures.length == 0 ? "View Document" : "View Document" }}
                 </button>
 
             </div>
@@ -70,7 +70,7 @@ import { API_BASE_URL } from "~/config";
 import { getProfile, user } from "~/js/fetchUserProfile";
 // import { getspecificsignaturepositons, prePlacedSignatures } from '~/js/fetchsignatureposition';
 import { fetchDocumentPdf, pdfFile } from "~/js/fetchDocumentPdf";
-import { fetchDocumentTitle, isFreeSign, title } from "~/js/fetchDocumentTitle";
+import { fetchDocumentTitle, isFreeSign, title,isCancelled } from "~/js/fetchDocumentTitle";
 import { getusersignature } from "~/js/checkusersignature";
 import { checkDocumentSignature } from '~/js/checkdocumentsignature';
 import ViewSignatureBoxPlacement from '~/components/ViewSignatureBoxPlacement.vue';
@@ -697,7 +697,20 @@ onMounted(async () => {
     await fetchDocumentTitle(documentId.value);
     pdfTitle.value = title.value;
     signatureFile.value = await getusersignature($swal);
-    console.log(signatureFile.value);
+    if (isCancelled.value) {
+        const result = await $swal.fire({
+            title: "Document Unavailable",
+            text: "This document is unavailable because it has been cancelled.",
+            icon: "error",
+            confirmButtonText: "Close",
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+        });
+
+        if (result.isConfirmed) {
+            navigateTo("/main/639098620889818896");
+        }
+      }
     loading.value = false;
     console.log(prePlacedSignatures.value)
 });

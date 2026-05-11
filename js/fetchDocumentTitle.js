@@ -3,7 +3,8 @@ import { getToken } from "./cryptoToken";
 
 export const title = ref();
 export const isLiveView = ref();
-export const isFreeSign = ref()
+export const isFreeSign = ref();
+export const isCancelled = ref();
 
 export const fetchDocumentTitle = async (id) => {
       try {
@@ -19,7 +20,8 @@ export const fetchDocumentTitle = async (id) => {
         title.value = data.title;
         isLiveView.value = data.isLiveView;
         isFreeSign.value = data.isFreeSign;
-        
+        isCancelled.value = data.isCancelled;
+        console.log(isCancelled.value);
       } catch (error) {
         console.error("Error fetching form dropdown:", error);
       } 
