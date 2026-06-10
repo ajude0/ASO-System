@@ -44,7 +44,7 @@
 
 <script setup>
 import SigntureModal from '~/components/SigntureModal.vue';
-import { getToken, getSignDocumentId } from '~/js/cryptoToken';
+import { getToken, getSignDocumentId, getOriginalSignDocumentId } from '~/js/cryptoToken';
 import { postusersignature } from "~/js/usersignature";
 import { API_BASE_URL } from "~/config";
 import { getProfile, user } from "~/js/fetchUserProfile";
@@ -587,7 +587,8 @@ onMounted(async () => {
     currentEmplId.value = user.value.empid;
     currentUserName.value = user.value.requestorname;
     documentId.value = await getSignDocumentId();
-    strDocId.value = documentId.value?.toString();
+    const originalDocumentid = await getOriginalSignDocumentId();
+    strDocId.value = originalDocumentid?.toString();
     await getspecificsignaturepositons(documentId.value, currentEmplId.value, false)
     await fetchDocumentPdf(documentId.value);
     await fetchDocumentTitle(documentId.value);

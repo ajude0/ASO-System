@@ -14,8 +14,15 @@ export const decryptData = (encryptedData) => {
 };
 
 export const getToken = () => {
-  const encryptedToken = localStorage.getItem("user_token_aso");
-  return encryptedToken ? decryptData(encryptedToken) : null;
+  try {
+    const encryptedToken = localStorage.getItem("user_token_aso");
+    return encryptedToken ? decryptData(encryptedToken) : null;
+  } catch (error) {
+    console.error("Failed to decrypt token:", error);
+
+    localStorage.removeItem("user_token_aso");
+    return null;
+  }
 };
 export const getFormId = () => {
   const encryptedToken = localStorage.getItem("formId");
@@ -31,6 +38,13 @@ export const getDocumentId = () => {
   return encryptedToken ? decryptData(encryptedToken) : null;
 };
 
+
+export const getOriginalDocumentId = () => {
+  const encryptedToken = localStorage.getItem("originaldocumentId");
+  return encryptedToken ? decryptData(encryptedToken) : null;
+};
+
+
 export const getShareDocumentId = () => {
   const encryptedToken = localStorage.getItem("sharedocumentId");
   return encryptedToken ? decryptData(encryptedToken) : null;
@@ -43,6 +57,11 @@ export const getUrlTransactionId = () => {
 
 export const getUrlDocumentId = () => {
   const encryptedToken = localStorage.getItem("documenturlid");
+  return encryptedToken ? decryptData(encryptedToken) : null;
+};
+
+export const getOriginalSignDocumentId = () => {
+  const encryptedToken = localStorage.getItem("originalsDocumentId");
   return encryptedToken ? decryptData(encryptedToken) : null;
 };
 
@@ -61,7 +80,9 @@ export const clearAsoStorage = () => {
     "documenturlid",
     "signDocumentId",
     "user_token_aso",
-    "sharedocumentId"
+    "sharedocumentId",
+    "originalsDocumentId",
+    "originaldocumentId"
   ];
     // Delete cookie
   document.cookie = "_sys_pref_cache=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT;";

@@ -55,7 +55,7 @@
       v-for="(form, index) in forms"
       :key="index"
       class="doc-card bg-white rounded-xl border border-gray-200 p-4 flex flex-col gap-3 hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer group"
-      @click="viewDocument(form.id)"
+      @click="viewDocument(form)"
     >
       <!-- Top row: ID badge + action -->
       <div class="flex items-center justify-between">
@@ -67,7 +67,7 @@
         </span>
         <!-- View button -->
         <button
-          @click.stop="viewDocument(form.id)"
+          @click.stop="viewDocument(form)"
           class="flex items-center gap-1.5 text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg group-hover:bg-green-600 group-hover:text-white group-hover:border-green-600 transition-all duration-200"
           title="View Document"
         >
@@ -181,8 +181,9 @@ const router = useRouter();
 const paramid = ref();
 const { $swal } = useNuxtApp();
 
-async function viewDocument(id) {
-  localStorage.setItem("signDocumentId", encryptData(id));
+async function viewDocument(form) {
+  localStorage.setItem("originalsDocumentId", encryptData(form.id));
+  localStorage.setItem("signDocumentId", encryptData(form.protectedid));
   router.push("/main/639098620889818896/mobileSignDocument");
 }
 

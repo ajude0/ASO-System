@@ -64,7 +64,7 @@
 <script setup>
 import SigntureModal from '~/components/SigntureModal.vue';
 import SignaturePad from "signature_pad";
-import { getToken, getSignDocumentId } from '~/js/cryptoToken';
+import { getToken, getSignDocumentId, getOriginalDocumentId, getOriginalSignDocumentId } from '~/js/cryptoToken';
 import { postusersignature } from "~/js/usersignature";
 import { API_BASE_URL } from "~/config";
 import { getProfile, user } from "~/js/fetchUserProfile";
@@ -689,7 +689,9 @@ onMounted(async () => {
     currentEmplId.value = user.value.empid;
     currentUserName.value = user.value.requestorname;
     documentId.value = await getSignDocumentId();
-    strDocId.value = documentId.value?.toString();
+    const originalDocumentid = await getOriginalSignDocumentId();
+    strDocId.value = originalDocumentid?.toString();
+    console.log("string",strDocId.value);
     await getspecificsignaturepositons(documentId.value,currentEmplId.value,false);
     console.log("hey",prePlacedSignatures.value);
     console.log("here",prePlacedSignatures.value);

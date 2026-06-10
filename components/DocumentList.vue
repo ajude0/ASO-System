@@ -191,7 +191,7 @@
                                         }}
                                     </td>
                                     <td class="flex p-5 items-center gap-0.5">
-                                        <button @click="viewDocument(form.id)"
+                                        <button @click="viewDocument(form.protectedid)"
                                             class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-green-600 flex item-center"
                                             title="View Document">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
@@ -203,7 +203,7 @@
                                                     clip-rule="evenodd" />
                                             </svg>
                                         </button>
-                                        <button v-if="canEdit" @click="editDocumnet(form.id)"
+                                        <button v-if="canEdit" @click="editDocumnet(form)"
                                             class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-yellow-600 flex item-center"
                                             title="Edit Document">
                                             <svg class="w-6 h-6 text-yellow-400" aria-hidden="true"
@@ -355,10 +355,10 @@ const isLoadingModal = ref(false);
 function goToCreateDocument() {
     router.push("/main/activity/638992220838277083/addDocument");
 }
-function editDocumnet(id) {
-    localStorage.setItem("documentId", encryptData(id));
+function editDocumnet(form) {
+    localStorage.setItem("documentId", encryptData(form.protectedid));
+    localStorage.setItem("originaldocumentId", encryptData(form.id));
     router.push("/main/activity/638992220838277083/editDocument")
-
 }
 async function viewDocument(id){
     isLoadingModal.value = true;

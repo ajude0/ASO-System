@@ -12,7 +12,6 @@ export const fetchSharedUsers = async (documentid) => {
         'Content-Type': 'application/json',
       },
     });
-    console.log("su",data);
      return data;
 
   } catch (error) {

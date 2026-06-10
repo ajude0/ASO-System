@@ -4,7 +4,7 @@ import { getProfile, user } from '~/js/fetchUserProfile';
 import { getsignaturepositons, prePlacedSignatures } from '~/js/fetchsignatureposition';
 import { fetchDocumentPdf, pdfFile } from '~/js/fetchDocumentPdf';
 import { fetchDocumentTitle, title,isFreeSign } from '~/js/fetchDocumentTitle';
-import { getToken, getDocumentId } from '~/js/cryptoToken';
+import { getToken, getDocumentId, getOriginalDocumentId } from '~/js/cryptoToken';
 import LoadingModal from '~/components/modal/LoadingModal.vue';
 import PdfViewModal from '~/components/PdfViewModal.vue';
 
@@ -33,7 +33,9 @@ onMounted(async () => {
   currentUserName.value = user.value.requestorname;
 
   const documentid = getDocumentId();
-  strDocId.value   = documentid?.toString();
+  const originalDocumentid = getOriginalDocumentId();
+  // const
+  strDocId.value = originalDocumentid?.toString();
 
   await Promise.all([
     getsignaturepositons(documentid),

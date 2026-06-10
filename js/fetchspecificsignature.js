@@ -23,7 +23,7 @@ export const getspecificsignaturepositons = async (documentuploadid, currentEmpl
         const isOwner = item.assignedEmplId === currentEmplId;
 
         if (canViewAll || isOwner) {
-          const signatureFile = await getspecificusersignature(item.id);
+          const signatureFile = await getspecificusersignature(item.protectedid);
           prePlacedSignatures.value[i].imageSrc = signatureFile;
         } else {
           // Explicitly null so UI knows there's no image to show

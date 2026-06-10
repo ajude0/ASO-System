@@ -139,7 +139,7 @@
                                             }}
                                         </td>
                                         <td class="flex p-5 items-center gap-0.5">
-                                            <button @click="viewDocument(form.id)"
+                                            <button @click="viewDocument(form.protectedid)"
                                                 class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-green-600 flex item-center"
                                                 title="View Document">
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"

@@ -16,7 +16,7 @@ import {
   isFreeSign,
   isCancelled
 } from "~/js/fetchDocumentTitle";
-import { emailsignaturereminder } from "~/js/emailsignaturereminder";
+import { emailsignaturereminder, sharedemailsignaturereminder } from "~/js/emailsignaturereminder";
 import LoadingModal from "~/components/modal/LoadingModal.vue";
 
 
@@ -45,8 +45,9 @@ const openPlacementModal = () => {
   isPlacementModalOpen.value = true;
 };
 
-const resendEmail = (emplId) => {
-  emailsignaturereminder(emplId, $swal);
+const resendEmail = async(emplId) => {
+  const docid = await getShareDocumentId();
+  sharedemailsignaturereminder(emplId, $swal,docid);
 };
 
 // Save signature boxes from placement modal

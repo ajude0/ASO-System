@@ -90,7 +90,7 @@
 
                             <tbody class="divide-y divide-gray-300">
                                 <tr v-for="(form, index) in forms" :key="index"
-                                    class="bg-white transition-all duration-500 hover:bg-gray-100 cursor-pointer" @click="viewDocument(form.id)">
+                                    class="bg-white transition-all duration-500 hover:bg-gray-100 cursor-pointer" @click="viewDocument(form)">
                                     <td class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
                                         {{ form.id }}
                                     </td>
@@ -116,7 +116,7 @@
                                         }}
                                     </td>
                                     <td class="flex p-5 items-center gap-0.5">
-                                        <button @click="viewDocument(form.id)"
+                                        <button @click="viewDocument(form)"
                                             class="p-2 rounded-full bg-white group transition-all duration-500 hover:bg-green-600 flex item-center"
                                             title="View Document">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"
@@ -244,8 +244,10 @@ const { $swal } = useNuxtApp();
 const isViewModalOpen = ref(false);
 
 
-async function viewDocument(id){
-    localStorage.setItem("signDocumentId", encryptData(id));
+async function viewDocument(form){
+    localStorage.setItem("originalsDocumentId", encryptData(form.id));
+    console.log("here",form.id);
+    localStorage.setItem("signDocumentId", encryptData(form.protectedid));
     router.push("/main/639098620889818896/signDocument")
 }
 

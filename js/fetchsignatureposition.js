@@ -18,7 +18,7 @@ export const getsignaturepositons = async (documentuploadid) => {
 
       if (item.signedBy) {
         // Fetch the signature image
-        const signatureFile = await getusersignature(item.id);
+        const signatureFile = await getusersignature(item.protectedid);
 
         // Attach to the dropdown object
         prePlacedSignatures.value[i].imageSrc = signatureFile;

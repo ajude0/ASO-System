@@ -65,7 +65,7 @@ import { postusersignature } from "~/js/usersignature";
 import { API_BASE_URL } from "~/config";
 import { getProfile, user } from "~/js/fetchUserProfile";
 import { fetchDocumentPdf, pdfFile } from "~/js/fetchDocumentPdf";
-import { fetchDocumentTitle, title,isFreeSign,isCancelled } from "~/js/fetchDocumentTitle";
+import { fetchDocumentTitle, title,isFreeSign,isCancelled,docid } from "~/js/fetchDocumentTitle";
 import { getusersignature } from "~/js/checkusersignature";
 import { checkDocumentSignature } from '~/js/checkdocumentsignature';
 import ViewSignatureBoxPlacement from '~/components/ViewSignatureBoxPlacement.vue';
@@ -653,7 +653,6 @@ onMounted(async () => {
     currentEmplId.value = user.value.empid;
     currentUserName.value = user.value.requestorname;
     documentId.value = await getUrlDocumentId();
-    strDocId.value = documentId.value?.toString();
 
     await getspecificsignaturepositons(documentId.value,currentEmplId.value,false);
     await fetchDocumentPdf(documentId.value);
@@ -661,11 +660,12 @@ onMounted(async () => {
     const hasAccess = signaturesWithCurrentUserFlag.value.some(
         s => s.isCurrentUser
     )
+     strDocId.value = docid.value?.toString();
 
     if (!hasAccess) {
         const result = await $swal.fire({
             title: "Access Denied",
-            text: "You are not allowed to view this Document.",
+            text: "You are not allowed to view this document, or the email access link has expired. Please request the document creator to resend the document access link to your email.",
             icon: "error",
             confirmButtonText: "Close", // Button at the bottom
             allowOutsideClick: false,

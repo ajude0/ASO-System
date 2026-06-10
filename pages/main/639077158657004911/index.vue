@@ -124,7 +124,7 @@
 
                             <tbody class="divide-y divide-gray-300">
                                 <tr v-for="(form, index) in forms" :key="index"
-                                    class="bg-white transition-all duration-500 hover:bg-gray-50 cursor-pointer" @click="viewDocument(form.id)" >
+                                    class="bg-white transition-all duration-500 hover:bg-gray-50 cursor-pointer" @click="viewDocument(form)" >
                                     <td class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
                                         {{ form.id }}
                                     </td>
@@ -310,11 +310,11 @@ const paramid = ref();
 
 const router = useRouter();
 
-async function viewDocument(id){
-    localStorage.setItem("documentId", encryptData(id));
+async function viewDocument(form){
+    localStorage.setItem("documentId", encryptData(form.protectedid));
+    localStorage.setItem("originaldocumentId", encryptData(form.id));
     router.push("/main/639077158657004911/view")
 }
-
 
 function clearStatus() {
     query.value.Status = "";

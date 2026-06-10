@@ -5,6 +5,7 @@ export const title = ref();
 export const isLiveView = ref();
 export const isFreeSign = ref();
 export const isCancelled = ref();
+export const docid = ref();
 
 export const fetchDocumentTitle = async (id) => {
       try {
@@ -21,6 +22,7 @@ export const fetchDocumentTitle = async (id) => {
         isLiveView.value = data.isLiveView;
         isFreeSign.value = data.isFreeSign;
         isCancelled.value = data.isCancelled;
+        docid.value = data.unprotectid;
         console.log(isCancelled.value);
       } catch (error) {
         console.error("Error fetching form dropdown:", error);

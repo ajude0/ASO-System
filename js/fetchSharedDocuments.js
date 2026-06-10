@@ -40,6 +40,7 @@ export const query = ref({
       }
   
       forms.value = response.forms;
+      console.log(forms.value);
       totalEntries.value = response.totalCount;
       totalPages.value = Math.ceil(response.totalCount / query.value.PageSize);
   
