@@ -1,11 +1,9 @@
 <template>
-  <!-- bg-white border border-slate-200 rounded-2xl p-7 -->
   <div class="bg-white border border-slate-200 rounded-2xl p-7 font-sans text-slate-900 w-full relative">
 
     <!-- Header -->
     <div class="flex flex-wrap justify-between items-start gap-3 mb-5">
       <div>
-        <!-- text-[11px] font-semibold tracking-widest uppercase text-slate-400 -->
         <span class="block text-[11px] font-semibold tracking-widest uppercase text-slate-400 mb-1">
           System Analytics
         </span>
@@ -29,6 +27,54 @@
       </div>
     </div>
 
+    <!-- Date Presets + Filter Row -->
+    <div class="flex flex-wrap items-center gap-1.5 mb-4">
+
+      <!-- Preset Pills -->
+      <button
+        v-for="p in presets"
+        :key="p.key"
+        @click="applyPreset(p.key)"
+        :class="[
+          'text-[12px] px-3 py-1 rounded-full border transition-all duration-150 cursor-pointer',
+          activePreset === p.key
+            ? 'bg-indigo-50 border-indigo-400 text-indigo-700 font-medium'
+            : 'border-slate-200 bg-slate-50 text-slate-500 hover:text-slate-800 hover:border-slate-300'
+        ]"
+      >
+        {{ p.label }}
+      </button>
+
+      <div class="w-px h-4 bg-slate-200 mx-1"></div>
+
+      <!-- Custom date inputs -->
+      <div class="flex items-center gap-2">
+        <label class="text-xs text-slate-400">From</label>
+        <input
+          type="date"
+          v-model="startDate"
+          @change="activePreset = null"
+          class="text-[12px] px-2 py-1 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 cursor-pointer focus:outline-none focus:ring-1 focus:ring-slate-300"
+        />
+      </div>
+      <div class="flex items-center gap-2">
+        <label class="text-xs text-slate-400">To</label>
+        <input
+          type="date"
+          v-model="endDate"
+          @change="activePreset = null"
+          class="text-[12px] px-2 py-1 rounded-lg border border-slate-200 bg-slate-50 text-slate-900 cursor-pointer focus:outline-none focus:ring-1 focus:ring-slate-300"
+        />
+      </div>
+      <button
+        @click="fetchData"
+        class="text-[12px] px-3 py-1 rounded-lg border border-slate-200 bg-slate-100 text-slate-800 hover:bg-slate-200 cursor-pointer transition-colors"
+      >
+        Apply
+      </button>
+
+    </div>
+
     <!-- Metric Toggle -->
     <div class="flex gap-2 mb-5">
       <button
@@ -49,7 +95,6 @@
 
     <!-- Loading -->
     <div v-if="loading" class="flex flex-col items-center justify-center gap-3 min-h-[200px] text-slate-400 text-sm">
-      <!-- animate-spin border-t-indigo-500 border-slate-200 -->
       <div class="w-7 h-7 rounded-full border-2 border-slate-200 border-t-indigo-500 animate-spin"></div>
       <p>Loading utilization data…</p>
     </div>
@@ -85,7 +130,7 @@
           </linearGradient>
         </defs>
 
-        <!-- Grid lines (light: slate-100) -->
+        <!-- Grid lines -->
         <line
           v-for="(tick, i) in yTicks" :key="`g${i}`"
           :x1="pad.l" :y1="yScale(tick)"
@@ -147,7 +192,7 @@
         </g>
       </svg>
 
-      <!-- Tooltip: bg-white border-slate-200 rounded-xl shadow-md -->
+      <!-- Tooltip -->
       <div
         v-if="tooltip.visible && tooltip.data"
         class="absolute pointer-events-none z-10 bg-white border border-slate-200 rounded-xl px-4 py-3 min-w-[180px] shadow-md"
@@ -181,12 +226,70 @@
 import { ref, computed, onMounted } from 'vue'
 import { API_BASE_URL } from '~/config'
 
-const API_URL = `${API_BASE_URL}/api/Dashboard/digifast-utilization`  // ← update to your base URL
+const API_URL = `${API_BASE_URL}/api/Dashboard/digifast-utilization`
 
 const metrics = [
-  { key: 'activeUsers',       label: 'Active Users',  color: '#6366f1' },
-  { key: 'totalTransactions', label: 'Transactions',  color: '#10b981' },
+  { key: 'activeUsers',       label: 'Active Users', color: '#6366f1' },
+  { key: 'totalTransactions', label: 'Transactions', color: '#10b981' },
 ]
+
+// ── Presets ───────────────────────────────────────────────────────────────
+const presets = [
+  { key: 'last_30days',  label: 'Last 30 days' },  // ← renamed
+  { key: 'this_week',    label: 'This week' },
+  { key: 'last_week',    label: 'Last week' },
+  { key: 'this_month',   label: 'This month' },
+  { key: 'last_month',   label: 'Last month' },
+  { key: 'last_3months', label: 'Last 3 months' },
+]
+
+const activePreset = ref('this_month')
+
+function toInputDate(d) {
+  return d.toISOString().slice(0, 10)
+}
+
+function applyPreset(key) {
+  const now = new Date()
+  const y   = now.getFullYear()
+  const m   = now.getMonth()
+
+  const ranges = {
+    last_30days: () => {
+    const start = new Date(now)
+    start.setDate(now.getDate() - 29)
+    return [start, now]
+  },
+    this_week: () => {
+      const day = now.getDay() || 7
+      const mon = new Date(now); mon.setDate(now.getDate() - day + 1)
+      const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
+      return [mon, sun]
+    },
+    last_week: () => {
+      const day = now.getDay() || 7
+      const mon = new Date(now); mon.setDate(now.getDate() - day + 1 - 7)
+      const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
+      return [mon, sun]
+    },
+    this_month:   () => [new Date(y, m, 1),     new Date(y, m + 1, 0)],
+    last_month:   () => [new Date(y, m - 1, 1), new Date(y, m, 0)],
+    last_3months: () => [new Date(y, m - 2, 1), new Date(y, m + 1, 0)],
+  }
+
+  const [s, e]       = ranges[key]()
+  startDate.value    = toInputDate(s)
+  endDate.value      = toInputDate(e)
+  activePreset.value = key
+  fetchData()
+}
+// ─────────────────────────────────────────────────────────────────────────
+
+// ── Date filter state ─────────────────────────────────────────────────────
+const now          = new Date()
+const startDate    = ref(toInputDate(new Date(now.getFullYear(), now.getMonth(), 1)))
+const endDate      = ref(toInputDate(new Date(now.getFullYear(), now.getMonth() + 1, 0)))
+// ─────────────────────────────────────────────────────────────────────────
 
 const loading      = ref(true)
 const error        = ref(null)
@@ -256,7 +359,10 @@ async function fetchData() {
   loading.value = true
   error.value   = null
   try {
-    const res = await fetch(API_URL)
+    const params = new URLSearchParams()
+    if (startDate.value) params.append('startDate', startDate.value)
+    if (endDate.value)   params.append('endDate',   endDate.value)
+    const res = await fetch(`${API_URL}?${params.toString()}`)
     if (!res.ok) throw new Error(`Server error ${res.status}`)
     rawData.value = await res.json()
   } catch (e) {
@@ -266,7 +372,7 @@ async function fetchData() {
   }
 }
 
-onMounted(fetchData)
+onMounted(() => applyPreset('last_30days'))
 
 function onMouseMove(e) {
   if (!svgRef.value || !chartData.value.length) return
@@ -289,13 +395,12 @@ function formatNumber(n) {
   if (n >= 1_000)     return (n / 1_000).toFixed(1) + 'K'
   return String(n)
 }
-function formatTick(n)      { return formatNumber(n) }
+function formatTick(n)       { return formatNumber(n) }
 function formatDate(iso)     { return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) }
 function formatDateFull(iso) { return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' }) }
 
 definePageMeta({
-  middleware: ["auth", "check-menu-access"], // Use an array for multiple middlewares
-  name:"23454546675653",
-});
-
+  middleware: ["auth", "check-menu-access"],
+  name: "23454546675653",
+})
 </script>
