@@ -127,6 +127,12 @@
                                                 :descending="query.IsDescending" />
                                         </div>
                                     </th>
+                                     <th 
+                                        class="p-5 text-left text-sm font-semibold text-gray-900 capitalize cursor-pointer select-none">
+                                        <div class="flex items-center gap-1">
+                                            <span>Fully Signed At</span>
+                                        </div>
+                                    </th>
 
                                     <th scope="col"
                                         class="p-5 text-left whitespace-nowrap text-sm leading-6 font-semibold text-gray-900 capitalize">
@@ -188,6 +194,20 @@
                                                 minute: "numeric",
                                                 hour12: true, // optional, for 12-hour format with AM/PM
                                             })
+                                        }}
+                                    </td>
+                                      <td class="p-5 whitespace-nowrap text-sm leading-6 font-medium text-gray-900">
+                                      {{
+                                        form.fullySignedAt
+                                            ? new Date(form.fullySignedAt).toLocaleString("en-US", {
+                                                year: "numeric",
+                                                month: "long",
+                                                day: "numeric",
+                                                hour: "numeric",
+                                                minute: "numeric",
+                                                hour12: true,
+                                            })
+                                            : "-"
                                         }}
                                     </td>
                                     <td class="flex p-5 items-center gap-0.5">

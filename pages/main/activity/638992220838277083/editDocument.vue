@@ -68,6 +68,37 @@ const formatUserName = (u) => {
   return u.employeename2 || u.employeename1 || u.name || "Unknown User";
 };
 
+const linkCopied = ref(false);
+let copyTimeout = null;
+
+const copyEmailLink = async () => {
+    // Replace this wigning link
+ const documentId = getDocumentId();
+
+    const emailLink = `https://apps.fastlogistics.com.ph/digifast/#/main/document/?documenturlid=${documentId}`;
+
+    try {
+        await navigator.clipboard.writeText(emailLink);
+    } catch (err) {
+        // Fallback for older browsers / non-secure contexts
+        const textarea = document.createElement("textarea");
+        textarea.value = emailLink;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textarea);
+    }
+
+    linkCopied.value = true;
+    clearTimeout(copyTimeout);
+    copyTimeout = setTimeout(() => {
+        linkCopied.value = false;
+    }, 2000);
+};
+
 const openShareModal = async () => {
   showShareModal.value = true;
   query.value.search = "";
@@ -719,6 +750,7 @@ const handleSaveAllSignatures = async (updatedSignatures) => {
       showConfirmButton: false,
     });
     await checkDocumentSignature(docId);
+     await getsignaturepositons(docId);
   } catch (error) {
     await getsignaturepositons(docId);
     let errorMessage = "Something went wrong. Please try again later.";
@@ -1373,7 +1405,25 @@ onMounted(async () => {
 
           <!-- Signature Boxes List -->
           <div class="bg-white rounded-lg shadow-md p-6">
-            <h2 class="text-xl font-semibold mb-4">Signature Status per Person</h2>
+           <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-semibold">Signature Status per Person</h2>
+    <button
+        @click="copyEmailLink"
+        class="relative inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-medium transition"
+        :class="linkCopied
+            ? 'border-green-200 bg-green-50 text-green-700'
+            : 'border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100'"
+    >
+        <svg v-if="!linkCopied" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 010 5.656l-3 3a4 4 0 01-5.656-5.656l1.5-1.5M10.172 13.828a4 4 0 010-5.656l3-3a4 4 0 015.656 5.656l-1.5 1.5" />
+        </svg>
+        <svg v-else class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        {{ linkCopied ? "Copied!" : "Copy Email Link" }}
+    </button>
+</div>
+         
             <div v-if="prePlacedSignatures.length === 0" class="text-gray-400 text-center py-8 text-sm">
               No signature boxes placed yet
             </div>
@@ -1613,4 +1663,5 @@ import SignatureBoxPlacement from "~/components/SignatureBoxPlacement.vue";
 import SigntureModal from "~/components/SigntureModal.vue";
 import { isLoading } from "~/js/fetchTransactions";
 import { fetchSharedUsers } from "~/js/fetchSharedUsers";
+import Buttons from "../../buttons.vue";
 </script>

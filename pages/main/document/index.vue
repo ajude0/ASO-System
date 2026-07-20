@@ -2,7 +2,7 @@
 <div v-if="isLoading"> <LoadingModal/></div>
 <div v-else>
     <div v-if="showThankYouPage">
-        <ThankYouPage :transaction-id="documentId" :transaction-name="title" type-name="Document" @refresh="refreshThankYou"/>
+        <ThankYouPage :transaction-id="originalDocId" :transaction-name="title" :created-by="createdBy" :created-date="createdDate" type-name="Document" @refresh="refreshThankYou"/>
     </div>
     <div v-else>
         <div v-if="canViewPage">
@@ -65,7 +65,7 @@ import { postusersignature } from "~/js/usersignature";
 import { API_BASE_URL } from "~/config";
 import { getProfile, user } from "~/js/fetchUserProfile";
 import { fetchDocumentPdf, pdfFile } from "~/js/fetchDocumentPdf";
-import { fetchDocumentTitle, title,isFreeSign,isCancelled,docid } from "~/js/fetchDocumentTitle";
+import { fetchDocumentTitle, title,isFreeSign,isCancelled,docid,originalDocId,createdDate,createdBy} from "~/js/fetchDocumentTitle";
 import { getusersignature } from "~/js/checkusersignature";
 import { checkDocumentSignature } from '~/js/checkdocumentsignature';
 import ViewSignatureBoxPlacement from '~/components/ViewSignatureBoxPlacement.vue';
